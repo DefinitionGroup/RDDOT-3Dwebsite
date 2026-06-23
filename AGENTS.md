@@ -66,7 +66,9 @@ The current direction is:
   - one straight-line kitchen layout
   - cabinet/korpus color
   - front color
-- The current 3D scene is a box-based prototype, not final production geometry.
+- The current 3D scene loads `public/models/kitchen-line.glb`.
+- The current GLB uses generic mesh names and one shared material, so material assignment is heuristic.
+- Prefer production GLB assets with named nodes/material slots for cabinet bodies, fronts, handles, countertop, appliances, and room surfaces.
 - Product metadata belongs in the product-definition contract first.
 - URL state must remain shareable and backward-compatible where possible.
 - If the URL state shape changes, add normalization/fallback logic.
@@ -144,4 +146,3 @@ npm run build
 - `features/configurator/engine/kitchen-scene.tsx`: 3D scene.
 - `app/configure/page.tsx`: configurator route.
 - `app/checkout/page.tsx`: fake checkout route.
-

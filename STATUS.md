@@ -28,7 +28,9 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
 - Improved hero typography animation with staggered motion.
 - Added `/configure` as the first 3D configurator route.
 - Built an isolated configurator feature module under `features/configurator`.
-- Added a simple straight-line kitchen scene using React Three Fiber, drei, and Three.js.
+- Added a straight-line kitchen scene using React Three Fiber, drei, and Three.js.
+- Loaded `public/models/kitchen-line.glb` into the configurator as the active kitchen model.
+- Added heuristic GLB material mapping so cabinet/korpus and front colors affect the imported model.
 - Added color configuration for:
   - cabinet/korpus finish
   - front finish
@@ -55,7 +57,7 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
 - `npm run build` passes.
 - `/configure` renders on desktop and mobile.
 - The 3D canvas is nonblank.
-- Screenshot pixel checks confirmed color changes and camera changes affect the rendered scene.
+- Screenshot pixel checks confirmed color changes and camera changes affect the imported GLB scene.
 - `/checkout` preserves configuration through the shared URL.
 - Mobile checkout overflow was found and fixed.
 - Next.js runtime diagnostics reported no config or session errors.
@@ -85,7 +87,8 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
 - No Studio page-builder block exists yet for dropping the configurator into a page.
 - No real product catalog, SKU model, pricing engine, cart, checkout, order, CRM, or payment integration exists yet.
 - The checkout page is a visual fake checkout only and performs no submission.
-- The 3D model is still a box-based prototype; there are no production 3D assets.
+- The configurator now loads `kitchen-line.glb`, but the asset uses generic mesh names and one shared material.
+- The current GLB color mapping is heuristic. A production asset should expose named nodes/material slots for cabinet bodies, fronts, handles, countertop, appliances, and room surfaces.
 - There is no saved configuration persistence beyond the shareable URL.
 - No analytics/event tracking exists for configurator interactions.
 - No automated Playwright test suite exists yet.
@@ -142,4 +145,3 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
 - `ACCESSIBILITY.md`: keyboard behavior, focus states, reduced motion, contrast, forms, and configurator-specific a11y decisions.
 - `PERFORMANCE.md`: Core Web Vitals targets, 3D budgets, image budgets, lazy loading, and monitoring.
 - `DECISIONS.md` or `docs/adr/*`: short architecture decision records for key choices.
-

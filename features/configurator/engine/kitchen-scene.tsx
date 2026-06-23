@@ -4,6 +4,7 @@ import { CameraControls, ContactShadows, Environment } from "@react-three/drei";
 import { useEffect, useRef, type ElementRef } from "react";
 import type { CameraView, ConfiguratorState } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT } from "@/features/configurator/product-definition";
+import { KitchenModel } from "@/features/configurator/engine/kitchen-model";
 
 type KitchenSceneProps = {
   cameraView: CameraView;
@@ -42,7 +43,7 @@ export function KitchenScene({ cameraView, state }: KitchenSceneProps) {
 
       <group position={[0, -0.7, 0]}>
         <RoomShell />
-        <KitchenLine cabinetHex={cabinetColor.hex} frontHex={frontColor.hex} />
+        <KitchenModel cabinetHex={cabinetColor.hex} frontHex={frontColor.hex} />
       </group>
 
       <ContactShadows
@@ -74,7 +75,7 @@ function RoomShell() {
         <planeGeometry args={[8.8, 7.2]} />
         <meshStandardMaterial color="#ded7ce" roughness={0.82} />
       </mesh>
-      <mesh position={[0, 1.8, -1.52]} receiveShadow>
+      <mesh position={[0, 1.8, -2.16]} receiveShadow>
         <boxGeometry args={[8.8, 5.1, 0.05]} />
         <meshStandardMaterial color="#f5f1ea" roughness={0.94} />
       </mesh>
@@ -93,97 +94,6 @@ function RoomShell() {
       <mesh position={[-2.32, 2.68, -1.47]}>
         <boxGeometry args={[1.16, 0.08, 0.08]} />
         <meshStandardMaterial color="#d7cfc5" roughness={0.72} />
-      </mesh>
-    </group>
-  );
-}
-
-function KitchenLine({ cabinetHex, frontHex }: { cabinetHex: string; frontHex: string }) {
-  const baseUnits = [-1.5, -0.75, 0, 0.75, 1.5];
-
-  return (
-    <group>
-      <mesh castShadow position={[0, 0.68, -0.18]}>
-        <boxGeometry args={[4.55, 0.08, 1.02]} />
-        <meshStandardMaterial color="#c9bfb3" metalness={0.05} roughness={0.38} />
-      </mesh>
-      <mesh castShadow position={[-2.38, 0.38, -0.22]}>
-        <boxGeometry args={[0.74, 1.92, 1.02]} />
-        <meshStandardMaterial color={cabinetHex} roughness={0.68} />
-      </mesh>
-      <mesh castShadow position={[-2.38, 0.38, 0.315]}>
-        <boxGeometry args={[0.64, 1.7, 0.045]} />
-        <meshStandardMaterial color={frontHex} roughness={0.42} />
-      </mesh>
-      {baseUnits.map((x, index) => (
-        <BaseCabinet cabinetHex={cabinetHex} frontHex={frontHex} index={index} key={x} x={x} />
-      ))}
-      {[-0.75, 0, 0.75, 1.5].map((x) => (
-        <WallCabinet cabinetHex={cabinetHex} frontHex={frontHex} key={x} x={x} />
-      ))}
-      <mesh position={[0.35, 0.05, 0.36]}>
-        <boxGeometry args={[3.85, 0.04, 0.08]} />
-        <meshStandardMaterial color="#211f1d" roughness={0.45} />
-      </mesh>
-      <mesh castShadow position={[2.22, 0.35, -0.12]} rotation={[0, 0, 0.22]}>
-        <boxGeometry args={[0.08, 0.96, 0.08]} />
-        <meshStandardMaterial color="#ff0004" roughness={0.36} />
-      </mesh>
-    </group>
-  );
-}
-
-function BaseCabinet({
-  cabinetHex,
-  frontHex,
-  index,
-  x
-}: {
-  cabinetHex: string;
-  frontHex: string;
-  index: number;
-  x: number;
-}) {
-  return (
-    <group position={[x, 0.28, -0.18]}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.68, 0.82, 0.92]} />
-        <meshStandardMaterial color={cabinetHex} roughness={0.7} />
-      </mesh>
-      <mesh castShadow position={[0, 0.02, 0.49]}>
-        <boxGeometry args={[0.58, 0.66, 0.045]} />
-        <meshStandardMaterial color={frontHex} roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.38, 0.52]}>
-        <boxGeometry args={[0.38, 0.018, 0.03]} />
-        <meshStandardMaterial color={index % 2 ? "#eee7dd" : "#2e2a27"} roughness={0.28} />
-      </mesh>
-      <mesh position={[0, -0.45, 0.08]}>
-        <boxGeometry args={[0.64, 0.07, 0.78]} />
-        <meshStandardMaterial color="#22201e" roughness={0.65} />
-      </mesh>
-    </group>
-  );
-}
-
-function WallCabinet({
-  cabinetHex,
-  frontHex,
-  x
-}: {
-  cabinetHex: string;
-  frontHex: string;
-  x: number;
-}) {
-  return (
-    <group position={[x, 1.5, -0.42]}>
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.68, 0.72, 0.48]} />
-        <meshStandardMaterial color={cabinetHex} roughness={0.76} />
-      </mesh>
-      <mesh castShadow position={[0, 0, 0.265]}>
-        <boxGeometry args={[0.57, 0.58, 0.035]} />
-        <meshStandardMaterial color={frontHex} roughness={0.42} />
       </mesh>
     </group>
   );
