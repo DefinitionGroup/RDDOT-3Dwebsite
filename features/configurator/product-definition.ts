@@ -57,20 +57,39 @@ export const RDTD_KITCHEN_PRODUCT: ConfiguratorProductDefinition = {
       externalId: "front-porcelain"
     },
     {
-      key: "red-dot",
-      label: { de: "Rotpunkt", en: "Red dot", es: "Punto rojo" },
-      hex: "#ff0004",
+      key: "castoro-ottawa",
+      label: {
+        de: "Fenix Castoro Ottawa",
+        en: "Fenix Castoro Ottawa",
+        es: "Fenix Castoro Ottawa"
+      },
+      hex: "#77694f",
+      textureUrl: "/images/material-fenix-castoro-ottawa-0717.png",
       material: "matte",
       priceDeltaCents: 48000,
-      externalId: "front-red-dot"
+      externalId: "front-fenix-castoro-ottawa-0717"
     },
     {
-      key: "night",
-      label: { de: "Nacht", en: "Night", es: "Noche" },
-      hex: "#171615",
+      key: "verde-kitami",
+      label: {
+        de: "Fenix Verde Kitami",
+        en: "Fenix Verde Kitami",
+        es: "Fenix Verde Kitami"
+      },
+      hex: "#a3ab99",
+      textureUrl: "/images/material-fenix-verde-kitami-0794.png",
       material: "matte",
       priceDeltaCents: 52000,
-      externalId: "front-night"
+      externalId: "front-fenix-verde-kitami-0794"
+    },
+    {
+      key: "walnut-memory",
+      label: { de: "Nussbaum Memory", en: "Walnut Memory", es: "Nogal Memory" },
+      hex: "#5d3f2e",
+      textureUrl: "/images/material-walnut-memory-wn832.png",
+      material: "structured",
+      priceDeltaCents: 58000,
+      externalId: "front-walnut-memory-wn832"
     },
     {
       key: "sage",

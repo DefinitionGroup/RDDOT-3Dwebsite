@@ -14,9 +14,9 @@ export function ConfiguratorCanvas({ cameraView, state }: ConfiguratorCanvasProp
   return (
     <Canvas
       camera={{ fov: 38, position: [4.2, 2.4, 5.6] }}
-      dpr={[1, 1.7]}
+      dpr={[1, 2]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
-      shadows
+      shadows="variance"
     >
       <Suspense fallback={null}>
         <KitchenScene cameraView={cameraView} state={state} />

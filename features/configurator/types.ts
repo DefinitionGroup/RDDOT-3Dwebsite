@@ -6,6 +6,7 @@ export type FinishOption = {
   key: string;
   label: Record<LocaleCode, string>;
   hex: string;
+  textureUrl?: string;
   material: "matte" | "satin" | "structured";
   priceDeltaCents: number;
   externalId?: string;
