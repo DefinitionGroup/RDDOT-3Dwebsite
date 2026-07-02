@@ -21,6 +21,7 @@
     "postprocessing": "^6.39.2",
     "react": "latest",
     "react-dom": "latest",
+    "replicate": "^1.4.0",
     "three": "^0.184.0"
   },
   "devDependencies": {

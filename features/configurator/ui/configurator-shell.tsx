@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Camera,
   Check,
   Copy,
   Eye,
@@ -26,6 +27,9 @@ import {
   normalizeConfiguratorState,
   RDTD_KITCHEN_PRODUCT
 } from "@/features/configurator/product-definition";
+import { PHOTO_PRESETS } from "@/features/configurator/photo/photo-presets";
+import { PhotoPopover, type PhotoStatus } from "@/features/configurator/photo/photo-popover";
+import { useSceneCapture } from "@/features/configurator/photo/use-scene-capture";
 import { CONFIG_QUERY_PARAM, encodeConfiguration } from "@/features/configurator/state-codec";
 import type {
   CameraView,
@@ -51,6 +55,10 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   const [copied, setCopied] = useState(false);
   const [isConfigPanelOpen, setConfigPanelOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [isPhotoOpen, setPhotoOpen] = useState(false);
+  const [photoPresetKey, setPhotoPresetKey] = useState(PHOTO_PRESETS[0].key);
+  const [photoStatus, setPhotoStatus] = useState<PhotoStatus>({ phase: "idle" });
+  const { captureRef, capturePhoto } = useSceneCapture();
 
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT.cabinetColors, config.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT.frontColors, config.frontColorKey);
@@ -77,6 +85,52 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
     window.setTimeout(() => setCopied(false), 1800);
   }
 
+  function openPhoto() {
+    setPhotoStatus({ phase: "idle" });
+    setPhotoOpen(true);
+  }
+
+  async function generatePhoto() {
+    const preview = capturePhoto();
+    if (!preview) {
+      setPhotoStatus({
+        phase: "error",
+        message: "Die Szene konnte nicht aufgenommen werden. Bitte versuche es erneut."
+      });
+      return;
+    }
+
+    setPhotoStatus({ phase: "generating", preview });
+
+    try {
+      const response = await fetch("/api/photo", {
+        body: JSON.stringify({
+          cabinetColorKey: config.cabinetColorKey,
+          frontColorKey: config.frontColorKey,
+          image: preview,
+          presetKey: photoPresetKey
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+
+      const payload = (await response.json()) as { image?: string; error?: string };
+      if (!response.ok || !payload.image) {
+        throw new Error(payload.error ?? "Generation failed.");
+      }
+
+      setPhotoStatus({ phase: "done", image: payload.image, preview });
+    } catch (error) {
+      setPhotoStatus({
+        phase: "error",
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : "Das Foto konnte nicht erstellt werden. Bitte versuche es erneut."
+      });
+    }
+  }
+
   function resetConfiguration() {
     updateConfig({
       cabinetColorKey: "graphite",
@@ -89,7 +143,7 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f4f0eb] text-ink">
       <div className="absolute inset-0">
-        <ConfiguratorCanvas cameraView={cameraView} state={config} />
+        <ConfiguratorCanvas cameraView={cameraView} captureRef={captureRef} state={config} />
       </div>
 
       <motion.div
@@ -102,7 +156,18 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
       <CameraControlOverlay
         activeView={cameraView}
         isConfigPanelOpen={isConfigPanelOpen}
+        onPhoto={openPhoto}
         onSelect={setCameraView}
+      />
+
+      <PhotoPopover
+        locale={locale}
+        onClose={() => setPhotoOpen(false)}
+        onGenerate={generatePhoto}
+        onSelectPreset={setPhotoPresetKey}
+        open={isPhotoOpen}
+        selectedPresetKey={photoPresetKey}
+        status={photoStatus}
       />
 
       <AnimatePresence initial={false}>
@@ -302,10 +367,12 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
 function CameraControlOverlay({
   activeView,
   isConfigPanelOpen,
+  onPhoto,
   onSelect
 }: {
   activeView: CameraView;
   isConfigPanelOpen: boolean;
+  onPhoto: () => void;
   onSelect: (view: CameraView) => void;
 }) {
   return (
@@ -322,7 +389,7 @@ function CameraControlOverlay({
         initial={{ opacity: 0, y: 16 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-4 gap-1">
           {cameraViews.map((viewOption) => (
             <CameraViewButton
               active={activeView === viewOption.key}
@@ -332,6 +399,14 @@ function CameraControlOverlay({
               onClick={() => onSelect(viewOption.key)}
             />
           ))}
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 bg-signature px-3 text-sm font-semibold text-white transition-colors hover:bg-signature/85"
+            onClick={onPhoto}
+            type="button"
+          >
+            <Camera aria-hidden="true" size={16} strokeWidth={1.8} />
+            Foto
+          </button>
         </div>
       </motion.div>
     </div>
