@@ -4,15 +4,9 @@ import {
   Camera,
   Check,
   Copy,
-  Eye,
-  Palette,
   PanelRightClose,
-  Scan,
-  SlidersHorizontal,
   RotateCcw,
-  ShoppingBag,
-  View,
-  ZoomIn
+  SlidersHorizontal
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
@@ -43,10 +37,10 @@ type ConfiguratorShellProps = {
   locale?: LocaleCode;
 };
 
-const cameraViews: { key: CameraView; label: string; Icon: typeof Eye }[] = [
-  { key: "signature", label: "Raum", Icon: Eye },
-  { key: "front", label: "Front", Icon: Scan },
-  { key: "detail", label: "Detail", Icon: ZoomIn }
+const cameraViews: { key: CameraView; label: string }[] = [
+  { key: "signature", label: "Raum" },
+  { key: "front", label: "Front" },
+  { key: "detail", label: "Detail" }
 ];
 
 export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorShellProps) {
@@ -141,17 +135,10 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f4f0eb] text-ink">
+    <main className="relative min-h-screen overflow-hidden bg-canvas text-ink">
       <div className="absolute inset-0">
         <ConfiguratorCanvas cameraView={cameraView} captureRef={captureRef} state={config} />
       </div>
-
-      <motion.div
-        aria-hidden="true"
-        animate={{ opacity: isConfigPanelOpen ? 1 : 0.58 }}
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgb(244_240_235/.9)_0%,rgb(244_240_235/.42)_28%,rgb(244_240_235/.08)_58%,rgb(244_240_235/.72)_100%)]"
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      />
 
       <CameraControlOverlay
         activeView={cameraView}
@@ -176,14 +163,14 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
             animate={{ opacity: 1, x: 0 }}
             aria-expanded={false}
             aria-label="Konfiguration einblenden"
-            className="fixed right-4 top-24 z-30 inline-flex min-h-12 items-center gap-2 bg-ink px-4 text-xs font-semibold uppercase tracking-[0.08em] text-paper shadow-lift transition-colors hover:bg-graphite lg:right-8 lg:top-8"
+            className="fixed right-4 top-20 z-30 inline-flex min-h-11 items-center gap-2.5 border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink lg:right-8 lg:top-8"
             exit={{ opacity: 0, x: 14 }}
             initial={{ opacity: 0, x: 14 }}
             onClick={() => setConfigPanelOpen(true)}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             type="button"
           >
-            <SlidersHorizontal aria-hidden="true" size={16} strokeWidth={1.8} />
+            <SlidersHorizontal aria-hidden="true" size={15} strokeWidth={1.5} />
             Konfiguration
           </motion.button>
         )}
@@ -191,16 +178,29 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
 
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="pointer-events-none relative z-10 flex min-h-screen flex-col justify-between p-4 md:p-6 lg:flex-row lg:p-8"
-        initial={{ opacity: 0, y: 18 }}
+        className="pointer-events-none relative z-10 flex min-h-screen flex-col justify-between lg:flex-row"
+        initial={{ opacity: 0, y: 14 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="pointer-events-auto flex h-fit items-center justify-between gap-4 lg:w-[24rem]">
+        <div className="pointer-events-auto flex h-fit items-center justify-between gap-6 p-5 md:p-6 lg:p-8">
           <BrandLogo compact href="/" tone="dark" />
           <Link
-            className="bg-paper/80 px-4 py-3 text-xs font-medium uppercase tracking-[0.08em] text-ink backdrop-blur-xl transition-colors hover:bg-paper"
+            className="group inline-flex items-center gap-2 text-body leading-none text-graphite transition-colors hover:text-ink"
             href="/"
           >
+            <svg
+              aria-hidden="true"
+              className="size-3 transition-transform duration-300 ease-signature group-hover:-translate-x-0.5"
+              fill="none"
+              viewBox="0 0 12 12"
+            >
+              <path
+                d="M10 6H2m0 0 4-4M2 6l4 4"
+                stroke="currentColor"
+                strokeLinecap="square"
+                strokeWidth="1.2"
+              />
+            </svg>
             Zurück
           </Link>
         </div>
@@ -208,72 +208,61 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
         <AnimatePresence initial={false}>
           {isConfigPanelOpen && (
             <motion.section
-              animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-              className="pointer-events-auto mt-[46vh] w-full bg-paper/88 p-4 shadow-lift backdrop-blur-2xl md:p-6 lg:mt-0 lg:min-h-[calc(100vh-4rem)] lg:w-[26rem] lg:self-stretch lg:overflow-y-auto"
-              exit={{ opacity: 0, x: 32, filter: "blur(8px)" }}
-              initial={{ opacity: 0, x: 28, filter: "blur(8px)" }}
+              animate={{ opacity: 1, x: 0 }}
+              className="pointer-events-auto mt-[44vh] w-full border-t border-hairline bg-canvas p-6 md:p-8 lg:mt-0 lg:min-h-screen lg:w-[27rem] lg:self-stretch lg:overflow-y-auto lg:border-l lg:border-t-0"
+              exit={{ opacity: 0, x: 32 }}
+              initial={{ opacity: 0, x: 28 }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="mb-5 flex justify-end">
-                <button
-                  aria-expanded={true}
-                  aria-label="Konfiguration ausblenden"
-                  className="inline-flex min-h-10 items-center gap-2 border border-ink/10 bg-white/45 px-3 text-xs font-semibold uppercase tracking-[0.08em] text-ink transition-colors hover:border-ink/35 hover:bg-white/70"
-                  onClick={() => setConfigPanelOpen(false)}
-                  type="button"
-                >
-                  <PanelRightClose aria-hidden="true" size={16} strokeWidth={1.8} />
-                  Ausblenden
-                </button>
-              </div>
-
               <motion.div
                 animate="show"
                 initial="hidden"
                 variants={{
                   hidden: {},
-                  show: { transition: { staggerChildren: 0.07 } }
+                  show: { transition: { staggerChildren: 0.06 } }
                 }}
               >
                 <motion.div
                   variants={{
-                    hidden: { opacity: 0, y: 18 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.55 } }
+                    hidden: { opacity: 0, y: 12 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                   }}
                 >
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-signature">
-                    3D Immersion Prototype
-                  </p>
-                  <h1 className="mt-4 font-editorial text-[clamp(2.3rem,8vw,4.85rem)] leading-[0.9] text-ink">
+                  <div className="flex items-start justify-between gap-4">
+                    <p className="text-body uppercase tracking-[0.22em] text-graphite">
+                      Konfigurator
+                    </p>
+                    <button
+                      aria-expanded={true}
+                      aria-label="Konfiguration ausblenden"
+                      className="grid size-9 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
+                      onClick={() => setConfigPanelOpen(false)}
+                      type="button"
+                    >
+                      <PanelRightClose aria-hidden="true" size={15} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                  <h1 className="mt-5 text-lead text-ink">
                     {getLocalizedLabel(RDTD_KITCHEN_PRODUCT.title, locale)}
+                    <span className="text-signature">.</span>
                   </h1>
-                  <p className="mt-5 text-pretty text-sm leading-6 text-graphite">
+                  <p className="mt-3 text-pretty text-body text-graphite">
                     {getLocalizedLabel(RDTD_KITCHEN_PRODUCT.description, locale)}
                   </p>
                 </motion.div>
 
                 <motion.div
-                  className="mt-7 border-y border-ink/10 py-4"
+                  className="mt-8 flex items-baseline justify-between gap-4 border-t border-hairline pt-6"
                   variants={{
-                    hidden: { opacity: 0, y: 18 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.55 } }
+                    hidden: { opacity: 0, y: 12 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                   }}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.14em] text-graphite">Layout</p>
-                      <p className="mt-1 text-sm font-medium text-ink">Straight line kitchen</p>
-                    </div>
-                    <div className="grid size-12 place-items-center bg-ink text-paper">
-                      <View aria-hidden="true" size={20} strokeWidth={1.8} />
-                    </div>
-                  </div>
+                  <p className="text-body text-graphite">Layout</p>
+                  <p className="text-body text-ink">Küchenzeile, gerade</p>
                 </motion.div>
 
-                <ControlGroup
-                  icon={<Palette aria-hidden="true" size={18} strokeWidth={1.8} />}
-                  title="Korpusfarbe"
-                >
+                <ControlGroup title="Korpus">
                   <FinishPicker
                     activeKey={cabinetColor.key}
                     locale={locale}
@@ -282,10 +271,7 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                   />
                 </ControlGroup>
 
-                <ControlGroup
-                  icon={<Palette aria-hidden="true" size={18} strokeWidth={1.8} />}
-                  title="Frontfarbe"
-                >
+                <ControlGroup title="Front">
                   <FinishPicker
                     activeKey={frontColor.key}
                     locale={locale}
@@ -295,65 +281,57 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                 </ControlGroup>
 
                 <motion.div
-                  className="mt-8 space-y-4"
+                  className="mt-8 space-y-5 border-t border-hairline pt-6"
                   variants={{
-                    hidden: { opacity: 0, y: 18 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.55 } }
+                    hidden: { opacity: 0, y: 12 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                   }}
                 >
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.14em] text-graphite">
-                        Preisindikator
-                      </p>
-                      <p className="mt-1 text-[2rem] font-semibold leading-none text-ink">
-                        {formatCurrency(quote.totalCents, locale)}
-                      </p>
-                    </div>
-                    <p className="max-w-[9rem] text-right text-xs leading-5 text-graphite">
-                      Temporär aus Produktdaten. Später Commerce-ready.
+                  <div className="flex items-baseline justify-between gap-4">
+                    <p className="text-body text-graphite">Richtpreis</p>
+                    <p className="text-lead text-ink">
+                      {formatCurrency(quote.totalCents, locale)}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                     <a
-                      className="inline-flex min-h-12 items-center justify-center gap-2 bg-signature px-4 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
+                      className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
                       href={checkoutHref}
                     >
-                      <ShoppingBag aria-hidden="true" size={17} />
-                      Fake Checkout
+                      Zur Kasse
                     </a>
                     <button
                       aria-label="Share URL kopieren"
-                      className="grid size-12 place-items-center border border-ink/12 bg-white/65 text-ink transition-colors hover:border-ink/35"
+                      className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
                       onClick={copyShareUrl}
                       title="Share URL kopieren"
                       type="button"
                     >
                       {copied ? (
-                        <Check aria-hidden="true" size={18} />
+                        <Check aria-hidden="true" size={16} strokeWidth={1.5} />
                       ) : (
-                        <Copy aria-hidden="true" size={18} />
+                        <Copy aria-hidden="true" size={16} strokeWidth={1.5} />
                       )}
                     </button>
                     <button
                       aria-label="Konfiguration zurücksetzen"
-                      className="grid size-12 place-items-center border border-ink/12 bg-white/65 text-ink transition-colors hover:border-ink/35"
+                      className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
                       onClick={resetConfiguration}
                       title="Konfiguration zurücksetzen"
                       type="button"
                     >
-                      <RotateCcw aria-hidden="true" size={18} />
+                      <RotateCcw aria-hidden="true" size={16} strokeWidth={1.5} />
                     </button>
                   </div>
 
-                  <div className="min-h-5 text-xs text-graphite">
+                  <p className="min-h-5 text-body text-ash">
                     {isPending
-                      ? "Aktualisiere Szene..."
+                      ? "Aktualisiere Szene …"
                       : copied
                         ? "Share-Link kopiert."
-                        : "Änderungen werden in der URL gespeichert."}
-                  </div>
+                        : "Ihre Konfiguration wird in der URL gespeichert."}
+                  </p>
                 </motion.div>
               </motion.div>
             </motion.section>
@@ -377,37 +355,34 @@ function CameraControlOverlay({
 }) {
   return (
     <div
-      className={`pointer-events-auto fixed z-20 w-[min(calc(100vw-2rem),25rem)] -translate-x-1/2 ${
+      className={`pointer-events-auto fixed z-20 w-[min(calc(100vw-2.5rem),24rem)] -translate-x-1/2 ${
         isConfigPanelOpen
-          ? "left-1/2 top-[calc(46vh-5.25rem)] lg:left-[calc((100vw-26rem)/2)] lg:top-auto lg:bottom-8"
+          ? "left-1/2 top-[calc(44vh-4.5rem)] lg:left-[calc((100vw-27rem)/2)] lg:top-auto lg:bottom-8"
           : "bottom-6 left-1/2"
       }`}
     >
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="border border-white/50 bg-paper/72 p-2 shadow-lift backdrop-blur-2xl"
-        initial={{ opacity: 0, y: 16 }}
+        className="grid grid-cols-4 divide-x divide-hairline border border-hairline bg-canvas"
+        initial={{ opacity: 0, y: 12 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="grid grid-cols-4 gap-1">
-          {cameraViews.map((viewOption) => (
-            <CameraViewButton
-              active={activeView === viewOption.key}
-              icon={viewOption.Icon}
-              key={viewOption.key}
-              label={viewOption.label}
-              onClick={() => onSelect(viewOption.key)}
-            />
-          ))}
-          <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 bg-signature px-3 text-sm font-semibold text-white transition-colors hover:bg-signature/85"
-            onClick={onPhoto}
-            type="button"
-          >
-            <Camera aria-hidden="true" size={16} strokeWidth={1.8} />
-            Foto
-          </button>
-        </div>
+        {cameraViews.map((viewOption) => (
+          <CameraViewButton
+            active={activeView === viewOption.key}
+            key={viewOption.key}
+            label={viewOption.label}
+            onClick={() => onSelect(viewOption.key)}
+          />
+        ))}
+        <button
+          className="inline-flex min-h-11 items-center justify-center gap-2 bg-ink px-3 text-body leading-none text-paper transition-colors hover:bg-graphite"
+          onClick={onPhoto}
+          type="button"
+        >
+          <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
+          Foto
+        </button>
       </motion.div>
     </div>
   );
@@ -415,51 +390,38 @@ function CameraControlOverlay({
 
 function CameraViewButton({
   active,
-  icon: Icon,
   label,
   onClick
 }: {
   active: boolean;
-  icon: typeof Eye;
   label: string;
   onClick: () => void;
 }) {
   return (
     <button
       aria-pressed={active}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-sm font-semibold transition-colors ${
-        active ? "bg-ink text-paper" : "bg-white/45 text-ink hover:bg-white/75"
+      className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-body leading-none transition-colors ${
+        active ? "text-ink" : "text-graphite hover:text-ink"
       }`}
       onClick={onClick}
       type="button"
     >
-      <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
+      {active && <span aria-hidden="true" className="size-1.5 rounded-full bg-signature" />}
       {label}
     </button>
   );
 }
 
-function ControlGroup({
-  children,
-  icon,
-  title
-}: {
-  children: React.ReactNode;
-  icon?: React.ReactNode;
-  title: string;
-}) {
+function ControlGroup({ children, title }: { children: React.ReactNode; title: string }) {
   return (
     <motion.div
-      className="mt-7"
+      className="mt-8 border-t border-hairline pt-6"
       variants={{
-        hidden: { opacity: 0, y: 18 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.55 } }
+        hidden: { opacity: 0, y: 12 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
       }}
     >
-      <div className="mb-3 flex items-center gap-2">
-        {icon}
-        <h2 className="text-sm font-semibold text-ink">{title}</h2>
-      </div>
+      <h2 className="mb-4 text-body text-ink">{title}</h2>
       {children}
     </motion.div>
   );
@@ -477,15 +439,13 @@ function FinishPicker({
   options: FinishOption[];
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 gap-3">
       {options.map((option) => {
         const isActive = activeKey === option.key;
         return (
           <button
             aria-pressed={isActive}
-            className={`min-h-[5.6rem] border p-2 text-left transition-colors ${
-              isActive ? "border-ink bg-white" : "border-ink/10 bg-white/45 hover:border-ink/35"
-            }`}
+            className="group text-left"
             key={option.key}
             onClick={() => onSelect(option.key)}
             title={getLocalizedLabel(option.label, locale)}
@@ -493,14 +453,23 @@ function FinishPicker({
           >
             <span
               aria-hidden="true"
-              className="block h-8 w-full border border-ink/10 bg-cover bg-center"
+              className={`block aspect-[4/3] w-full border bg-cover bg-center transition-colors ${
+                isActive ? "border-ink" : "border-hairline group-hover:border-graphite"
+              }`}
               style={
                 option.textureUrl
                   ? { backgroundColor: option.hex, backgroundImage: `url(${option.textureUrl})` }
                   : { backgroundColor: option.hex }
               }
             />
-            <span className="mt-2 block text-xs font-medium leading-tight text-ink">
+            <span
+              className={`mt-2 flex items-center gap-1.5 text-body leading-tight ${
+                isActive ? "text-ink" : "text-graphite"
+              }`}
+            >
+              {isActive && (
+                <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-signature" />
+              )}
               {getLocalizedLabel(option.label, locale)}
             </span>
           </button>

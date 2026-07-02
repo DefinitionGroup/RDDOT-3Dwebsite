@@ -18,8 +18,9 @@
   --radius-hero: 0;
   --radius-soft: 0;
 
-  /* The single site-wide font weight. */
+  /* The single site-wide font weight; display headlines go light. */
   --font-weight-base: 400;
+  --font-weight-display: 200;
 
   --container: 82rem;
 }

@@ -37,7 +37,11 @@ const config: Config = {
       fontSize: {
         display: [
           "clamp(2.75rem, 7vw, 7rem)",
-          { lineHeight: "1", letterSpacing: "-0.03em" }
+          {
+            lineHeight: "1",
+            letterSpacing: "-0.03em",
+            fontWeight: "var(--font-weight-display)"
+          }
         ],
         lead: [
           "clamp(1.25rem, 2vw, 1.75rem)",

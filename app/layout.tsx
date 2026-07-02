@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const sans = Hanken_Grotesk({
-  subsets: ["latin"],
+const sans = localFont({
+  src: "./fonts/AspektaVF.woff2",
+  weight: "100 900",
   variable: "--font-sans",
   display: "swap"
 });
