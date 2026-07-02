@@ -1,6 +1,8 @@
 "use client";
 
 import { CameraControls, ContactShadows, Environment } from "@react-three/drei";
+import { EffectComposer, N8AO, ToneMapping } from "@react-three/postprocessing";
+import { ToneMappingMode } from "postprocessing";
 import { useEffect, useMemo, useRef, type ElementRef } from "react";
 import {
   ClampToEdgeWrapping,
@@ -61,7 +63,10 @@ export function KitchenScene({ cameraView, state }: KitchenSceneProps) {
         shadow-radius={5}
       />
       <spotLight angle={0.45} intensity={3.2} penumbra={0.7} position={[-3.2, 4.5, 3.4]} />
-      <Environment environmentIntensity={0.85} preset="apartment" />
+      {/* Self-hosted copy of drei's "apartment" preset (lebombo) — the preset
+          prop streams it from a GitHub CDN at runtime, which can stall and
+          suspend the whole canvas. */}
+      <Environment environmentIntensity={0.85} files="/hdri/lebombo_1k.hdr" />
 
       <group position={[0, -0.7, 0]}>
         <RoomShell floorTexture={floorTexture} skyTexture={skyTexture} />
@@ -76,6 +81,10 @@ export function KitchenScene({ cameraView, state }: KitchenSceneProps) {
         position={[0, -0.72, 0]}
         scale={8}
       />
+      <EffectComposer>
+        <N8AO aoRadius={0.4} distanceFalloff={0.75} intensity={3} />
+        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      </EffectComposer>
       <CameraControls
         dollySpeed={0.65}
         maxDistance={8.4}

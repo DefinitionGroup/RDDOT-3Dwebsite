@@ -7,6 +7,8 @@ export type FinishOption = {
   label: Record<LocaleCode, string>;
   hex: string;
   textureUrl?: string;
+  normalMapUrl?: string;
+  roughnessMapUrl?: string;
   material: "matte" | "satin" | "structured";
   priceDeltaCents: number;
   externalId?: string;

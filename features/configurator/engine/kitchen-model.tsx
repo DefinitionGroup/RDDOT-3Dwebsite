@@ -11,6 +11,7 @@ import {
   Object3D,
   RepeatWrapping,
   SRGBColorSpace,
+  Vector2,
   Vector3,
   type BufferGeometry,
   type Texture
@@ -26,10 +27,22 @@ type KitchenModelProps = {
 const KITCHEN_MODEL_PATH = "/models/kitchen-line.glb";
 const MODEL_SCALE = 1.18;
 
+const ALL_FINISHES = [
+  ...RDTD_KITCHEN_PRODUCT.cabinetColors,
+  ...RDTD_KITCHEN_PRODUCT.frontColors
+];
+
+// Albedo maps are sRGB photos; normal/roughness maps stay linear.
+const SRGB_TEXTURE_URLS = new Set(
+  ALL_FINISHES.flatMap((finish) => (finish.textureUrl ? [finish.textureUrl] : []))
+);
+
 const FINISH_TEXTURE_URLS = [
   ...new Set(
-    [...RDTD_KITCHEN_PRODUCT.cabinetColors, ...RDTD_KITCHEN_PRODUCT.frontColors].flatMap(
-      (finish) => (finish.textureUrl ? [finish.textureUrl] : [])
+    ALL_FINISHES.flatMap((finish) =>
+      [finish.textureUrl, finish.normalMapUrl, finish.roughnessMapUrl].filter(
+        (url): url is string => Boolean(url)
+      )
     )
   )
 ];
@@ -42,7 +55,9 @@ export function KitchenModel({ cabinetFinish, frontFinish }: KitchenModelProps) 
   const texturesByUrl = useMemo(() => {
     const entries = FINISH_TEXTURE_URLS.map((url, index) => {
       const texture = finishTextures[index];
-      texture.colorSpace = SRGBColorSpace;
+      if (SRGB_TEXTURE_URLS.has(url)) {
+        texture.colorSpace = SRGBColorSpace;
+      }
       texture.wrapS = RepeatWrapping;
       texture.wrapT = RepeatWrapping;
       texture.anisotropy = 8;
@@ -96,12 +111,24 @@ function createFinishMaterial(
   texturesByUrl: Map<string, Texture>,
   roughness: number
 ) {
-  const texture = finish.textureUrl ? texturesByUrl.get(finish.textureUrl) ?? null : null;
+  const map = finish.textureUrl ? texturesByUrl.get(finish.textureUrl) ?? null : null;
+  const normalMap = finish.normalMapUrl
+    ? texturesByUrl.get(finish.normalMapUrl) ?? null
+    : null;
+  const roughnessMap = finish.roughnessMapUrl
+    ? texturesByUrl.get(finish.roughnessMapUrl) ?? null
+    : null;
+  const baseRoughness = finish.material === "structured" ? Math.max(roughness, 0.58) : roughness;
 
   return new MeshStandardMaterial({
-    color: new Color(texture ? "#ffffff" : finish.hex),
-    map: texture,
-    roughness: finish.material === "structured" ? Math.max(roughness, 0.58) : roughness
+    color: new Color(map ? "#ffffff" : finish.hex),
+    map,
+    normalMap,
+    normalScale: new Vector2(0.65, 0.65),
+    // With a roughness map the texel value carries the finish; without it the
+    // scalar does.
+    roughness: roughnessMap ? 1 : baseRoughness,
+    roughnessMap
   });
 }
 

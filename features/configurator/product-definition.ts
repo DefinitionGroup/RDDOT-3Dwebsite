@@ -87,17 +87,11 @@ export const RDTD_KITCHEN_PRODUCT: ConfiguratorProductDefinition = {
       label: { de: "Nussbaum Memory", en: "Walnut Memory", es: "Nogal Memory" },
       hex: "#5d3f2e",
       textureUrl: "/images/material-walnut-memory-wn832.png",
+      normalMapUrl: "/images/material-walnut-memory-wn832-normal.png",
+      roughnessMapUrl: "/images/material-walnut-memory-wn832-rough.png",
       material: "structured",
       priceDeltaCents: 58000,
       externalId: "front-walnut-memory-wn832"
-    },
-    {
-      key: "sage",
-      label: { de: "Salbei", en: "Sage", es: "Salvia" },
-      hex: "#9aa18d",
-      material: "matte",
-      priceDeltaCents: 35000,
-      externalId: "front-sage"
     }
   ],
   priceBook: {
