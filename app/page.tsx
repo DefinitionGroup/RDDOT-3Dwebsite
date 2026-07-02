@@ -1,3 +1,4 @@
+import { SiteFooter } from "@/components/design-system/site-footer";
 import { SiteHeader } from "@/components/design-system/site-header";
 import { CollectionCompare } from "@/components/sections/collection-compare";
 import { MaterialRhythm } from "@/components/sections/material-rhythm";
@@ -14,6 +15,7 @@ export default function Home() {
         <MaterialRhythm />
         <CollectionCompare />
       </main>
+      <SiteFooter />
     </>
   );
 }

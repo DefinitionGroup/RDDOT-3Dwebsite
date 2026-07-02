@@ -1,19 +1,14 @@
-"use client";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 
-import Image from "next/image";
-import { motion } from "motion/react";
-import type { HTMLMotionProps } from "motion/react";
-import type { ReactNode } from "react";
-
-type SignatureButtonProps = HTMLMotionProps<"a"> & {
+type SignatureButtonProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   children: ReactNode;
   tone?: "solid" | "glass" | "light";
 };
 
 const toneClass = {
-  solid: "bg-graphite text-porcelain hover:bg-ink",
-  glass: "bg-white/12 text-white ring-1 ring-white/15 hover:bg-white/20",
-  light: "bg-paper text-ink hover:bg-porcelain"
+  solid: "border border-ink bg-ink text-paper hover:bg-transparent hover:text-ink",
+  glass: "border border-white/40 bg-transparent text-white hover:border-white hover:bg-white hover:text-ink",
+  light: "border border-ink bg-transparent text-ink hover:bg-ink hover:text-paper"
 };
 
 export function SignatureButton({
@@ -23,26 +18,26 @@ export function SignatureButton({
   href = "#",
   ...props
 }: SignatureButtonProps) {
-  const iconSrc =
-    tone === "light" ? "/images/icon-arrow-up-right-dark.svg" : "/images/icon-arrow-up-right.svg";
-
   return (
-    <motion.a
-      className={`group inline-flex min-h-10 items-center gap-3 px-4 py-3 text-[0.75rem] font-medium leading-none transition-colors duration-300 ease-signature ${toneClass[tone]} ${className}`}
+    <a
+      className={`group inline-flex min-h-11 items-center gap-3 px-6 py-3 text-body leading-none transition-colors duration-300 ease-signature ${toneClass[tone]} ${className}`}
       href={href}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
       {...props}
     >
       <span>{children}</span>
-      <span className="relative size-3.5 overflow-hidden">
-        <Image
-          alt=""
-          className="object-contain transition-transform duration-300 ease-signature group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-          fill
-          src={iconSrc}
+      <svg
+        aria-hidden="true"
+        className="size-3 transition-transform duration-300 ease-signature group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        fill="none"
+        viewBox="0 0 12 12"
+      >
+        <path
+          d="M2 10 10 2M4 2h6v6"
+          stroke="currentColor"
+          strokeLinecap="square"
+          strokeWidth="1.2"
         />
-      </span>
-    </motion.a>
+      </svg>
+    </a>
   );
 }

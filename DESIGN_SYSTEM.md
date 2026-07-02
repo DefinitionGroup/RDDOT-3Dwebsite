@@ -1,34 +1,34 @@
-# rotpunkt Signature Design System
+# rotpunkt Signature — "Galerie" Design System
 
-This first pass turns the two Figma versions into a modular Tailwind and Next.js foundation.
+A boutique, gallery-minimal system: one typeface, one weight, three sizes, one accent.
 
-## Direction
+## Principles
 
-- Use version 2 as the primary ecommerce direction: one immersive image-led hero, brand/navigation integrated into the scene, and a compact collection action rail.
-- Keep version 1 as a module library source: image panels, collection compare blocks, editorial text rhythm, glass labels, and red/amber accent details.
-- Improvement applied: the first viewport elevates `rotpunkt Signature` as the hero-level product signal, while the Figma line `Von 0 auf 100°C in 4 Klicks.` becomes supporting copy.
+- **Gallery white.** Flat off-white field (`canvas`), near-black `ink`, hairline gray structure. No gradients, no glass, no shadows on the landing page.
+- **One accent.** Red exists only as the rotpunkt dot: the logo, the feature markers, and the trailing full stop of every headline (`RedStop`).
+- **One typeface, one weight.** Hanken Grotesk (variable, via `next/font`), weight controlled by a single token: `--font-weight-base` in `app/globals.css` (also exposed as Tailwind `font-base`). Change 400 → 300/500 in one line.
+- **Three sizes.** `text-display` (monumental headlines, clamps to 7rem), `text-lead` (supporting statements), `text-body` (everything else: copy, nav, buttons, captions).
+- **Sharp geometry.** 0px radius everywhere; structure drawn with 1px `hairline` borders.
+- **Framed photography.** Images sit inside the content grid with captions below, like plates in a monograph. Never full-bleed.
+- **Quiet cinema.** One shared easing (`ease-signature`), fades and 12–16px rises, plus a slow 1.8–2.4s scale-in on images. No blur, no 3D rotations, no long staggers.
 
-## Tailwind Tokens
+## Tokens
 
-- Colors are defined as CSS RGB variables in `app/globals.css` and mapped in `tailwind.config.ts`.
-- Core tokens: `canvas`, `paper`, `mist`, `ink`, `graphite`, `ash`, `porcelain`, `signature`, `ember`.
-- Type tokens: `font-brand`, `font-sans`, `font-editorial`.
-- Shape tokens: `rounded-hero` for the immersive first viewport and `rounded-soft` for small controls.
-- Motion tokens: `ease-signature`, `animate-ambient-pan`, and `animate-soft-reveal`.
+- Colors: `canvas`, `paper`, `mist`, `ink`, `graphite`, `ash`, `porcelain`, `hairline`, `signature` (red). `ember` is aliased to `signature` for legacy configurator styles.
+- Type: `text-display` / `text-lead` / `text-body`, `font-base` weight token.
+- Radius tokens `rounded-hero`/`rounded-soft` resolve to 0.
 
 ## Components
 
-- `BrandLogo`: reusable `rotpunkt | Signature` lockup with light/dark variants.
-- `SiteHeader`: image-overlay navigation with collection/config/process links and cart indicator.
-- `SignatureButton`: reusable CTA using motion.dev hover/tap interactions and Figma arrow asset.
-- `CollectionStep`: reusable hero rail item for collection or process steps.
-- `ImagePanel`: reusable image module with optional glass caption and CTA.
-- `SectionHeading`: consistent editorial section heading.
-- `FeatureList`: reusable red-dot narrative list.
+- `BrandLogo` — rotpunkt • Signature lockup, one weight, hairline divider.
+- `SiteHeader` — wordmark, three single-word links, cart; hairline bottom border appears on scroll.
+- `SignatureButton` — sharp 1px-border button, tones `solid` / `light` / `glass` (dark grounds).
+- `SectionHeading` + `RedStop` — display headlines with the red-dot full stop.
+- `ImagePanel` — framed image plate with caption and slow scale-in.
+- `FeatureList` — hairline-divided rows with red dot markers.
+- `SiteFooter` — hairline top, wordmark, links, copyright.
 
-## Next Ecom Steps
+## Notes
 
-- Connect collection modules to real product or CMS data.
-- Add PDP-level components: finish swatches, dimension selector, price/lead-time panel, and configurator entry.
-- Add Storybook or a component docs route once product states and variants are known.
-- Add accessibility QA for final copy and contrast after brand content replaces prototype text.
+- The configurator (`features/configurator`) and checkout still use legacy tokens (`glass-surface`, `porcelain`, etc.) — kept defined for compatibility; restyle them next to match Galerie.
+- No mobile nav menu yet (links hidden below `md`).

@@ -1,59 +1,38 @@
 "use client";
 
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { CartIndicator } from "@/components/design-system/cart-indicator";
 import { navItems } from "@/lib/content";
 
 export function SiteHeader() {
   const { scrollY } = useScroll();
-  const [isHidden, setIsHidden] = useState(false);
-  const hasObservedScroll = useRef(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = scrollY.getPrevious() ?? latest;
-
-    if (!hasObservedScroll.current) {
-      hasObservedScroll.current = true;
-      return;
-    }
-
-    if (latest < 24) {
-      setIsHidden(false);
-      return;
-    }
-
-    if (latest > previous && latest > 120) {
-      setIsHidden(true);
-      return;
-    }
-
-    if (latest < previous) {
-      setIsHidden(false);
-    }
+    setIsScrolled(latest > 12);
   });
 
   return (
     <motion.header
-      animate={{ opacity: isHidden ? 0 : 1, y: isHidden ? "-115%" : 0 }}
-      className="pointer-events-none fixed inset-x-0 top-0 z-50 px-4 pt-4 md:px-10 md:pt-6"
-      initial={{ opacity: 0, y: -28 }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      animate={{ y: 0, opacity: 1 }}
+      className={`fixed inset-x-0 top-0 z-50 border-b bg-canvas/90 backdrop-blur-sm transition-colors duration-500 ${
+        isScrolled ? "border-hairline" : "border-transparent"
+      }`}
+      initial={{ y: -16, opacity: 0 }}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
     >
-      <nav className="pointer-events-auto mx-auto flex max-w-[1540px] items-center justify-between bg-black/68 px-4 py-3 shadow-glass backdrop-blur-xl md:px-7 md:py-2.5">
-        <BrandLogo tone="light" />
-        <div className="hidden items-center gap-10 lg:flex">
+      <nav className="signature-container flex items-center justify-between py-5">
+        <BrandLogo />
+        <div className="hidden items-center gap-12 md:flex">
           {navItems.map((item) => (
             <a
-              className="group w-32 text-porcelain transition-colors duration-300 hover:text-white"
+              className="text-body text-graphite transition-colors duration-300 hover:text-ink"
               href={item.href}
               key={item.title}
             >
-              <span className="block text-[0.94rem] leading-[1.45]">{item.title}</span>
-              <span className="mt-0.5 block text-[0.72rem] font-medium leading-tight opacity-78 transition-opacity group-hover:opacity-100">
-                {item.description}
-              </span>
+              {item.title}
             </a>
           ))}
         </div>

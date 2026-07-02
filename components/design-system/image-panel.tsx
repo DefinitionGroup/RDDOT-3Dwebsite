@@ -2,48 +2,50 @@
 
 import Image from "next/image";
 import { motion } from "motion/react";
-import { SignatureButton } from "@/components/design-system/button";
 
 type ImagePanelProps = {
   alt: string;
-  cta?: string;
-  eyebrow?: string;
   image: string;
+  caption?: string;
   priority?: boolean;
-  title?: string;
+  ratio?: string;
 };
 
-export function ImagePanel({ alt, cta, eyebrow, image, priority = false, title }: ImagePanelProps) {
+export function ImagePanel({
+  alt,
+  image,
+  caption,
+  priority = false,
+  ratio = "aspect-[4/3]"
+}: ImagePanelProps) {
   return (
     <motion.figure
-      className="relative isolate min-h-[28rem] overflow-hidden bg-ink"
-      initial={{ opacity: 1, y: 28 }}
-      transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-      viewport={{ once: true, amount: 0.25 }}
+      className="m-0"
+      initial={{ opacity: 0, y: 14 }}
+      transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+      viewport={{ once: true, amount: 0.2 }}
       whileInView={{ opacity: 1, y: 0 }}
     >
-      <Image
-        alt={alt}
-        className="object-cover transition-transform duration-700 ease-signature hover:scale-[1.025]"
-        fill
-        priority={priority}
-        sizes="(min-width: 1024px) 50vw, 100vw"
-        src={image}
-      />
-      {title && (
-        <figcaption className="glass-surface absolute bottom-6 left-6 max-w-[19rem] p-6 text-white md:bottom-8 md:left-8">
-          <h3 className="font-brand text-[2rem] font-medium leading-none">{title}</h3>
-          {eyebrow && (
-            <p className="mt-4 max-w-28 text-[0.72rem] font-medium leading-tight text-porcelain">
-              {eyebrow}
-            </p>
-          )}
-          {cta && (
-            <SignatureButton className="mt-4" href="#collections">
-              {cta}
-            </SignatureButton>
-          )}
-        </figcaption>
+      <div className={`relative overflow-hidden bg-mist ${ratio}`}>
+        <motion.div
+          className="absolute inset-0"
+          initial={{ scale: 1.06 }}
+          transition={{ duration: 1.8, ease: [0.22, 1, 0.36, 1] }}
+          viewport={{ once: true, amount: 0.2 }}
+          whileInView={{ scale: 1 }}
+        >
+          <Image
+            alt={alt}
+            className="object-cover"
+            fill
+            priority={priority}
+            sizes="(min-width: 1024px) 60vw, 100vw"
+            src={image}
+          />
+        </motion.div>
+      </div>
+      {caption && (
+        <figcaption className="mt-3 text-body text-graphite">{caption}</figcaption>
       )}
     </motion.figure>
   );

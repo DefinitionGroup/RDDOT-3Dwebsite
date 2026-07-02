@@ -9,20 +9,20 @@ type FeatureListProps = {
 
 export function FeatureList({ features }: FeatureListProps) {
   return (
-    <div className="grid gap-8">
+    <div className="grid">
       {features.map((feature, index) => (
         <motion.article
-          className="grid grid-cols-[0.9rem_1fr] gap-4"
-          initial={{ opacity: 1, y: 16 }}
+          className="grid grid-cols-[0.75rem_1fr] gap-5 border-t border-hairline py-7 last:border-b"
+          initial={{ opacity: 0, y: 12 }}
           key={feature.title}
-          transition={{ delay: index * 0.06, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: index * 0.05, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           viewport={{ once: true, amount: 0.35 }}
           whileInView={{ opacity: 1, y: 0 }}
         >
-          <span className="mt-2 block size-3 rounded-full bg-signature" />
+          <span className="mt-[0.45rem] block size-2 rounded-full bg-signature" />
           <div>
-            <h3 className="text-[1rem] font-medium text-ink">{feature.title}</h3>
-            <p className="mt-2 max-w-[34rem] text-pretty text-[0.94rem] leading-[1.65] text-graphite">
+            <h3 className="text-body text-ink">{feature.title}</h3>
+            <p className="mt-1.5 max-w-[34rem] text-pretty text-body text-graphite">
               {feature.body}
             </p>
           </div>

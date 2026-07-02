@@ -4,28 +4,23 @@ import { SignatureButton } from "@/components/design-system/button";
 
 export function MaterialRhythm() {
   return (
-    <section className="py-16 md:py-28" id="configure">
-      <div className="signature-container grid gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-end lg:gap-20">
+    <section className="pb-28 md:pb-44" id="configure">
+      <div className="signature-container grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:items-end lg:gap-24">
         <div>
-          <SectionHeading title="Material, Licht und Auswahl als System." />
-          <p className="mt-8 max-w-[30rem] text-pretty text-[1rem] leading-[1.72] text-graphite">
-            Version 1 bringt gute Bausteine für spätere Produktmodule: breite
-            Raumansichten, Detailbilder und kurze Copy-Blöcke. Statt sie zu
-            stapeln, wird jedes Motiv einem klaren Zweck zugeordnet.
+          <SectionHeading title="Ihr Raum. Ihre Küche." />
+          <p className="mt-8 max-w-[26rem] text-pretty text-lead text-graphite">
+            Stellen Sie Front, Stein und Licht in Echtzeit zusammen — im
+            3D-Konfigurator.
           </p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <SignatureButton href="/configure">3D Konfigurator öffnen</SignatureButton>
-            <SignatureButton href="#collections" tone="light">
-              Linien vergleichen
-            </SignatureButton>
+          <div className="mt-10">
+            <SignatureButton href="/configure">3D-Konfigurator öffnen</SignatureButton>
           </div>
         </div>
         <ImagePanel
           alt="Dunkle Küche mit Industrie-Fenstern und großzügiger Arbeitsinsel"
+          caption="Agile — Industriefenster, mattes Schwarz"
           image="/images/signature-panorama.png"
-          title="Agile"
-          eyebrow="Effizienz. Mit Klasse."
-          cta="Zum Modul"
+          ratio="aspect-[16/10]"
         />
       </div>
     </section>

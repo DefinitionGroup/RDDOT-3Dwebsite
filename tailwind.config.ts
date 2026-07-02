@@ -24,38 +24,46 @@ const config: Config = {
         graphite: "rgb(var(--color-graphite) / <alpha-value>)",
         ash: "rgb(var(--color-ash) / <alpha-value>)",
         porcelain: "rgb(var(--color-porcelain) / <alpha-value>)",
+        hairline: "rgb(var(--color-hairline) / <alpha-value>)",
         signature: "rgb(var(--color-signature) / <alpha-value>)",
-        ember: "rgb(var(--color-ember) / <alpha-value>)"
+        ember: "rgb(var(--color-signature) / <alpha-value>)"
       },
       fontFamily: {
-        sans: ["General Sans", "Funnel Sans", "Avenir Next", "sans-serif"],
-        brand: ["Funnel Sans", "General Sans", "Avenir Next", "sans-serif"],
-        editorial: ["Crimson Text", "Georgia", "serif"]
+        sans: ["var(--font-sans)", "Helvetica Neue", "Arial", "sans-serif"],
+        brand: ["var(--font-sans)", "Helvetica Neue", "Arial", "sans-serif"],
+        editorial: ["var(--font-sans)", "Helvetica Neue", "Arial", "sans-serif"]
+      },
+      // The entire site uses exactly three sizes.
+      fontSize: {
+        display: [
+          "clamp(2.75rem, 7vw, 7rem)",
+          { lineHeight: "1", letterSpacing: "-0.03em" }
+        ],
+        lead: [
+          "clamp(1.25rem, 2vw, 1.75rem)",
+          { lineHeight: "1.3", letterSpacing: "-0.01em" }
+        ],
+        body: ["0.9375rem", { lineHeight: "1.7", letterSpacing: "0" }]
+      },
+      // The single site-wide weight — change --font-weight-base in globals.css.
+      fontWeight: {
+        base: "var(--font-weight-base)"
       },
       borderRadius: {
         hero: "var(--radius-hero)",
         soft: "var(--radius-soft)"
       },
-      boxShadow: {
-        glass: "0 24px 80px rgb(17 16 15 / 0.18)",
-        lift: "0 28px 70px rgb(57 53 49 / 0.16)"
-      },
       transitionTimingFunction: {
         signature: "cubic-bezier(.22, 1, .36, 1)"
       },
       keyframes: {
-        "ambient-pan": {
-          "0%": { transform: "translate3d(0, 0, 0) scale(1.035)" },
-          "100%": { transform: "translate3d(-1.5%, 1%, 0) scale(1.07)" }
-        },
         "soft-reveal": {
-          "0%": { opacity: "0", transform: "translateY(18px)" },
+          "0%": { opacity: "0", transform: "translateY(14px)" },
           "100%": { opacity: "1", transform: "translateY(0)" }
         }
       },
       animation: {
-        "ambient-pan": "ambient-pan 18s ease-in-out alternate infinite",
-        "soft-reveal": "soft-reveal .9s cubic-bezier(.22, 1, .36, 1) both"
+        "soft-reveal": "soft-reveal .8s cubic-bezier(.22, 1, .36, 1) both"
       }
     }
   },
