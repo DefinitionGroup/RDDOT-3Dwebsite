@@ -209,7 +209,7 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
           {isConfigPanelOpen && (
             <motion.section
               animate={{ opacity: 1, x: 0 }}
-              className="pointer-events-auto mt-[44vh] w-full border-t border-hairline bg-canvas p-6 md:p-8 lg:mt-0 lg:min-h-screen lg:w-[27rem] lg:self-stretch lg:overflow-y-auto lg:border-l lg:border-t-0"
+              className="pointer-events-auto mt-[56vh] w-full border-t border-hairline bg-canvas p-6 md:p-8 lg:mt-0 lg:min-h-screen lg:w-[27rem] lg:self-stretch lg:overflow-y-auto lg:border-l lg:border-t-0"
               exit={{ opacity: 0, x: 32 }}
               initial={{ opacity: 0, x: 28 }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
@@ -357,7 +357,7 @@ function CameraControlOverlay({
     <div
       className={`pointer-events-auto fixed z-20 w-[min(calc(100vw-2.5rem),24rem)] -translate-x-1/2 ${
         isConfigPanelOpen
-          ? "left-1/2 top-[calc(44vh-4.5rem)] lg:left-[calc((100vw-27rem)/2)] lg:top-auto lg:bottom-8"
+          ? "left-1/2 top-[calc(56vh-4.5rem)] lg:left-[calc((100vw-27rem)/2)] lg:top-auto lg:bottom-8"
           : "bottom-6 left-1/2"
       }`}
     >
