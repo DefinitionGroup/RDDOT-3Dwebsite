@@ -10,7 +10,7 @@ export function ProductStory() {
         <ImagePanel
           alt="Signature Küche bei Abendlicht mit Glasfront und Holzdecke"
           caption="Exclusive Line — Abendlicht, Glas, Eiche"
-          image="/images/signature-detail.png"
+          image="/images/signature-detail.webp"
           ratio="aspect-[3/4] md:aspect-[4/5]"
         />
         <div className="lg:sticky lg:top-32">

@@ -103,7 +103,7 @@ export function KitchenScene({ cameraView, state, visualization }: KitchenSceneP
         backgroundRotation={[0, -0.55, 0]}
         environmentIntensity={isApartment ? 0.82 : 1.08}
         environmentRotation={[0, -0.55, 0]}
-        files="/hdri/qwantani_dusk_2_2k.hdr"
+        files="/hdri/qwantani_dusk_1k.hdr"
       />
 
       {isApartment ? (

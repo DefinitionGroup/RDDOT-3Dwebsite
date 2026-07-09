@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "rotpunkt Signature",
     description: "Premium Küchen, geplant auf den Punkt.",
-    images: ["/images/signature-hero.png"]
+    images: ["/images/signature-hero.jpg"]
   }
 };
 

@@ -19,7 +19,7 @@ export function MaterialRhythm() {
         <ImagePanel
           alt="Dunkle Küche mit Industrie-Fenstern und großzügiger Arbeitsinsel"
           caption="Agile — Industriefenster, mattes Schwarz"
-          image="/images/signature-panorama.png"
+          image="/images/signature-panorama.webp"
           ratio="aspect-[16/10]"
         />
       </div>

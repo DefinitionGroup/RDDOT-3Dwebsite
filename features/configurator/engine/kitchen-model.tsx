@@ -54,7 +54,7 @@ export function KitchenModel({ cabinetFinish, frontFinish }: KitchenModelProps) 
 
   const texturesByUrl = useMemo(() => {
     const entries = FINISH_TEXTURE_URLS.map((url, index) => {
-      const texture = finishTextures[index];
+      const texture = finishTextures[index].clone();
       if (SRGB_TEXTURE_URLS.has(url)) {
         texture.colorSpace = SRGBColorSpace;
       }
@@ -67,6 +67,12 @@ export function KitchenModel({ cabinetFinish, frontFinish }: KitchenModelProps) 
 
     return new Map<string, Texture>(entries);
   }, [finishTextures]);
+
+  useEffect(() => {
+    return () => {
+      texturesByUrl.forEach((texture) => texture.dispose());
+    };
+  }, [texturesByUrl]);
 
   useEffect(() => {
     const materials = {

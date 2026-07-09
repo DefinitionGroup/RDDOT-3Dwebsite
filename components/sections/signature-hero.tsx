@@ -85,7 +85,7 @@ export function SignatureHero() {
                 fill
                 priority
                 sizes="100vw"
-                src="/images/signature-hero.png"
+                src="/images/signature-hero.jpg"
               />
             </motion.div>
           </div>

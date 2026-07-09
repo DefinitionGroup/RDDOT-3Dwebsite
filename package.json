@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "optimize:apartment": "node scripts/optimize-apartment-model.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -25,6 +26,7 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.4.1",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
