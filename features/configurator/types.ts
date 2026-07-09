@@ -52,3 +52,5 @@ export type ConfiguratorQuote = {
 };
 
 export type CameraView = "signature" | "front" | "detail";
+
+export type VisualizationMode = "studio" | "apartment";

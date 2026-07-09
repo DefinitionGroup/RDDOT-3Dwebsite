@@ -2,7 +2,11 @@
 
 import { Canvas, useThree } from "@react-three/fiber";
 import { Suspense, useEffect } from "react";
-import type { CameraView, ConfiguratorState } from "@/features/configurator/types";
+import type {
+  CameraView,
+  ConfiguratorState,
+  VisualizationMode
+} from "@/features/configurator/types";
 import type { SceneCaptureRef } from "@/features/configurator/photo/use-scene-capture";
 import { KitchenScene } from "@/features/configurator/engine/kitchen-scene";
 
@@ -10,9 +14,15 @@ type ConfiguratorCanvasProps = {
   cameraView: CameraView;
   captureRef?: SceneCaptureRef;
   state: ConfiguratorState;
+  visualization: VisualizationMode;
 };
 
-export function ConfiguratorCanvas({ cameraView, captureRef, state }: ConfiguratorCanvasProps) {
+export function ConfiguratorCanvas({
+  cameraView,
+  captureRef,
+  state,
+  visualization
+}: ConfiguratorCanvasProps) {
   return (
     <Canvas
       camera={{ fov: 38, position: [4.2, 2.4, 5.6] }}
@@ -26,7 +36,7 @@ export function ConfiguratorCanvas({ cameraView, captureRef, state }: Configurat
       shadows="variance"
     >
       <Suspense fallback={null}>
-        <KitchenScene cameraView={cameraView} state={state} />
+        <KitchenScene cameraView={cameraView} state={state} visualization={visualization} />
         {captureRef ? <CaptureBridge captureRef={captureRef} /> : null}
       </Suspense>
     </Canvas>

@@ -29,7 +29,8 @@ import type {
   CameraView,
   ConfiguratorState,
   FinishOption,
-  LocaleCode
+  LocaleCode,
+  VisualizationMode
 } from "@/features/configurator/types";
 
 type ConfiguratorShellProps = {
@@ -48,6 +49,7 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   const [cameraView, setCameraView] = useState<CameraView>("signature");
   const [copied, setCopied] = useState(false);
   const [isConfigPanelOpen, setConfigPanelOpen] = useState(true);
+  const [visualization, setVisualization] = useState<VisualizationMode>("studio");
   const [isPending, startTransition] = useTransition();
   const [isPhotoOpen, setPhotoOpen] = useState(false);
   const [photoPresetKey, setPhotoPresetKey] = useState(PHOTO_PRESETS[0].key);
@@ -137,7 +139,12 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   return (
     <main className="relative min-h-screen overflow-hidden bg-canvas text-ink">
       <div className="absolute inset-0">
-        <ConfiguratorCanvas cameraView={cameraView} captureRef={captureRef} state={config} />
+        <ConfiguratorCanvas
+          cameraView={cameraView}
+          captureRef={captureRef}
+          state={config}
+          visualization={visualization}
+        />
       </div>
 
       <CameraControlOverlay
@@ -251,6 +258,8 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                   </p>
                 </motion.div>
 
+                <VisualizationTabs active={visualization} onSelect={setVisualization} />
+
                 <motion.div
                   className="mt-8 flex items-baseline justify-between gap-4 border-t border-hairline pt-6"
                   variants={{
@@ -339,6 +348,55 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
         </AnimatePresence>
       </motion.div>
     </main>
+  );
+}
+
+function VisualizationTabs({
+  active,
+  onSelect
+}: {
+  active: VisualizationMode;
+  onSelect: (mode: VisualizationMode) => void;
+}) {
+  const options: { key: VisualizationMode; label: string }[] = [
+    { key: "studio", label: "Studio" },
+    { key: "apartment", label: "Appartement" }
+  ];
+
+  return (
+    <motion.div
+      className="mt-8 border-t border-hairline pt-6"
+      variants={{
+        hidden: { opacity: 0, y: 12 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+      }}
+    >
+      <p className="mb-4 text-body text-graphite">Visualisierung</p>
+      <div
+        aria-label="Visualisierung"
+        className="grid grid-cols-2 divide-x divide-hairline border border-hairline"
+        role="tablist"
+      >
+        {options.map((option) => {
+          const isActive = active === option.key;
+
+          return (
+            <button
+              aria-selected={isActive}
+              className={`min-h-11 px-4 text-body transition-colors ${
+                isActive ? "bg-ink text-paper" : "text-graphite hover:text-ink"
+              }`}
+              key={option.key}
+              onClick={() => onSelect(option.key)}
+              role="tab"
+              type="button"
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 }
 
