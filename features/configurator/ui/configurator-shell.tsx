@@ -1,17 +1,20 @@
 "use client";
 
+import { useProgress } from "@react-three/drei";
 import {
   Camera,
   Check,
   Copy,
   PanelRightClose,
   RotateCcw,
+  ScanLine,
   SlidersHorizontal
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
+import { preloadApartmentModel } from "@/features/configurator/engine/apartment-model";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import {
   findFinish,
@@ -52,6 +55,8 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   const [visualization, setVisualization] = useState<VisualizationMode>("studio");
   const [isPending, startTransition] = useTransition();
   const [isPhotoOpen, setPhotoOpen] = useState(false);
+  const [pathTracing, setPathTracing] = useState(false);
+  const [renderRequested, setRenderRequested] = useState(false);
   const [photoPresetKey, setPhotoPresetKey] = useState(PHOTO_PRESETS[0].key);
   const [photoStatus, setPhotoStatus] = useState<PhotoStatus>({ phase: "idle" });
   const { captureRef, capturePhoto } = useSceneCapture();
@@ -61,16 +66,52 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   const quote = getConfiguratorQuote(config);
   const encodedConfig = encodeConfiguration(config);
   const checkoutHref = `/checkout?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
+  const renderActive = pathTracing || renderRequested;
 
   useEffect(() => {
     const path = `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
     window.history.replaceState(null, "", path);
   }, [encodedConfig]);
 
+  useEffect(() => {
+    const timeout = window.setTimeout(preloadApartmentModel, 450);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!renderRequested) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setPathTracing(true);
+      setRenderRequested(false);
+    }, 80);
+
+    return () => window.clearTimeout(timeout);
+  }, [renderRequested]);
+
+  function stopRender() {
+    setRenderRequested(false);
+    setPathTracing(false);
+  }
+
   function updateConfig(next: Partial<ConfiguratorState>) {
+    stopRender();
     startTransition(() => {
       setConfig((current) => normalizeConfiguratorState({ ...current, ...next }));
     });
+  }
+
+  function selectCameraView(view: CameraView) {
+    stopRender();
+    setCameraView(view);
+  }
+
+  function selectVisualization(mode: VisualizationMode) {
+    stopRender();
+    setVisualization(mode);
   }
 
   async function copyShareUrl() {
@@ -82,8 +123,19 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   }
 
   function openPhoto() {
+    stopRender();
     setPhotoStatus({ phase: "idle" });
     setPhotoOpen(true);
+  }
+
+  function togglePathTracing() {
+    setPhotoOpen(false);
+    if (renderActive) {
+      stopRender();
+      return;
+    }
+
+    setRenderRequested(true);
   }
 
   async function generatePhoto() {
@@ -142,16 +194,22 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
         <ConfiguratorCanvas
           cameraView={cameraView}
           captureRef={captureRef}
+          onCameraInteraction={stopRender}
+          pathTracing={pathTracing}
           state={config}
           visualization={visualization}
         />
       </div>
 
+      <VisualizationPreloader active={visualization === "apartment"} />
+
       <CameraControlOverlay
         activeView={cameraView}
         isConfigPanelOpen={isConfigPanelOpen}
         onPhoto={openPhoto}
-        onSelect={setCameraView}
+        onRender={togglePathTracing}
+        onSelect={selectCameraView}
+        renderActive={renderActive}
       />
 
       <PhotoPopover
@@ -258,7 +316,7 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                   </p>
                 </motion.div>
 
-                <VisualizationTabs active={visualization} onSelect={setVisualization} />
+                <VisualizationTabs active={visualization} onSelect={selectVisualization} />
 
                 <motion.div
                   className="mt-8 flex items-baseline justify-between gap-4 border-t border-hairline pt-6"
@@ -351,6 +409,68 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   );
 }
 
+function VisualizationPreloader({ active }: { active: boolean }) {
+  const isLoading = useProgress((state) => state.active);
+  const progress = useProgress((state) => state.progress);
+  const roundedProgress = Math.max(0, Math.min(100, Math.round(progress)));
+  const visible = active && isLoading;
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          animate={{ opacity: 1 }}
+          aria-live="polite"
+          className="fixed inset-0 z-[60] bg-canvas text-ink"
+          exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          role="status"
+          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="flex min-h-full flex-col px-6 py-6 md:px-10 md:py-8">
+            <div className="flex items-center justify-between border-b border-hairline pb-5">
+              <p className="text-body uppercase tracking-[0.22em] text-graphite">
+                rotpunkt Signature
+              </p>
+              <p className="text-body tabular-nums text-graphite">{roundedProgress}%</p>
+            </div>
+
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="my-auto w-full max-w-[38rem]"
+              initial={{ opacity: 0, y: 16 }}
+              transition={{ delay: 0.08, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <p className="text-body uppercase tracking-[0.22em] text-graphite">
+                Visualisierung
+              </p>
+              <h2 className="mt-6 text-lead leading-tight text-ink md:text-display">
+                Appartement wird geladen<span className="text-signature">.</span>
+              </h2>
+              <div className="mt-10 h-px overflow-hidden bg-hairline" aria-hidden="true">
+                <motion.div
+                  animate={{ width: `${Math.max(3, roundedProgress)}%` }}
+                  className="h-full bg-signature"
+                  initial={{ width: "3%" }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </div>
+              <p className="mt-4 text-body text-graphite">
+                Raum, Materialien und Licht werden vorbereitet.
+              </p>
+            </motion.div>
+
+            <div className="flex items-center justify-between border-t border-hairline pt-5 text-body text-graphite">
+              <span>3D Konfigurator</span>
+              <span>Appartement</span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function VisualizationTabs({
   active,
   onSelect
@@ -404,16 +524,20 @@ function CameraControlOverlay({
   activeView,
   isConfigPanelOpen,
   onPhoto,
-  onSelect
+  onRender,
+  onSelect,
+  renderActive
 }: {
   activeView: CameraView;
   isConfigPanelOpen: boolean;
   onPhoto: () => void;
+  onRender: () => void;
   onSelect: (view: CameraView) => void;
+  renderActive: boolean;
 }) {
   return (
     <div
-      className={`pointer-events-auto fixed z-20 w-[min(calc(100vw-2.5rem),24rem)] -translate-x-1/2 ${
+      className={`pointer-events-auto fixed z-20 w-[min(calc(100vw-2.5rem),30rem)] -translate-x-1/2 ${
         isConfigPanelOpen
           ? "left-1/2 top-[calc(56vh-4.5rem)] lg:left-[calc((100vw-27rem)/2)] lg:top-auto lg:bottom-8"
           : "bottom-6 left-1/2"
@@ -421,7 +545,7 @@ function CameraControlOverlay({
     >
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-4 divide-x divide-hairline border border-hairline bg-canvas"
+        className="grid grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] divide-x divide-hairline border border-hairline bg-canvas sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto]"
         initial={{ opacity: 0, y: 12 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
@@ -434,12 +558,29 @@ function CameraControlOverlay({
           />
         ))}
         <button
+          aria-label="AI Foto"
           className="inline-flex min-h-11 items-center justify-center gap-2 bg-ink px-3 text-body leading-none text-paper transition-colors hover:bg-graphite"
           onClick={onPhoto}
+          title="AI Foto"
           type="button"
         >
           <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
-          Foto
+          <span className="hidden sm:inline">Foto</span>
+        </button>
+        <button
+          aria-label={renderActive ? "3D Render beenden" : "3D Render starten"}
+          aria-pressed={renderActive}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-body leading-none transition-colors ${
+            renderActive
+              ? "bg-signature text-paper hover:bg-ink"
+              : "bg-graphite text-paper hover:bg-signature"
+          }`}
+          onClick={onRender}
+          title={renderActive ? "3D Render beenden" : "3D Render starten"}
+          type="button"
+        >
+          <ScanLine aria-hidden="true" size={15} strokeWidth={1.5} />
+          <span className="hidden sm:inline">Render</span>
         </button>
       </motion.div>
     </div>

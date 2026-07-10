@@ -1,7 +1,7 @@
 "use client";
 
 import { useGLTF, useTexture } from "@react-three/drei";
-import { useEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo } from "react";
 import {
   Box3,
   BufferAttribute,
@@ -21,6 +21,7 @@ import type { FinishOption } from "@/features/configurator/types";
 
 type KitchenModelProps = {
   cabinetFinish: FinishOption;
+  environmentMap?: Texture;
   frontFinish: FinishOption;
 };
 
@@ -47,7 +48,11 @@ const FINISH_TEXTURE_URLS = [
   )
 ];
 
-export function KitchenModel({ cabinetFinish, frontFinish }: KitchenModelProps) {
+export function KitchenModel({
+  cabinetFinish,
+  environmentMap,
+  frontFinish
+}: KitchenModelProps) {
   const gltf = useGLTF(KITCHEN_MODEL_PATH);
   const model = useMemo(() => prepareKitchenModel(gltf.scene), [gltf.scene]);
   const finishTextures = useTexture(FINISH_TEXTURE_URLS);
@@ -74,22 +79,29 @@ export function KitchenModel({ cabinetFinish, frontFinish }: KitchenModelProps) 
     };
   }, [texturesByUrl]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const materials = {
-      cabinet: createFinishMaterial(cabinetFinish, texturesByUrl, "cabinet"),
-      front: createFinishMaterial(frontFinish, texturesByUrl, "front"),
+      cabinet: createFinishMaterial(
+        cabinetFinish,
+        texturesByUrl,
+        "cabinet",
+        environmentMap
+      ),
+      front: createFinishMaterial(frontFinish, texturesByUrl, "front", environmentMap),
       handle: new MeshPhysicalMaterial({
         color: "#26231f",
+        envMap: environmentMap ?? null,
         envMapIntensity: 1.75,
         metalness: 0.78,
-        roughness: 0.15
+        roughness: 0.13
       }),
       neutral: new MeshPhysicalMaterial({
         clearcoat: 0.92,
         clearcoatRoughness: 0.06,
         color: "#c9c3ba",
+        envMap: environmentMap ?? null,
         envMapIntensity: 1.8,
-        roughness: 0.13
+        roughness: 0.11
       })
     } satisfies Record<ModelRole, MeshPhysicalMaterial>;
 
@@ -107,7 +119,7 @@ export function KitchenModel({ cabinetFinish, frontFinish }: KitchenModelProps) 
     return () => {
       Object.values(materials).forEach((material) => material.dispose());
     };
-  }, [cabinetFinish, frontFinish, model.scene, texturesByUrl]);
+  }, [cabinetFinish, environmentMap, frontFinish, model.scene, texturesByUrl]);
 
   return (
     <group scale={MODEL_SCALE}>
@@ -119,7 +131,8 @@ export function KitchenModel({ cabinetFinish, frontFinish }: KitchenModelProps) 
 function createFinishMaterial(
   finish: FinishOption,
   texturesByUrl: Map<string, Texture>,
-  surface: "cabinet" | "front"
+  surface: "cabinet" | "front",
+  environmentMap?: Texture
 ) {
   const map = finish.textureUrl ? texturesByUrl.get(finish.textureUrl) ?? null : null;
   const normalMap = finish.normalMapUrl
@@ -138,6 +151,7 @@ function createFinishMaterial(
     clearcoat: profile.clearcoat,
     clearcoatRoughness: profile.clearcoatRoughness,
     color,
+    envMap: environmentMap ?? null,
     envMapIntensity: profile.envMapIntensity,
     ior: 1.46,
     map,
@@ -145,7 +159,7 @@ function createFinishMaterial(
     normalScale: new Vector2(profile.normalScale, profile.normalScale),
     // With a roughness map the texel value carries the finish; without it the
     // scalar does.
-    roughness: roughnessMap ? 0.76 : profile.roughness,
+    roughness: roughnessMap ? 0.68 : profile.roughness,
     roughnessMap,
     specularIntensity: profile.specularIntensity
   });
@@ -159,11 +173,11 @@ function getFinishProfile(
   if (finish.material === "structured") {
     return {
       clearcoat: 0.28,
-      clearcoatRoughness: 0.3,
+      clearcoatRoughness: 0.27,
       colorScale: 0.94,
-      envMapIntensity: 1.2,
+      envMapIntensity: 1.35,
       normalScale: 0.38,
-      roughness: 0.48,
+      roughness: 0.43,
       specularIntensity: 0.8
     };
   }
@@ -173,9 +187,9 @@ function getFinishProfile(
       clearcoat: 0.96,
       clearcoatRoughness: 0.05,
       colorScale: 0.82,
-      envMapIntensity: 1.85,
+      envMapIntensity: 2.05,
       normalScale: 0.24,
-      roughness: surface === "front" ? 0.11 : 0.16,
+      roughness: surface === "front" ? 0.09 : 0.14,
       specularIntensity: 1
     };
   }
@@ -184,9 +198,9 @@ function getFinishProfile(
     clearcoat: hasColorMap ? 0.56 : 0.58,
     clearcoatRoughness: hasColorMap ? 0.15 : 0.17,
     colorScale: hasColorMap ? 1 : 0.9,
-    envMapIntensity: hasColorMap ? 1.6 : 1.65,
+    envMapIntensity: hasColorMap ? 1.8 : 1.85,
     normalScale: 0.28,
-    roughness: hasColorMap ? 0.3 : 0.28,
+    roughness: hasColorMap ? 0.26 : 0.24,
     specularIntensity: 0.95
   };
 }
@@ -206,12 +220,26 @@ function prepareKitchenModel(sourceScene: Object3D) {
 
     object.userData.configuratorRole = classifyMesh(object);
     ensurePlanarUVs(object.geometry);
+    normalizeMaterialGroups(object.geometry);
   });
 
   return {
     scene,
     offset: [-center.x, -bounds.min.y, -center.z] as [number, number, number]
   };
+}
+
+function normalizeMaterialGroups(geometry: BufferGeometry) {
+  const indexCount = geometry.index?.count;
+  const vertexCount = geometry.getAttribute("position")?.count;
+  const drawCount = indexCount ?? vertexCount;
+
+  if (!drawCount) {
+    return;
+  }
+
+  geometry.clearGroups();
+  geometry.addGroup(0, drawCount, 0);
 }
 
 /**

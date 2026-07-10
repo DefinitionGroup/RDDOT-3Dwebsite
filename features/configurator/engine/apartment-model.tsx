@@ -1,6 +1,6 @@
 "use client";
 
-import { useGLTF } from "@react-three/drei";
+import { CubeCamera, useGLTF } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
 import {
   Mesh,
@@ -15,12 +15,15 @@ import type { FinishOption } from "@/features/configurator/types";
 type ApartmentModelProps = {
   cabinetFinish: FinishOption;
   frontFinish: FinishOption;
+  reflectionProbe?: boolean;
+  reflectionResolution?: number;
 };
 
 const APARTMENT_MODEL_PATH = "/kitchen1.glb";
 const APARTMENT_ORIGIN: [number, number, number] = [6.94, -0.595, 2.216];
 const REPLACEMENT_KITCHEN_POSITION: [number, number, number] = [-6.94, 0.595, -2.216];
 const REPLACEMENT_KITCHEN_ROTATION: [number, number, number] = [0, Math.PI / 2, 0];
+const REFLECTION_PROBE_Y = 1.25;
 const CONCRETE_WALL_OBJECTS = new Set(["Walls"].map(normalizeObjectName));
 const REMOVED_APARTMENT_OBJECTS = new Set(
   [
@@ -34,7 +37,12 @@ const REMOVED_APARTMENT_OBJECTS = new Set(
   ].map(normalizeObjectName)
 );
 
-export function ApartmentModel({ cabinetFinish, frontFinish }: ApartmentModelProps) {
+export function ApartmentModel({
+  cabinetFinish,
+  frontFinish,
+  reflectionProbe = true,
+  reflectionResolution = 256
+}: ApartmentModelProps) {
   const gltf = useGLTF(APARTMENT_MODEL_PATH, "/draco/gltf/", true);
   const apartment = useMemo(() => prepareApartmentScene(gltf.scene), [gltf.scene]);
 
@@ -52,10 +60,33 @@ export function ApartmentModel({ cabinetFinish, frontFinish }: ApartmentModelPro
         position={REPLACEMENT_KITCHEN_POSITION}
         rotation={REPLACEMENT_KITCHEN_ROTATION}
       >
-        <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} />
+        {reflectionProbe ? (
+          <CubeCamera
+            frames={1}
+            position={[0, REFLECTION_PROBE_Y, 0]}
+            resolution={reflectionResolution}
+          >
+            {(environmentMap) => (
+              // CubeCamera moves its children with the probe; cancel that lift for the model.
+              <group position={[0, -REFLECTION_PROBE_Y, 0]}>
+                <KitchenModel
+                  cabinetFinish={cabinetFinish}
+                  environmentMap={environmentMap}
+                  frontFinish={frontFinish}
+                />
+              </group>
+            )}
+          </CubeCamera>
+        ) : (
+          <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} />
+        )}
       </group>
     </group>
   );
+}
+
+export function preloadApartmentModel() {
+  useGLTF.preload(APARTMENT_MODEL_PATH, "/draco/gltf/", true);
 }
 
 function prepareApartmentScene(sourceScene: Object3D) {

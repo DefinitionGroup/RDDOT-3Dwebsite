@@ -3,13 +3,26 @@
 import {
   CameraControls,
   ContactShadows,
-  Environment,
-  Html,
-  useProgress
+  CubeCamera,
+  Environment
 } from "@react-three/drei";
-import { EffectComposer, N8AO, ToneMapping } from "@react-three/postprocessing";
+import {
+  Bloom,
+  BrightnessContrast,
+  EffectComposer,
+  LUT,
+  N8AO,
+  SMAA,
+  ToneMapping,
+  Vignette
+} from "@react-three/postprocessing";
 import { useThree } from "@react-three/fiber";
-import { ToneMappingMode } from "postprocessing";
+import {
+  BlendFunction,
+  LookupTexture,
+  SMAAPreset,
+  ToneMappingMode
+} from "postprocessing";
 import { Suspense, useEffect, useMemo, useRef, type ElementRef } from "react";
 import {
   DataTexture,
@@ -32,11 +45,18 @@ import { KitchenModel } from "@/features/configurator/engine/kitchen-model";
 
 type KitchenSceneProps = {
   cameraView: CameraView;
+  onCameraInteraction?: () => void;
+  pathTracing: boolean;
   state: ConfiguratorState;
   visualization: VisualizationMode;
 };
 
 type CameraPreset = [number, number, number, number, number, number];
+
+const STUDIO_STAGE_Y = -0.7;
+const STUDIO_FLOOR_OFFSET = -0.04;
+const STUDIO_FLOOR_Y = STUDIO_STAGE_Y + STUDIO_FLOOR_OFFSET;
+const STUDIO_REFLECTION_PROBE_Y = 1.15;
 
 const cameraPresets: Record<CameraView, CameraPreset> = {
   signature: [5.05, 2.75, 6.25, 0, 0.45, -0.08],
@@ -62,7 +82,13 @@ const mobileApartmentCameraPresets: Record<CameraView, CameraPreset> = {
   detail: [4.3, 2, 3.2, 0.15, 0.98, 0.4]
 };
 
-export function KitchenScene({ cameraView, state, visualization }: KitchenSceneProps) {
+export function KitchenScene({
+  cameraView,
+  onCameraInteraction,
+  pathTracing,
+  state,
+  visualization
+}: KitchenSceneProps) {
   const controlsRef = useRef<ElementRef<typeof CameraControls> | null>(null);
   const width = useThree((rootState) => rootState.size.width);
   const floorTexture = useMemo(() => createTexturedFloorTexture(), []);
@@ -70,6 +96,7 @@ export function KitchenScene({ cameraView, state, visualization }: KitchenSceneP
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT.frontColors, state.frontColorKey);
   const isCompactViewport = width < 720;
   const isApartment = visualization === "apartment";
+  const reflectionResolution = isCompactViewport ? 128 : 256;
 
   useEffect(() => {
     const presets = isApartment
@@ -80,8 +107,8 @@ export function KitchenScene({ cameraView, state, visualization }: KitchenSceneP
         ? mobileCameraPresets
         : cameraPresets;
     const preset = presets[cameraView];
-    controlsRef.current?.setLookAt(...preset, true);
-  }, [cameraView, isApartment, isCompactViewport]);
+    controlsRef.current?.setLookAt(...preset, !pathTracing);
+  }, [cameraView, isApartment, isCompactViewport, pathTracing]);
 
   useEffect(() => {
     return () => {
@@ -91,17 +118,25 @@ export function KitchenScene({ cameraView, state, visualization }: KitchenSceneP
 
   return (
     <>
-      <fog
-        args={isApartment ? ["#bdc5c4", 14, 32] : ["#d7e8e9", 8.5, 19]}
-        attach="fog"
-      />
-      {isApartment ? <ApartmentLightRig /> : <StudioLightRig />}
+      {!pathTracing && (
+        <fog
+          args={isApartment ? ["#bdc5c4", 14, 32] : ["#d7e8e9", 8.5, 19]}
+          attach="fog"
+        />
+      )}
+      {isApartment ? (
+        <ApartmentLightRig pathTracing={pathTracing} />
+      ) : (
+        <StudioLightRig pathTracing={pathTracing} />
+      )}
       <Environment
         background
         backgroundBlurriness={0.035}
         backgroundIntensity={isApartment ? 0.46 : 0.72}
         backgroundRotation={[0, -0.55, 0]}
-        environmentIntensity={isApartment ? 0.82 : 1.08}
+        environmentIntensity={
+          pathTracing ? (isApartment ? 1.15 : 1.05) : isApartment ? 0.74 : 0.96
+        }
         environmentRotation={[0, -0.55, 0]}
         files="/hdri/qwantani_dusk_1k.hdr"
       />
@@ -109,49 +144,56 @@ export function KitchenScene({ cameraView, state, visualization }: KitchenSceneP
       {isApartment ? (
         <Suspense
           fallback={
-            <ApartmentLoadingFallback
+            <StudioKitchen
               cabinetFinish={cabinetColor}
               floorTexture={floorTexture}
               frontFinish={frontColor}
+              reflectionProbe={!pathTracing}
+              reflectionResolution={reflectionResolution}
             />
           }
         >
-          <ApartmentModel cabinetFinish={cabinetColor} frontFinish={frontColor} />
+          <ApartmentModel
+            cabinetFinish={cabinetColor}
+            frontFinish={frontColor}
+            reflectionProbe={!pathTracing}
+            reflectionResolution={reflectionResolution}
+          />
         </Suspense>
       ) : (
         <StudioKitchen
           cabinetFinish={cabinetColor}
           floorTexture={floorTexture}
           frontFinish={frontColor}
+          reflectionProbe={!pathTracing}
+          reflectionResolution={reflectionResolution}
         />
       )}
 
-      {!isApartment && (
+      {!pathTracing && !isApartment && (
         <ContactShadows
           blur={3.2}
           color="#514b45"
           far={4.2}
           opacity={0.15}
-          position={[0, -0.72, 0]}
+          position={[0, STUDIO_FLOOR_Y + 0.002, 0]}
           scale={9}
         />
       )}
-      <EffectComposer>
-        <N8AO
-          aoRadius={isApartment ? 0.4 : 0.34}
-          color={isApartment ? "#4d4945" : "#625b54"}
-          distanceFalloff={0.9}
-          intensity={isApartment ? 1.35 : 1.15}
-          quality="medium"
+      {!pathTracing && (
+        <CinematicEffects
+          apartment={isApartment}
+          compact={isCompactViewport}
         />
-        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      </EffectComposer>
+      )}
       <CameraControls
         dollySpeed={0.65}
+        makeDefault
         maxDistance={isApartment ? 11 : 8.4}
         maxPolarAngle={Math.PI / 2.08}
         minDistance={2.2}
         minPolarAngle={Math.PI / 8}
+        onControlStart={onCameraInteraction}
         ref={controlsRef}
         smoothTime={0.85}
         truckSpeed={0.42}
@@ -160,14 +202,14 @@ export function KitchenScene({ cameraView, state, visualization }: KitchenSceneP
   );
 }
 
-function StudioLightRig() {
+function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
   return (
     <>
       <hemisphereLight args={["#f6fbff", "#857a6e", 0.35]} />
       <ambientLight intensity={0.04} />
       <directionalLight
         castShadow
-        intensity={1.55}
+        intensity={pathTracing ? 1.8 : 1.35}
         position={[4.8, 6.2, 3.9]}
         shadow-bias={-0.0002}
         shadow-blurSamples={24}
@@ -178,16 +220,20 @@ function StudioLightRig() {
       <spotLight
         angle={0.48}
         color="#fff1dd"
-        intensity={1.05}
+        intensity={pathTracing ? 2 : 0.82}
         penumbra={0.78}
         position={[-3.6, 4.7, 3.8]}
       />
-      <pointLight color="#bfe6ff" intensity={0.26} position={[3.6, 2.4, -3.8]} />
+      <pointLight
+        color="#bfe6ff"
+        intensity={pathTracing ? 0.45 : 0.22}
+        position={[3.6, 2.4, -3.8]}
+      />
     </>
   );
 }
 
-function ApartmentLightRig() {
+function ApartmentLightRig({ pathTracing }: { pathTracing: boolean }) {
   const warmFillRef = useRef<RectAreaLight | null>(null);
   const coolFillRef = useRef<RectAreaLight | null>(null);
 
@@ -203,7 +249,7 @@ function ApartmentLightRig() {
       <directionalLight
         castShadow
         color="#fff0dc"
-        intensity={1.05}
+        intensity={pathTracing ? 1.6 : 0.92}
         position={[4.6, 6.8, -3.6]}
         shadow-bias={-0.0002}
         shadow-blurSamples={24}
@@ -214,7 +260,7 @@ function ApartmentLightRig() {
       <rectAreaLight
         color="#ffd2a6"
         height={1.8}
-        intensity={3.2}
+        intensity={pathTracing ? 14 : 2.7}
         position={[1.8, 3.8, -3.2]}
         ref={warmFillRef}
         width={3.8}
@@ -222,7 +268,7 @@ function ApartmentLightRig() {
       <rectAreaLight
         color="#a9d4ef"
         height={2.4}
-        intensity={2.1}
+        intensity={pathTracing ? 8 : 1.8}
         position={[-3.8, 2.8, 2.8]}
         ref={coolFillRef}
         width={2.6}
@@ -230,40 +276,10 @@ function ApartmentLightRig() {
       <spotLight
         angle={0.52}
         color="#ffc998"
-        intensity={0.95}
+        intensity={pathTracing ? 4 : 0.76}
         penumbra={0.9}
         position={[-2.8, 4.5, -0.8]}
       />
-    </>
-  );
-}
-
-function ApartmentLoadingFallback({
-  cabinetFinish,
-  floorTexture,
-  frontFinish
-}: StudioKitchenProps) {
-  const progress = useProgress((state) => state.progress);
-  const roundedProgress = Math.round(progress);
-
-  return (
-    <>
-      <StudioKitchen
-        cabinetFinish={cabinetFinish}
-        floorTexture={floorTexture}
-        frontFinish={frontFinish}
-      />
-      <Html fullscreen style={{ pointerEvents: "none" }}>
-        <div
-          aria-live="polite"
-          className="flex h-full items-end justify-center pb-8 text-caption text-paper"
-          role="status"
-        >
-          <span className="bg-ink/80 px-3 py-2 backdrop-blur-sm">
-            Appartement wird geladen {roundedProgress}%
-          </span>
-        </div>
-      </Html>
     </>
   );
 }
@@ -272,14 +288,75 @@ type StudioKitchenProps = {
   cabinetFinish: FinishOption;
   floorTexture: Texture;
   frontFinish: FinishOption;
+  reflectionProbe: boolean;
+  reflectionResolution: number;
 };
 
-function StudioKitchen({ cabinetFinish, floorTexture, frontFinish }: StudioKitchenProps) {
+function StudioKitchen({
+  cabinetFinish,
+  floorTexture,
+  frontFinish,
+  reflectionProbe,
+  reflectionResolution
+}: StudioKitchenProps) {
   return (
-    <group position={[0, -0.7, 0]}>
+    <group position={[0, STUDIO_STAGE_Y, 0]}>
       <AtmosphericStage floorTexture={floorTexture} />
-      <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} />
+      <group position={[0, STUDIO_FLOOR_OFFSET, 0]}>
+        {reflectionProbe ? (
+          <CubeCamera
+            frames={1}
+            position={[0, STUDIO_REFLECTION_PROBE_Y, 0]}
+            resolution={reflectionResolution}
+          >
+            {(environmentMap) => (
+              // CubeCamera moves its children with the probe; cancel that lift for the model.
+              <group position={[0, -STUDIO_REFLECTION_PROBE_Y, 0]}>
+                <KitchenModel
+                  cabinetFinish={cabinetFinish}
+                  environmentMap={environmentMap}
+                  frontFinish={frontFinish}
+                />
+              </group>
+            )}
+          </CubeCamera>
+        ) : (
+          <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} />
+        )}
+      </group>
     </group>
+  );
+}
+
+function CinematicEffects({ apartment, compact }: { apartment: boolean; compact: boolean }) {
+  const lut = useMemo(() => createCinematicLut(), []);
+
+  useEffect(() => {
+    return () => lut.dispose();
+  }, [lut]);
+
+  return (
+    <EffectComposer multisampling={compact ? 0 : 4}>
+      <N8AO
+        aoRadius={apartment ? 0.42 : 0.35}
+        color={apartment ? "#4d4945" : "#625b54"}
+        distanceFalloff={0.9}
+        intensity={apartment ? 1.28 : 1.08}
+        quality={compact ? "medium" : "high"}
+      />
+      <Bloom
+        blendFunction={BlendFunction.ADD}
+        intensity={0.09}
+        luminanceSmoothing={0.3}
+        luminanceThreshold={0.94}
+        mipmapBlur
+      />
+      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      <BrightnessContrast brightness={-0.035} contrast={0.055} />
+      <LUT lut={lut} tetrahedralInterpolation />
+      <Vignette darkness={0.28} eskil={false} offset={0.32} />
+      <SMAA preset={SMAAPreset.HIGH} />
+    </EffectComposer>
   );
 }
 
@@ -289,7 +366,11 @@ type AtmosphericStageProps = {
 
 function AtmosphericStage({ floorTexture }: AtmosphericStageProps) {
   return (
-    <mesh position={[0, -0.04, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh
+      position={[0, STUDIO_FLOOR_OFFSET, 0]}
+      receiveShadow
+      rotation={[-Math.PI / 2, 0, 0]}
+    >
       <planeGeometry args={[16, 12]} />
       <meshStandardMaterial
         bumpMap={floorTexture}
@@ -376,4 +457,38 @@ function smoothStep(value: number) {
 
 function mix(start: number, end: number, amount: number) {
   return start + (end - start) * amount;
+}
+
+function createCinematicLut() {
+  const lut = LookupTexture.createNeutral(16);
+  const data = lut.image.data as Float32Array;
+
+  for (let index = 0; index < data.length; index += 4) {
+    let red = addContrast(data[index]);
+    let green = addContrast(data[index + 1]);
+    let blue = addContrast(data[index + 2]);
+    const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
+    const highlight = smoothStep(clampUnit((luminance - 0.42) / 0.58));
+    const shadow = 1 - smoothStep(clampUnit(luminance / 0.52));
+
+    red = luminance + (red - luminance) * 1.035;
+    green = luminance + (green - luminance) * 1.025;
+    blue = luminance + (blue - luminance) * 1.03;
+
+    data[index] = clampUnit(red + highlight * 0.012 - shadow * 0.008);
+    data[index + 1] = clampUnit(green + highlight * 0.004);
+    data[index + 2] = clampUnit(blue - highlight * 0.014 + shadow * 0.012);
+  }
+
+  lut.name = "Signature cinematic neutral";
+  lut.needsUpdate = true;
+  return lut;
+}
+
+function addContrast(value: number) {
+  return clampUnit((value - 0.5) * 1.045 + 0.5);
+}
+
+function clampUnit(value: number) {
+  return Math.max(0, Math.min(1, value));
 }
