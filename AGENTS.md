@@ -29,8 +29,8 @@ The current direction is:
 - Use `rg` for search.
 - Use `apply_patch` for file edits.
 - Do not revert user changes or unrelated files.
-- Run `npm run lint` after code changes.
-- Run `npm run build` after route, server/client boundary, or TypeScript-heavy changes.
+- Run `pnpm lint` after code changes.
+- Run `pnpm build` after route, server/client boundary, or TypeScript-heavy changes.
 - For 3D/frontend visual changes, verify in a browser on desktop and mobile.
 
 ## Frontend Design Rules
@@ -130,9 +130,9 @@ These warnings are not build blockers right now, but should be revisited before 
 ## Useful Commands
 
 ```bash
-npm run dev -- -p 3001
-npm run lint
-npm run build
+pnpm exec next dev -p 3001
+pnpm lint
+pnpm build
 ```
 
 ## Important Files
@@ -146,3 +146,17 @@ npm run build
 - `features/configurator/engine/kitchen-scene.tsx`: 3D scene.
 - `app/configure/page.tsx`: configurator route.
 - `app/checkout/page.tsx`: fake checkout route.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default canonical triage labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repository using a root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.

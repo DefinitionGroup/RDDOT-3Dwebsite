@@ -6,9 +6,12 @@ import {
   Box3,
   BufferAttribute,
   Color,
+  DataTexture,
+  LinearFilter,
   Mesh,
   MeshPhysicalMaterial,
   Object3D,
+  RGBAFormat,
   RepeatWrapping,
   SRGBColorSpace,
   Vector2,
@@ -54,8 +57,8 @@ export function KitchenModel({
   frontFinish
 }: KitchenModelProps) {
   const gltf = useGLTF(KITCHEN_MODEL_PATH);
-  const model = useMemo(() => prepareKitchenModel(gltf.scene), [gltf.scene]);
   const finishTextures = useTexture(FINISH_TEXTURE_URLS);
+  const microSurfaceTexture = useMemo(() => createMicroSurfaceTexture(), []);
 
   const texturesByUrl = useMemo(() => {
     const entries = FINISH_TEXTURE_URLS.map((url, index) => {
@@ -76,50 +79,91 @@ export function KitchenModel({
   useEffect(() => {
     return () => {
       texturesByUrl.forEach((texture) => texture.dispose());
+      microSurfaceTexture.dispose();
     };
-  }, [texturesByUrl]);
+  }, [microSurfaceTexture, texturesByUrl]);
 
-  useLayoutEffect(() => {
+  const model = useMemo(() => {
+    const preparedModel = prepareKitchenModel(gltf.scene);
     const materials = {
       cabinet: createFinishMaterial(
         cabinetFinish,
         texturesByUrl,
         "cabinet",
-        environmentMap
+        environmentMap,
+        microSurfaceTexture
       ),
-      front: createFinishMaterial(frontFinish, texturesByUrl, "front", environmentMap),
+      front: createFinishMaterial(
+        frontFinish,
+        texturesByUrl,
+        "front",
+        environmentMap,
+        microSurfaceTexture
+      ),
       handle: new MeshPhysicalMaterial({
-        color: "#26231f",
+        color: "#171614",
         envMap: environmentMap ?? null,
-        envMapIntensity: 1.75,
-        metalness: 0.78,
-        roughness: 0.13
+        envMapIntensity: 1.2,
+        metalness: 0.92,
+        roughness: 0.23
       }),
-      neutral: new MeshPhysicalMaterial({
-        clearcoat: 0.92,
-        clearcoatRoughness: 0.06,
-        color: "#c9c3ba",
+      countertop: new MeshPhysicalMaterial({
+        bumpMap: microSurfaceTexture,
+        bumpScale: 0.0018,
+        clearcoat: 0.16,
+        clearcoatRoughness: 0.32,
+        color: "#b8b3aa",
         envMap: environmentMap ?? null,
-        envMapIntensity: 1.8,
-        roughness: 0.11
+        envMapIntensity: 1.05,
+        metalness: 0,
+        roughness: 0.36,
+        specularIntensity: 0.72
+      }),
+      plinth: new MeshPhysicalMaterial({
+        color: "#24221f",
+        envMap: environmentMap ?? null,
+        envMapIntensity: 0.9,
+        metalness: 0.22,
+        roughness: 0.34
+      }),
+      backdrop: new MeshPhysicalMaterial({
+        bumpMap: microSurfaceTexture,
+        bumpScale: 0.0012,
+        color: "#8f918c",
+        envMap: environmentMap ?? null,
+        envMapIntensity: 0.48,
+        metalness: 0,
+        roughness: 0.78
       })
     } satisfies Record<ModelRole, MeshPhysicalMaterial>;
 
-    model.scene.traverse((object) => {
+    preparedModel.scene.traverse((object) => {
       if (!(object instanceof Mesh)) {
         return;
       }
 
       const role = getModelRole(object);
       object.material = materials[role];
-      object.castShadow = role !== "neutral";
+      object.castShadow = role !== "backdrop";
       object.receiveShadow = true;
     });
 
+    return { ...preparedModel, materials };
+  }, [
+    cabinetFinish,
+    environmentMap,
+    frontFinish,
+    gltf.scene,
+    microSurfaceTexture,
+    texturesByUrl
+  ]);
+
+  useLayoutEffect(() => {
     return () => {
-      Object.values(materials).forEach((material) => material.dispose());
+      Object.values(model.materials).forEach((material) => material.dispose());
+      model.ownedGeometries.forEach((geometry) => geometry.dispose());
     };
-  }, [cabinetFinish, environmentMap, frontFinish, model.scene, texturesByUrl]);
+  }, [model]);
 
   return (
     <group scale={MODEL_SCALE}>
@@ -132,7 +176,8 @@ function createFinishMaterial(
   finish: FinishOption,
   texturesByUrl: Map<string, Texture>,
   surface: "cabinet" | "front",
-  environmentMap?: Texture
+  environmentMap: Texture | undefined,
+  microSurfaceTexture: Texture
 ) {
   const map = finish.textureUrl ? texturesByUrl.get(finish.textureUrl) ?? null : null;
   const normalMap = finish.normalMapUrl
@@ -148,6 +193,8 @@ function createFinishMaterial(
     : new Color(finish.hex).multiplyScalar(profile.colorScale);
 
   return new MeshPhysicalMaterial({
+    bumpMap: normalMap ? null : microSurfaceTexture,
+    bumpScale: normalMap ? 0 : profile.bumpScale,
     clearcoat: profile.clearcoat,
     clearcoatRoughness: profile.clearcoatRoughness,
     color,
@@ -173,42 +220,52 @@ function getFinishProfile(
   if (finish.material === "structured") {
     return {
       clearcoat: 0.28,
-      clearcoatRoughness: 0.27,
-      colorScale: 0.94,
-      envMapIntensity: 1.35,
-      normalScale: 0.38,
-      roughness: 0.43,
-      specularIntensity: 0.8
+      clearcoatRoughness: 0.38,
+      colorScale: 0.88,
+      envMapIntensity: 0.92,
+      normalScale: 0.32,
+      roughness: 0.48,
+      specularIntensity: 0.7,
+      bumpScale: 0.0028
     };
   }
 
   if (finish.material === "satin") {
     return {
-      clearcoat: 0.96,
-      clearcoatRoughness: 0.05,
-      colorScale: 0.82,
-      envMapIntensity: 2.05,
-      normalScale: 0.24,
-      roughness: surface === "front" ? 0.09 : 0.14,
-      specularIntensity: 1
+      clearcoat: 0.38,
+      clearcoatRoughness: 0.24,
+      colorScale: 0.84,
+      envMapIntensity: 1.15,
+      normalScale: 0.2,
+      roughness: surface === "front" ? 0.26 : 0.31,
+      specularIntensity: 0.82,
+      bumpScale: 0.0014
     };
   }
 
   return {
-    clearcoat: hasColorMap ? 0.56 : 0.58,
-    clearcoatRoughness: hasColorMap ? 0.15 : 0.17,
-    colorScale: hasColorMap ? 1 : 0.9,
-    envMapIntensity: hasColorMap ? 1.8 : 1.85,
-    normalScale: 0.28,
-    roughness: hasColorMap ? 0.26 : 0.24,
-    specularIntensity: 0.95
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.42,
+    colorScale: hasColorMap ? 0.92 : 0.86,
+    envMapIntensity: 0.88,
+    normalScale: 0.22,
+    roughness: hasColorMap ? 0.52 : 0.48,
+    specularIntensity: 0.62,
+    bumpScale: 0.002
   };
 }
 
-type ModelRole = "cabinet" | "front" | "handle" | "neutral";
+type ModelRole =
+  | "backdrop"
+  | "cabinet"
+  | "countertop"
+  | "front"
+  | "handle"
+  | "plinth";
 
 function prepareKitchenModel(sourceScene: Object3D) {
   const scene = sourceScene.clone(true);
+  const ownedGeometries: BufferGeometry[] = [];
   const bounds = new Box3().setFromObject(scene);
   const center = new Vector3();
   bounds.getCenter(center);
@@ -218,12 +275,18 @@ function prepareKitchenModel(sourceScene: Object3D) {
       return;
     }
 
+    // Object3D.clone() keeps geometry references shared with the useGLTF cache.
+    // The path tracer adds and merges attributes while building its static scene,
+    // so each render pipeline needs an isolated geometry instance.
+    object.geometry = object.geometry.clone();
+    ownedGeometries.push(object.geometry);
     object.userData.configuratorRole = classifyMesh(object);
     ensurePlanarUVs(object.geometry);
     normalizeMaterialGroups(object.geometry);
   });
 
   return {
+    ownedGeometries,
     scene,
     offset: [-center.x, -bounds.min.y, -center.z] as [number, number, number]
   };
@@ -288,7 +351,14 @@ function getModelRole(mesh: Mesh): ModelRole {
 }
 
 function isModelRole(role: unknown): role is ModelRole {
-  return role === "cabinet" || role === "front" || role === "handle" || role === "neutral";
+  return (
+    role === "backdrop" ||
+    role === "cabinet" ||
+    role === "countertop" ||
+    role === "front" ||
+    role === "handle" ||
+    role === "plinth"
+  );
 }
 
 function classifyMesh(mesh: Mesh): ModelRole {
@@ -300,9 +370,15 @@ function classifyMesh(mesh: Mesh): ModelRole {
 
   const name = mesh.name.toLowerCase();
   const isLine = name.startsWith("line");
-  const isPlane = name.startsWith("plane");
-  const isFlatCounterOrPlinth = size.y <= 0.16 && size.x >= 1.2;
-  const isLargeBackPlane = size.z <= 0.025 && size.x >= 2.8 && size.y >= 1.8;
+  const isLargeBackPlane =
+    name === "plane559" || (size.z <= 0.025 && size.x >= 2.8 && size.y >= 1.8);
+  const isCountertop =
+    size.y <= 0.12 &&
+    center.y >= 0.82 &&
+    center.y <= 1.08 &&
+    (size.x >= 1.2 || (size.x >= 0.54 && size.z >= 0.45));
+  const isPlinth =
+    size.y <= 0.16 && center.y <= 0.2 && (size.x >= 1.2 || size.z >= 0.7);
   const isDoorLikePanel =
     size.z <= 0.04 &&
     size.x >= 0.12 &&
@@ -314,8 +390,16 @@ function classifyMesh(mesh: Mesh): ModelRole {
     return "handle";
   }
 
-  if (isPlane || isFlatCounterOrPlinth || isLargeBackPlane) {
-    return "neutral";
+  if (isLargeBackPlane) {
+    return "backdrop";
+  }
+
+  if (isCountertop || name.startsWith("plane")) {
+    return "countertop";
+  }
+
+  if (isPlinth) {
+    return "plinth";
   }
 
   if (isDoorLikePanel) {
@@ -323,6 +407,33 @@ function classifyMesh(mesh: Mesh): ModelRole {
   }
 
   return "cabinet";
+}
+
+function createMicroSurfaceTexture() {
+  const size = 128;
+  const data = new Uint8Array(size * size * 4);
+
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const offset = (y * size + x) * 4;
+      const grain = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      const value = 118 + (grain - Math.floor(grain)) * 20;
+
+      data[offset] = value;
+      data[offset + 1] = value;
+      data[offset + 2] = value;
+      data[offset + 3] = 255;
+    }
+  }
+
+  const texture = new DataTexture(data, size, size, RGBAFormat);
+  texture.magFilter = LinearFilter;
+  texture.minFilter = LinearFilter;
+  texture.repeat.set(14, 14);
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 useGLTF.preload(KITCHEN_MODEL_PATH);

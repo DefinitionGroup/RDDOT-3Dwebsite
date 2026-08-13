@@ -15,6 +15,7 @@ import type { FinishOption } from "@/features/configurator/types";
 type ApartmentModelProps = {
   cabinetFinish: FinishOption;
   frontFinish: FinishOption;
+  pathTracing?: boolean;
   reflectionProbe?: boolean;
   reflectionResolution?: number;
 };
@@ -25,6 +26,19 @@ const REPLACEMENT_KITCHEN_POSITION: [number, number, number] = [-6.94, 0.595, -2
 const REPLACEMENT_KITCHEN_ROTATION: [number, number, number] = [0, Math.PI / 2, 0];
 const REFLECTION_PROBE_Y = 1.25;
 const CONCRETE_WALL_OBJECTS = new Set(["Walls"].map(normalizeObjectName));
+const PATH_TRACING_APARTMENT_MESHES = new Set(
+  [
+    "Big Windows",
+    "Ceiling Windows",
+    "Floor",
+    "Sliding Door (3 Doors).004",
+    "Sliding Door (3 Doors).006",
+    "Sliding Door (3 Doors).008",
+    "Small Windows",
+    "TV CHIMNEY WALL",
+    "Walls"
+  ].map(normalizeObjectName)
+);
 const REMOVED_APARTMENT_OBJECTS = new Set(
   [
     "Modern Kitchen.001",
@@ -40,11 +54,15 @@ const REMOVED_APARTMENT_OBJECTS = new Set(
 export function ApartmentModel({
   cabinetFinish,
   frontFinish,
+  pathTracing = false,
   reflectionProbe = true,
   reflectionResolution = 256
 }: ApartmentModelProps) {
   const gltf = useGLTF(APARTMENT_MODEL_PATH, "/draco/gltf/", true);
-  const apartment = useMemo(() => prepareApartmentScene(gltf.scene), [gltf.scene]);
+  const apartment = useMemo(
+    () => prepareApartmentScene(gltf.scene, pathTracing),
+    [gltf.scene, pathTracing]
+  );
 
   useEffect(() => {
     return () => {
@@ -89,14 +107,20 @@ export function preloadApartmentModel() {
   useGLTF.preload(APARTMENT_MODEL_PATH, "/draco/gltf/", true);
 }
 
-function prepareApartmentScene(sourceScene: Object3D) {
+function prepareApartmentScene(sourceScene: Object3D, pathTracing: boolean) {
   const scene = sourceScene.clone(true);
   const objectsToRemove: Object3D[] = [];
   const concreteWall = createConcreteWallMaterial(scene);
   const concreteWallMaterial = concreteWall?.material ?? null;
 
   scene.traverse((object) => {
-    if (REMOVED_APARTMENT_OBJECTS.has(normalizeObjectName(object.name))) {
+    const normalizedName = normalizeObjectName(object.name);
+    const excludedFromPathTracing =
+      pathTracing &&
+      object instanceof Mesh &&
+      !PATH_TRACING_APARTMENT_MESHES.has(normalizedName);
+
+    if (REMOVED_APARTMENT_OBJECTS.has(normalizedName) || excludedFromPathTracing) {
       objectsToRemove.push(object);
     }
   });

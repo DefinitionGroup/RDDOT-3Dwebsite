@@ -2,6 +2,7 @@
 
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useState } from "react";
+import { AccountIndicator } from "@/components/design-system/account-indicator";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { CartIndicator } from "@/components/design-system/cart-indicator";
 import { navItems } from "@/lib/content";
@@ -36,7 +37,10 @@ export function SiteHeader() {
             </a>
           ))}
         </div>
-        <CartIndicator />
+        <div className="flex items-center gap-1">
+          <AccountIndicator />
+          <CartIndicator />
+        </div>
       </nav>
     </motion.header>
   );

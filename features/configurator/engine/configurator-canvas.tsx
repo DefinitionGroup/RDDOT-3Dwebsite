@@ -3,6 +3,7 @@
 import { Pathtracer, usePathtracer } from "@react-three/gpu-pathtracer";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Suspense, useEffect } from "react";
+import type { WebGLPathTracer } from "three-gpu-pathtracer";
 import type {
   CameraView,
   ConfiguratorState,
@@ -20,6 +21,33 @@ type ConfiguratorCanvasProps = {
   visualization: VisualizationMode;
 };
 
+type ConfigurablePathTracer = WebGLPathTracer & {
+  _generator: {
+    bvhOptions: {
+      maxLeafTris?: number;
+      strategy?: number;
+    };
+  };
+};
+
+// three-mesh-bvh CENTER strategy. The path tracer defaults to an expensive
+// SAH build with one triangle per leaf, which stalls the main thread on this
+// prototype's many small cabinet meshes.
+const BVH_CENTER_STRATEGY = 0;
+
+function configurePathTracer(pathTracer: WebGLPathTracer | null) {
+  if (!pathTracer) {
+    return;
+  }
+
+  const generator = (pathTracer as ConfigurablePathTracer)._generator;
+  generator.bvhOptions = {
+    ...generator.bvhOptions,
+    maxLeafTris: 8,
+    strategy: BVH_CENTER_STRATEGY
+  };
+}
+
 export function ConfiguratorCanvas({
   cameraView,
   captureRef,
@@ -30,9 +58,10 @@ export function ConfiguratorCanvas({
 }: ConfiguratorCanvasProps) {
   return (
     <Canvas
-      camera={{ fov: 38, position: [4.2, 2.4, 5.6] }}
-      dpr={[1, 2]}
+      camera={{ far: 50, fov: 38, near: 0.08, position: [4.2, 2.4, 5.6] }}
+      dpr={pathTracing ? [1, 1.35] : [1, 2]}
       gl={{
+        alpha: false,
         antialias: true,
         powerPreference: "high-performance",
         // Keeps the composited frame readable for the photo capture.
@@ -103,14 +132,15 @@ function PathTracingPipeline({
 }: Omit<RenderPipelineProps, "pathTracing"> & { compact: boolean }) {
   return (
     <Pathtracer
-      bounces={compact ? 3 : 5}
+      bounces={compact ? 4 : visualization === "apartment" ? 4 : 5}
       dynamicLowRes
-      fadeDuration={240}
-      filteredGlossyFactor={0.45}
+      fadeDuration={320}
+      filteredGlossyFactor={0.32}
       minSamples={2}
       rasterizeScene
-      resolutionFactor={compact ? 0.55 : visualization === "apartment" ? 0.78 : 0.9}
-      samples={compact ? 24 : visualization === "apartment" ? 48 : 72}
+      ref={configurePathTracer}
+      resolutionFactor={compact ? 0.68 : visualization === "apartment" ? 0.62 : 0.82}
+      samples={compact ? 32 : visualization === "apartment" ? 40 : 72}
       tiles={compact ? [1, 1] : [2, 1]}
     >
       <KitchenScene

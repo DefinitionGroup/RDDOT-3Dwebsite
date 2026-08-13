@@ -4,22 +4,20 @@ import {
   CameraControls,
   ContactShadows,
   CubeCamera,
-  Environment
+  Environment,
+  Lightformer,
+  PerspectiveCamera
 } from "@react-three/drei";
 import {
   Bloom,
-  BrightnessContrast,
   EffectComposer,
-  LUT,
   N8AO,
   SMAA,
-  ToneMapping,
-  Vignette
+  ToneMapping
 } from "@react-three/postprocessing";
 import { useThree } from "@react-three/fiber";
 import {
   BlendFunction,
-  LookupTexture,
   SMAAPreset,
   ToneMappingMode
 } from "postprocessing";
@@ -65,9 +63,9 @@ const cameraPresets: Record<CameraView, CameraPreset> = {
 };
 
 const mobileCameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [5.6, 2.55, 7.05, 0, -0.22, -0.12],
-  front: [0, 1.45, 6.8, 0, 0.05, 0],
-  detail: [2.7, 1.45, 3.85, 0.75, 0.02, 0.04]
+  signature: [7.4, 4.5, 9.2, 0, -2.45, -0.05],
+  front: [0, 2.8, 9.4, 0, -1.05, 0],
+  detail: [3.15, 1.7, 4.45, 0.75, -0.04, 0.04]
 };
 
 const apartmentCameraPresets: Record<CameraView, CameraPreset> = {
@@ -118,9 +116,16 @@ export function KitchenScene({
 
   return (
     <>
+      <PerspectiveCamera
+        far={50}
+        fov={isCompactViewport ? 50 : 38}
+        makeDefault
+        near={0.08}
+        position={[4.2, 2.4, 5.6]}
+      />
       {!pathTracing && (
         <fog
-          args={isApartment ? ["#bdc5c4", 14, 32] : ["#d7e8e9", 8.5, 19]}
+          args={isApartment ? ["#bdc5c4", 14, 32] : ["#aeb7b3", 9.5, 21]}
           attach="fog"
         />
       )}
@@ -129,17 +134,19 @@ export function KitchenScene({
       ) : (
         <StudioLightRig pathTracing={pathTracing} />
       )}
-      <Environment
-        background
-        backgroundBlurriness={0.035}
-        backgroundIntensity={isApartment ? 0.46 : 0.72}
-        backgroundRotation={[0, -0.55, 0]}
-        environmentIntensity={
-          pathTracing ? (isApartment ? 1.15 : 1.05) : isApartment ? 0.74 : 0.96
-        }
-        environmentRotation={[0, -0.55, 0]}
-        files="/hdri/qwantani_dusk_1k.hdr"
-      />
+      {isApartment ? (
+        <Environment
+          background
+          backgroundBlurriness={0.055}
+          backgroundIntensity={0.42}
+          backgroundRotation={[0, -0.55, 0]}
+          environmentIntensity={pathTracing ? 1.05 : 0.68}
+          environmentRotation={[0, -0.55, 0]}
+          files="/hdri/qwantani_dusk_1k.hdr"
+        />
+      ) : (
+        <StudioEnvironment compact={isCompactViewport} pathTracing={pathTracing} />
+      )}
 
       {isApartment ? (
         <Suspense
@@ -156,6 +163,7 @@ export function KitchenScene({
           <ApartmentModel
             cabinetFinish={cabinetColor}
             frontFinish={frontColor}
+            pathTracing={pathTracing}
             reflectionProbe={!pathTracing}
             reflectionResolution={reflectionResolution}
           />
@@ -189,7 +197,7 @@ export function KitchenScene({
       <CameraControls
         dollySpeed={0.65}
         makeDefault
-        maxDistance={isApartment ? 11 : 8.4}
+        maxDistance={isApartment ? 11 : isCompactViewport ? 13 : 8.4}
         maxPolarAngle={Math.PI / 2.08}
         minDistance={2.2}
         minPolarAngle={Math.PI / 8}
@@ -203,32 +211,95 @@ export function KitchenScene({
 }
 
 function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
+  const keyRef = useRef<RectAreaLight | null>(null);
+  const edgeRef = useRef<RectAreaLight | null>(null);
+
+  useEffect(() => {
+    keyRef.current?.lookAt(0, 0.75, 0);
+    edgeRef.current?.lookAt(0, 0.95, -0.4);
+  }, []);
+
   return (
     <>
-      <hemisphereLight args={["#f6fbff", "#857a6e", 0.35]} />
-      <ambientLight intensity={0.04} />
+      <hemisphereLight args={["#e8f0ef", "#625d56", 0.22]} />
+      <ambientLight intensity={0.025} />
       <directionalLight
         castShadow
-        intensity={pathTracing ? 1.8 : 1.35}
-        position={[4.8, 6.2, 3.9]}
+        color="#fff4e6"
+        intensity={pathTracing ? 2.2 : 1.15}
+        position={[4.8, 6.8, 4.6]}
         shadow-bias={-0.0002}
         shadow-blurSamples={24}
         shadow-mapSize={[3072, 3072]}
         shadow-normalBias={0.025}
-        shadow-radius={8}
+        shadow-radius={7}
       />
-      <spotLight
-        angle={0.48}
-        color="#fff1dd"
-        intensity={pathTracing ? 2 : 0.82}
-        penumbra={0.78}
-        position={[-3.6, 4.7, 3.8]}
+      <rectAreaLight
+        color="#fff1df"
+        height={4.2}
+        intensity={pathTracing ? 16 : 5.2}
+        position={[4.3, 4.6, 4.8]}
+        ref={keyRef}
+        width={3.4}
       />
-      <pointLight
-        color="#bfe6ff"
-        intensity={pathTracing ? 0.45 : 0.22}
-        position={[3.6, 2.4, -3.8]}
+      <rectAreaLight
+        color="#bcd8dc"
+        height={3.4}
+        intensity={pathTracing ? 8 : 2.4}
+        position={[-4.4, 2.7, 1.1]}
+        ref={edgeRef}
+        width={1.4}
       />
+    </>
+  );
+}
+
+function StudioEnvironment({
+  compact,
+  pathTracing
+}: {
+  compact: boolean;
+  pathTracing: boolean;
+}) {
+  return (
+    <>
+      <color args={["#aeb7b3"]} attach="background" />
+      <Environment
+        environmentIntensity={pathTracing ? 1.15 : 0.82}
+        resolution={compact ? 256 : 512}
+      >
+        <Lightformer
+          color="#fff6e8"
+          form="rect"
+          intensity={4.5}
+          position={[0, 5, -4]}
+          rotation={[Math.PI / 2, 0, 0]}
+          scale={[8, 3, 1]}
+        />
+        <Lightformer
+          color="#d8eef0"
+          form="rect"
+          intensity={3.2}
+          position={[-4.5, 1.8, 1.5]}
+          rotation={[0, Math.PI / 2, 0]}
+          scale={[4, 2.2, 1]}
+        />
+        <Lightformer
+          color="#fff0dc"
+          form="rect"
+          intensity={2.8}
+          position={[4.5, 2.5, 2.4]}
+          rotation={[0, -Math.PI / 2.5, 0]}
+          scale={[2.4, 5, 1]}
+        />
+        <Lightformer
+          color="#71817f"
+          form="ring"
+          intensity={1.2}
+          position={[0, 1, -5]}
+          scale={8}
+        />
+      </Environment>
     </>
   );
 }
@@ -329,32 +400,23 @@ function StudioKitchen({
 }
 
 function CinematicEffects({ apartment, compact }: { apartment: boolean; compact: boolean }) {
-  const lut = useMemo(() => createCinematicLut(), []);
-
-  useEffect(() => {
-    return () => lut.dispose();
-  }, [lut]);
-
   return (
     <EffectComposer multisampling={compact ? 0 : 4}>
       <N8AO
-        aoRadius={apartment ? 0.42 : 0.35}
-        color={apartment ? "#4d4945" : "#625b54"}
-        distanceFalloff={0.9}
-        intensity={apartment ? 1.28 : 1.08}
+        aoRadius={apartment ? 0.4 : 0.28}
+        color={apartment ? "#4d4945" : "#5a5853"}
+        distanceFalloff={0.82}
+        intensity={apartment ? 1.18 : 0.92}
         quality={compact ? "medium" : "high"}
       />
       <Bloom
         blendFunction={BlendFunction.ADD}
-        intensity={0.09}
+        intensity={0.035}
         luminanceSmoothing={0.3}
-        luminanceThreshold={0.94}
+        luminanceThreshold={1.02}
         mipmapBlur
       />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-      <BrightnessContrast brightness={-0.035} contrast={0.055} />
-      <LUT lut={lut} tetrahedralInterpolation />
-      <Vignette darkness={0.28} eskil={false} offset={0.32} />
       <SMAA preset={SMAAPreset.HIGH} />
     </EffectComposer>
   );
@@ -366,21 +428,28 @@ type AtmosphericStageProps = {
 
 function AtmosphericStage({ floorTexture }: AtmosphericStageProps) {
   return (
-    <mesh
-      position={[0, STUDIO_FLOOR_OFFSET, 0]}
-      receiveShadow
-      rotation={[-Math.PI / 2, 0, 0]}
-    >
-      <planeGeometry args={[16, 12]} />
-      <meshStandardMaterial
-        bumpMap={floorTexture}
-        bumpScale={0.006}
-        color="#d0ccc4"
-        map={floorTexture}
-        metalness={0.01}
-        roughness={0.74}
-      />
-    </mesh>
+    <>
+      <mesh
+        position={[0, STUDIO_FLOOR_OFFSET, 0]}
+        receiveShadow
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <planeGeometry args={[16, 12]} />
+        <meshPhysicalMaterial
+          bumpMap={floorTexture}
+          bumpScale={0.004}
+          clearcoat={0.05}
+          color="#aaa79f"
+          map={floorTexture}
+          metalness={0}
+          roughness={0.68}
+        />
+      </mesh>
+      <mesh position={[0, 3.46, -3.35]} receiveShadow>
+        <planeGeometry args={[16, 7]} />
+        <meshStandardMaterial color="#a6afab" metalness={0} roughness={0.9} />
+      </mesh>
+    </>
   );
 }
 
@@ -457,38 +526,4 @@ function smoothStep(value: number) {
 
 function mix(start: number, end: number, amount: number) {
   return start + (end - start) * amount;
-}
-
-function createCinematicLut() {
-  const lut = LookupTexture.createNeutral(16);
-  const data = lut.image.data as Float32Array;
-
-  for (let index = 0; index < data.length; index += 4) {
-    let red = addContrast(data[index]);
-    let green = addContrast(data[index + 1]);
-    let blue = addContrast(data[index + 2]);
-    const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
-    const highlight = smoothStep(clampUnit((luminance - 0.42) / 0.58));
-    const shadow = 1 - smoothStep(clampUnit(luminance / 0.52));
-
-    red = luminance + (red - luminance) * 1.035;
-    green = luminance + (green - luminance) * 1.025;
-    blue = luminance + (blue - luminance) * 1.03;
-
-    data[index] = clampUnit(red + highlight * 0.012 - shadow * 0.008);
-    data[index + 1] = clampUnit(green + highlight * 0.004);
-    data[index + 2] = clampUnit(blue - highlight * 0.014 + shadow * 0.012);
-  }
-
-  lut.name = "Signature cinematic neutral";
-  lut.needsUpdate = true;
-  return lut;
-}
-
-function addContrast(value: number) {
-  return clampUnit((value - 0.5) * 1.045 + 0.5);
-}
-
-function clampUnit(value: number) {
-  return Math.max(0, Math.min(1, value));
 }

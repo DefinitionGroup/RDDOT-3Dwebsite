@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-13T21:46:12Z",
+  "title": "Design System: rotpunkt Signature",
+  "extensions": {
+    "colorMeta": {
+      "signature-red": {
+        "role": "primary",
+        "displayName": "Signature Red",
+        "tonalRamp": [
+          "oklch(15% 0.07 28)",
+          "oklch(25% 0.12 28)",
+          "oklch(35% 0.17 28)",
+          "oklch(45% 0.22 28)",
+          "oklch(55% 0.24 28)",
+          "oklch(65% 0.20 28)",
+          "oklch(80% 0.12 28)",
+          "oklch(95% 0.03 28)"
+        ]
+      },
+      "gallery-canvas": {
+        "role": "neutral",
+        "displayName": "Gallery Canvas",
+        "tonalRamp": [
+          "oklch(15% 0.010 80)",
+          "oklch(25% 0.009 80)",
+          "oklch(35% 0.008 80)",
+          "oklch(48% 0.007 80)",
+          "oklch(62% 0.006 80)",
+          "oklch(75% 0.005 80)",
+          "oklch(87% 0.004 80)",
+          "oklch(98% 0.003 80)"
+        ]
+      },
+      "paper-white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(100% 0 0)"
+        ]
+      },
+      "material-mist": {
+        "role": "neutral",
+        "displayName": "Material Mist",
+        "tonalRamp": [
+          "oklch(15% 0.012 75)",
+          "oklch(26% 0.011 75)",
+          "oklch(38% 0.010 75)",
+          "oklch(50% 0.009 75)",
+          "oklch(62% 0.008 75)",
+          "oklch(74% 0.007 75)",
+          "oklch(86% 0.006 75)",
+          "oklch(95% 0.005 75)"
+        ]
+      },
+      "porcelain": {
+        "role": "neutral",
+        "displayName": "Porcelain",
+        "tonalRamp": [
+          "oklch(15% 0.010 75)",
+          "oklch(27% 0.009 75)",
+          "oklch(39% 0.008 75)",
+          "oklch(51% 0.007 75)",
+          "oklch(63% 0.006 75)",
+          "oklch(75% 0.005 75)",
+          "oklch(87% 0.004 75)",
+          "oklch(97% 0.003 75)"
+        ]
+      },
+      "near-black-ink": {
+        "role": "neutral",
+        "displayName": "Near-Black Ink",
+        "tonalRamp": [
+          "oklch(15% 0.010 70)",
+          "oklch(27% 0.009 70)",
+          "oklch(39% 0.008 70)",
+          "oklch(51% 0.007 70)",
+          "oklch(63% 0.006 70)",
+          "oklch(75% 0.005 70)",
+          "oklch(87% 0.004 70)",
+          "oklch(95% 0.003 70)"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "tonalRamp": [
+          "oklch(15% 0.012 65)",
+          "oklch(27% 0.011 65)",
+          "oklch(39% 0.010 65)",
+          "oklch(51% 0.009 65)",
+          "oklch(63% 0.008 65)",
+          "oklch(75% 0.007 65)",
+          "oklch(87% 0.006 65)",
+          "oklch(95% 0.005 65)"
+        ]
+      },
+      "ash": {
+        "role": "neutral",
+        "displayName": "Ash",
+        "tonalRamp": [
+          "oklch(15% 0.012 65)",
+          "oklch(27% 0.011 65)",
+          "oklch(39% 0.010 65)",
+          "oklch(51% 0.009 65)",
+          "oklch(63% 0.008 65)",
+          "oklch(75% 0.007 65)",
+          "oklch(87% 0.006 65)",
+          "oklch(95% 0.005 65)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "tonalRamp": [
+          "oklch(15% 0.010 70)",
+          "oklch(27% 0.009 70)",
+          "oklch(39% 0.008 70)",
+          "oklch(51% 0.007 70)",
+          "oklch(63% 0.006 70)",
+          "oklch(75% 0.005 70)",
+          "oklch(87% 0.004 70)",
+          "oklch(93% 0.003 70)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Large campaign and section statements with a short measure."
+      },
+      "account-headline": {
+        "displayName": "Account Headline",
+        "purpose": "A bounded display role for authentication and private workspace tasks."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "Editorial support, project names, and compact section titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Navigation, form labels, controls, captions, and explanations."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "signature-ease",
+        "value": "cubic-bezier(.22, 1, .36, 1)",
+        "purpose": "The shared deceleration curve for entrances, image settling, and state changes."
+      },
+      {
+        "name": "control-color",
+        "value": "300ms cubic-bezier(.22, 1, .36, 1)",
+        "purpose": "Button, link, icon, and border color feedback."
+      },
+      {
+        "name": "soft-reveal",
+        "value": "800ms cubic-bezier(.22, 1, .36, 1); opacity 0 to 1; translateY 14px to 0",
+        "purpose": "General content entrance and the account image reveal."
+      },
+      {
+        "name": "account-state",
+        "value": "420ms cubic-bezier(.22, 1, .36, 1); opacity; translateY 14px to 0; blur 4px to 0",
+        "purpose": "Continuity between email and one-time-code steps."
+      },
+      {
+        "name": "workspace-entry",
+        "value": "550ms cubic-bezier(.22, 1, .36, 1); opacity; translateY 16px to 0",
+        "purpose": "Single restrained entrance for the authenticated workspace."
+      },
+      {
+        "name": "image-settle",
+        "value": "1800ms cubic-bezier(.22, 1, .36, 1); scale 1.06 to 1",
+        "purpose": "Creates quiet presence in kitchen image panels."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Brand Mark",
+      "kind": "custom",
+      "description": "The rotpunkt wordmark built from Aspekta, a live red point, and the quieter Signature suffix.",
+      "html": "<a class=\"ds-brand\" href=\"#\" aria-label=\"rotpunkt Signature Startseite\"><span class=\"ds-brand-name\">r<span class=\"ds-brand-dot\"></span>tpunkt</span><span class=\"ds-brand-signature\">Signature</span></a>",
+      "css": ".ds-brand { display: inline-flex; align-items: baseline; color: rgb(var(--color-ink)); font-family: var(--font-sans), 'Helvetica Neue', Arial, sans-serif; font-weight: 400; letter-spacing: -0.025em; text-decoration: none; white-space: nowrap; } .ds-brand-name { display: inline-flex; align-items: center; font-size: 1.3rem; line-height: 1; } .ds-brand-dot { width: .3em; height: .3em; margin: 0 .04em; border-radius: 9999px; background: rgb(var(--color-signature)); transition: transform 300ms cubic-bezier(.22,1,.36,1); } .ds-brand-signature { margin-left: .625rem; padding-left: .625rem; border-left: 1px solid currentColor; font-size: 1.3rem; line-height: 1; opacity: .55; } .ds-brand:hover .ds-brand-dot { transform: scale(1.1); } .ds-brand:focus-visible { outline: auto; }"
+    },
+    {
+      "name": "Solid Button",
+      "kind": "button",
+      "refersTo": "button-solid",
+      "description": "The standard dark action for branded and configurator surfaces.",
+      "html": "<button class=\"ds-btn-solid\">Küche konfigurieren<svg aria-hidden=\"true\" viewBox=\"0 0 12 12\"><path d=\"M2 10 10 2M4 2h6v6\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"1.2\"/></svg></button>",
+      "css": ".ds-btn-solid { min-height: 44px; display: inline-flex; align-items: center; gap: 12px; padding: 12px 24px; border: 1px solid rgb(var(--color-ink)); border-radius: 0; background: rgb(var(--color-ink)); color: rgb(var(--color-paper)); font: 400 .9375rem/1 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; transition: color 300ms cubic-bezier(.22,1,.36,1), background-color 300ms cubic-bezier(.22,1,.36,1); } .ds-btn-solid svg { width: 12px; height: 12px; transition: transform 300ms cubic-bezier(.22,1,.36,1); } .ds-btn-solid:hover { background: transparent; color: rgb(var(--color-ink)); } .ds-btn-solid:hover svg { transform: translate(2px,-2px); } .ds-btn-solid:focus-visible { outline: auto; }"
+    },
+    {
+      "name": "Light Button",
+      "kind": "button",
+      "refersTo": "button-light",
+      "description": "A transparent secondary action that keeps the page plane open.",
+      "html": "<button class=\"ds-btn-light\">Collections<svg aria-hidden=\"true\" viewBox=\"0 0 12 12\"><path d=\"M2 10 10 2M4 2h6v6\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"1.2\"/></svg></button>",
+      "css": ".ds-btn-light { min-height: 44px; display: inline-flex; align-items: center; gap: 12px; padding: 12px 24px; border: 1px solid rgb(var(--color-ink)); border-radius: 0; background: transparent; color: rgb(var(--color-ink)); font: 400 .9375rem/1 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; transition: color 300ms cubic-bezier(.22,1,.36,1), background-color 300ms cubic-bezier(.22,1,.36,1); } .ds-btn-light svg { width: 12px; height: 12px; transition: transform 300ms cubic-bezier(.22,1,.36,1); } .ds-btn-light:hover { background: rgb(var(--color-ink)); color: rgb(var(--color-paper)); } .ds-btn-light:hover svg { transform: translate(2px,-2px); } .ds-btn-light:focus-visible { outline: auto; }"
+    },
+    {
+      "name": "Signature Task Button",
+      "kind": "button",
+      "refersTo": "button-signature",
+      "description": "The decisive continuation action in authentication and empty workspace states.",
+      "html": "<button class=\"ds-btn-signature\">Sicher anmelden</button>",
+      "css": ".ds-btn-signature { width: 100%; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; padding: 12px 24px; border: 0; border-radius: 0; background: rgb(var(--color-signature)); color: rgb(var(--color-paper)); font: 400 .9375rem/1.7 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; transition: background-color 300ms ease; } .ds-btn-signature:hover { background: rgb(var(--color-ink)); } .ds-btn-signature:focus-visible { outline: auto; } .ds-btn-signature:disabled { cursor: wait; background: rgb(var(--color-graphite)); }"
+    },
+    {
+      "name": "Underline Field",
+      "kind": "input",
+      "refersTo": "input-underline",
+      "description": "The open, single-rule form field used by account authentication.",
+      "html": "<label class=\"ds-field\"><span>E-Mail-Adresse</span><input type=\"email\" placeholder=\"name@beispiel.de\" /></label>",
+      "css": ".ds-field { display: block; color: rgb(var(--color-ink)); font: 400 .9375rem/1.7 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; } .ds-field input { width: 100%; min-height: 56px; margin-top: 12px; padding: 0; border: 0; border-bottom: 1px solid rgb(var(--color-ink)); border-radius: 0; background: transparent; color: rgb(var(--color-ink)); font: 400 1.125rem/1.5 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; outline: none; transition: border-color 150ms ease; } .ds-field input::placeholder { color: rgb(var(--color-graphite)); } .ds-field input:hover { border-bottom-color: rgb(var(--color-graphite)); } .ds-field input:focus { border-bottom-color: rgb(var(--color-signature)); }"
+    },
+    {
+      "name": "Navigation Link",
+      "kind": "nav",
+      "description": "A quiet text link that moves from Graphite to Ink without gaining a container.",
+      "html": "<a class=\"ds-nav-link\" href=\"#\">Collections</a>",
+      "css": ".ds-nav-link { color: rgb(var(--color-graphite)); font: 400 .9375rem/1.7 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; text-decoration: none; transition: color 300ms ease; } .ds-nav-link:hover { color: rgb(var(--color-ink)); } .ds-nav-link:focus-visible { outline: auto; }"
+    },
+    {
+      "name": "Account Icon Action",
+      "kind": "button",
+      "description": "A 44px square target whose icon quiets on hover instead of gaining a box.",
+      "html": "<a class=\"ds-account-action\" href=\"#\" aria-label=\"Mein Bereich\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"8\" r=\"3.25\"/><path d=\"M5.5 20c.35-4.05 2.52-6.1 6.5-6.1s6.15 2.05 6.5 6.1\"/></svg></a>",
+      "css": ".ds-account-action { width: 44px; height: 44px; display: grid; place-items: center; color: rgb(var(--color-ink)); text-decoration: none; } .ds-account-action svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.4; transition: opacity 300ms cubic-bezier(.22,1,.36,1); } .ds-account-action path { stroke-linecap: square; } .ds-account-action:hover svg { opacity: .6; } .ds-account-action:focus-visible { outline: auto; }"
+    },
+    {
+      "name": "Project Row",
+      "kind": "custom",
+      "description": "A ruled workspace record that preserves information density without becoming a card.",
+      "html": "<div class=\"ds-project-row\"><div><div class=\"ds-project-name\">Küche Düsseldorf</div><div class=\"ds-project-meta\">Zuletzt geändert am 13.08.2026</div></div><span class=\"ds-project-state\">Gespeichert</span></div>",
+      "css": ".ds-project-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 4px 24px; padding: 20px 0; border-top: 1px solid rgb(var(--color-hairline)); color: rgb(var(--color-ink)); font-family: var(--font-sans), 'Helvetica Neue', Arial, sans-serif; } .ds-project-name { font-size: clamp(1.25rem,2vw,1.75rem); line-height: 1.3; letter-spacing: -.01em; } .ds-project-meta, .ds-project-state { color: rgb(var(--color-graphite)); font-size: .875rem; line-height: 1.5; } @media (max-width: 639px) { .ds-project-row { grid-template-columns: 1fr; align-items: start; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Signature Gallery",
+    "overview": "rotpunkt Signature treats the interface as an architectural gallery for real kitchens. Warm white space, fine rules, precise type, and restrained controls recede around full-scale product imagery; the visual authority comes from the room, material, and planning state rather than decorative UI.\n\nThe system is premium without ornament. Aspekta Variable moves from unusually light, close-set statements to calm regular-weight utility copy. Near-black ink provides structure, gallery neutrals create quiet tonal separation, and signature red appears as a deliberately scarce point of identity or action.",
+    "keyCharacteristics": [
+      "Real kitchen imagery is the dominant visual material.",
+      "Sharp planes, square controls, and hairline rules replace soft containers.",
+      "One type family carries display, editorial, and operational roles.",
+      "Signature red punctuates; it does not flood the composition.",
+      "Motion is slow enough to create presence and short enough to preserve continuity."
+    ],
+    "rules": [
+      {
+        "name": "The One Red Point Rule",
+        "body": "Signature red marks the brand's point, the primary continuation, focus, or error. It never becomes a broad decorative field.",
+        "section": "colors"
+      },
+      {
+        "name": "The Warm White Rule",
+        "body": "Use Gallery Canvas for the page field and reserve Paper White for contrast over imagery or a consciously cleaner plane; do not collapse the palette into generic pure white and black.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Family Rule",
+        "body": "Keep Aspekta Variable across brand and operational UI; distinguish roles through scale and space before weight.",
+        "section": "typography"
+      },
+      {
+        "name": "The Light Statement Rule",
+        "body": "Display statements use the light axis, while body, labels, links, and emphasized inline text remain regular weight.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Plane Rule",
+        "body": "A section reads as one composition. Do not subdivide it into decorative cards, stat strips, or floating callouts.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-by-Default Rule",
+        "body": "Surfaces rest on the page plane. Add translucency only when content must remain legible over a live visual scene, never as decorative glass.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Architectural Edge Rule",
+        "body": "A control or container stays square unless its meaning is itself circular.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do let real kitchen imagery, material, or a rendered planning state anchor branded compositions.",
+      "Do use Signature Red for the point, decisive action, focus, selected state, or error—then let neutrals carry the rest.",
+      "Do preserve square geometry and hairline structure across new controls and surfaces.",
+      "Do keep motion tied to hierarchy, state continuity, image settling, and direct feedback.",
+      "Do collapse multi-plane compositions to a direct reading order on mobile and verify there is no horizontal overflow."
+    ],
+    "donts": [
+      "Don't introduce decorative cards, rounded media shells, floating badges, or detached hero overlays.",
+      "Don't substitute generic gradients or abstract decoration for real kitchen or configurator imagery.",
+      "Don't add bold-weight ladders, a second display family, or tracked uppercase copy at paragraph scale.",
+      "Don't default to auxiliary labels above headings; use a direct heading and spatial hierarchy.",
+      "Don't use broad red backgrounds, generic purple accents, or a default dark-mode palette.",
+      "Don't add ambient shadows or glass effects where a border, tonal shift, or open plane already explains the hierarchy."
+    ]
+  }
+}
