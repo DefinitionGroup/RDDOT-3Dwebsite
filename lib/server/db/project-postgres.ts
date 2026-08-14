@@ -10,8 +10,10 @@ import {
 } from "@/features/projects/configuration-contract";
 import type {
   CheckpointRevisionResult,
+  ConfigurationRevisionSummary,
   ProjectModule,
-  ProjectWorkspace
+  ProjectWorkspace,
+  RestoreRevisionResult
 } from "@/features/projects/project-module";
 import type {
   Database,
@@ -27,6 +29,20 @@ const labelSchema = z.string().trim().min(1).max(120);
 const topicSchema = z.string().trim().min(1).max(120);
 
 class IdempotencyConflict extends Error {}
+
+function mapRevisionSummary(row: {
+  id: string;
+  label: string | null;
+  trigger: "version-save" | "share" | "photo" | "quote";
+  displaySnapshot: unknown;
+  createdAt: Date;
+}): ConfigurationRevisionSummary {
+  return {
+    ...row,
+    displaySnapshot: row.displaySnapshot as ConfigurationRevisionSummary["displaySnapshot"],
+    createdAt: new Date(row.createdAt)
+  };
+}
 
 function mapWorkspace(row: {
   projectId: string;
@@ -205,6 +221,76 @@ export function createPostgresProjectModule(
       );
     },
 
+    async listConfigurationRevisions(input) {
+      const ownerId = uuidSchema.parse(input.ownerId);
+      const projectId = uuidSchema.parse(input.projectId);
+      const limit = z.number().int().min(1).max(100).parse(input.limit ?? 50);
+      const cursor = input.cursor
+        ? {
+            createdAt: z.date().parse(input.cursor.createdAt),
+            id: uuidSchema.parse(input.cursor.id)
+          }
+        : null;
+
+      let query = database
+        .withSchema("app")
+        .selectFrom("configurationRevision")
+        .innerJoin("project", "project.id", "configurationRevision.projectId")
+        .select([
+          "configurationRevision.id",
+          "configurationRevision.label",
+          "configurationRevision.trigger",
+          "configurationRevision.displaySnapshot",
+          "configurationRevision.createdAt"
+        ])
+        .where("project.id", "=", projectId)
+        .where("project.ownerId", "=", ownerId)
+        .where("project.lifecycle", "!=", "trashed");
+
+      if (cursor) {
+        query = query.where((expression) =>
+          expression.or([
+            expression("configurationRevision.createdAt", "<", cursor.createdAt),
+            expression.and([
+              expression(
+                "configurationRevision.createdAt",
+                "=",
+                cursor.createdAt
+              ),
+              expression("configurationRevision.id", "<", cursor.id)
+            ])
+          ])
+        );
+      }
+
+      const [rows, countRow] = await Promise.all([
+        query
+        .orderBy("configurationRevision.createdAt", "desc")
+          .orderBy("configurationRevision.id", "desc")
+          .limit(limit + 1)
+          .execute(),
+        database
+          .withSchema("app")
+          .selectFrom("configurationRevision")
+          .innerJoin("project", "project.id", "configurationRevision.projectId")
+          .select((expression) => expression.fn.countAll<number>().as("count"))
+          .where("project.id", "=", projectId)
+          .where("project.ownerId", "=", ownerId)
+          .where("project.lifecycle", "!=", "trashed")
+          .executeTakeFirstOrThrow()
+      ]);
+
+      const visibleRows = rows.slice(0, limit);
+      const last = rows.length > limit ? visibleRows.at(-1) : null;
+      return {
+        items: visibleRows.map(mapRevisionSummary),
+        totalCount: Number(countRow.count),
+        nextCursor: last
+          ? { createdAt: new Date(last.createdAt), id: last.id }
+          : null
+      };
+    },
+
     async saveWorkingConfiguration(input) {
       const ownerId = uuidSchema.parse(input.ownerId);
       const projectId = uuidSchema.parse(input.projectId);
@@ -337,7 +423,7 @@ export function createPostgresProjectModule(
             .returning("id")
             .executeTakeFirst();
 
-          const revision =
+          const revisionIdentity =
             insertedRevision ??
             (await transaction
               .withSchema("app")
@@ -353,10 +439,20 @@ export function createPostgresProjectModule(
               .where("configurationHash", "=", working.configurationHash)
               .executeTakeFirstOrThrow());
 
+          const revision = await transaction
+            .withSchema("app")
+            .selectFrom("configurationRevision")
+            .select(["id", "label", "trigger", "displaySnapshot", "createdAt"])
+            .where("id", "=", revisionIdentity.id)
+            .executeTakeFirstOrThrow();
+
           const requestHash = hashJson({
             revisionId: revision.id,
             topic,
-            payload: input.intent.payload
+            payload: input.intent.payload,
+            trigger: input.trigger,
+            label,
+            displaySnapshot: input.displaySnapshot
           });
           const outboxMessageId = randomUUID();
           const insertedOutbox = await transaction
@@ -371,6 +467,7 @@ export function createPostgresProjectModule(
               requestHash,
               payload: {
                 revisionId: revision.id,
+                revisionCreated: Boolean(insertedRevision),
                 data: input.intent.payload
               },
               processedAt: null
@@ -385,14 +482,16 @@ export function createPostgresProjectModule(
             return {
               kind: "checkpointed",
               revisionId: revision.id,
-              outboxMessageId: insertedOutbox.id
+              revision: mapRevisionSummary(revision),
+              outboxMessageId: insertedOutbox.id,
+              created: Boolean(insertedRevision)
             };
           }
 
           const replay = await transaction
             .withSchema("app")
             .selectFrom("outboxMessage")
-            .select(["id", "requestHash", "aggregateId"])
+            .select(["id", "requestHash", "aggregateId", "payload"])
             .where("topic", "=", topic)
             .where("idempotencyKey", "=", idempotencyKey)
             .executeTakeFirstOrThrow();
@@ -407,7 +506,13 @@ export function createPostgresProjectModule(
           return {
             kind: "checkpointed",
             revisionId: revision.id,
-            outboxMessageId: replay.id
+            revision: mapRevisionSummary(revision),
+            outboxMessageId: replay.id,
+            created:
+              typeof replay.payload === "object" &&
+              replay.payload !== null &&
+              !Array.isArray(replay.payload) &&
+              replay.payload.revisionCreated === true
           };
         });
       } catch (error) {
@@ -416,6 +521,141 @@ export function createPostgresProjectModule(
         }
         throw error;
       }
+    },
+
+    async restoreRevision(input): Promise<RestoreRevisionResult> {
+      const ownerId = uuidSchema.parse(input.ownerId);
+      const projectId = uuidSchema.parse(input.projectId);
+      const revisionId = uuidSchema.parse(input.revisionId);
+      const expectedVersion = z.number().int().positive().parse(input.expectedVersion);
+      const supportedProductDefinitionVersions = z
+        .array(productDefinitionVersionSchema)
+        .min(1)
+        .parse(input.supportedProductDefinitionVersions);
+
+      return database.transaction().execute(async (transaction) => {
+        const working = await transaction
+          .withSchema("app")
+          .selectFrom("workingConfiguration")
+          .innerJoin("project", "project.id", "workingConfiguration.projectId")
+          .select([
+            "workingConfiguration.normalizedConfiguration",
+            "workingConfiguration.configurationHash",
+            "workingConfiguration.schemaVersion",
+            "workingConfiguration.productDefinitionVersion",
+            "workingConfiguration.version"
+          ])
+          .where("project.id", "=", projectId)
+          .where("project.ownerId", "=", ownerId)
+          .where("project.lifecycle", "=", "active")
+          .forUpdate()
+          .executeTakeFirst();
+
+        if (!working) return { kind: "unavailable" };
+        if (currentVersion(working) !== expectedVersion) {
+          return {
+            kind: "conflict",
+            currentVersion: currentVersion(working)
+          };
+        }
+
+        const target = await transaction
+          .withSchema("app")
+          .selectFrom("configurationRevision")
+          .select([
+            "normalizedConfiguration",
+            "configurationHash",
+            "schemaVersion",
+            "productDefinitionVersion"
+          ])
+          .where("id", "=", revisionId)
+          .where("projectId", "=", projectId)
+          .executeTakeFirst();
+
+        if (!target) return { kind: "unavailable" };
+        if (
+          !supportedProductDefinitionVersions.includes(
+            target.productDefinitionVersion
+          )
+        ) {
+          return {
+            kind: "unsupported-product-definition",
+            productDefinitionVersion: target.productDefinitionVersion
+          };
+        }
+        const targetConfiguration = parseConfiguration(
+          target.normalizedConfiguration
+        );
+        if (
+          target.configurationHash === working.configurationHash &&
+          target.schemaVersion === working.schemaVersion &&
+          target.productDefinitionVersion === working.productDefinitionVersion
+        ) {
+          return {
+            kind: "unchanged",
+            configuration: targetConfiguration,
+            version: currentVersion(working)
+          };
+        }
+
+        await transaction
+          .withSchema("app")
+          .insertInto("configurationRevision")
+          .values({
+            id: randomUUID(),
+            projectId,
+            normalizedConfiguration: working.normalizedConfiguration,
+            configurationHash: working.configurationHash,
+            schemaVersion: working.schemaVersion,
+            productDefinitionVersion: working.productDefinitionVersion,
+            displaySnapshot: input.safetyDisplaySnapshot,
+            trigger: "version-save",
+            label: "Vor Wiederherstellung"
+          })
+          .onConflict((conflict) =>
+            conflict
+              .columns([
+                "projectId",
+                "schemaVersion",
+                "productDefinitionVersion",
+                "configurationHash"
+              ])
+              .doNothing()
+          )
+          .executeTakeFirst();
+
+        const updatedAt = new Date();
+        const restored = await transaction
+          .withSchema("app")
+          .updateTable("workingConfiguration")
+          .set((expression) => ({
+            normalizedConfiguration: target.normalizedConfiguration,
+            configurationHash: target.configurationHash,
+            schemaVersion: target.schemaVersion,
+            productDefinitionVersion: target.productDefinitionVersion,
+            version: expression("version", "+", 1),
+            updatedAt
+          }))
+          .where("projectId", "=", projectId)
+          .where("version", "=", expectedVersion)
+          .returning("version")
+          .executeTakeFirstOrThrow();
+
+        await transaction
+          .withSchema("app")
+          .updateTable("project")
+          .set({ updatedAt })
+          .where("id", "=", projectId)
+          .where("ownerId", "=", ownerId)
+          .executeTakeFirstOrThrow();
+
+        return {
+          kind: "restored",
+          configuration: targetConfiguration,
+          version: Number(restored.version),
+          updatedAt
+        };
+      });
     }
   };
 }

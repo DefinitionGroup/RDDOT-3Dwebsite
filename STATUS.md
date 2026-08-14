@@ -46,6 +46,9 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Active saved Projects autosave the Working Configuration with expected-version optimistic concurrency. A 409 conflict leaves the remote Project unchanged and offers load-latest or save-as-new.
 - Added browser-local, Project-scoped recovery drafts for unconfirmed changes, including stale-draft save-as-new handling.
 - Confirmed autosaves advance the Working Configuration version and update the Project timestamp used in the account workspace.
+- Added explicit “Version speichern” checkpoints for active Projects. They create or reuse an immutable Configuration Revision from the confirmed Working Configuration and remain separate from autosave.
+- Added an owner-scoped, cursor-paginated Project version history with historical finish and price display snapshots resolved from the Configuration Revision's pinned Product Definition version.
+- Added optimistic-concurrency-controlled version restoration. A restore first preserves the displaced Working Configuration as an immutable “Vor Wiederherstellung” safety version, then restores the selected Configuration Revision and its Product Definition identity.
 - Added `/checkout` as a fake checkout/request handoff that reads the shared configuration.
 - Added a temporary product-definition contract in `features/configurator/product-definition.ts`.
 - Added a Sanity adapter boundary in `features/configurator/adapters/sanity.ts`.
@@ -65,9 +68,11 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 
 ## Current Slice Verified
 
-- `pnpm test`, `pnpm test:db`, `pnpm lint`, and `pnpm build` pass.
-- Unit coverage includes browser-recovery parsing, stale-version classification, and the in-flight-save/newer-draft race. Database integration coverage confirms one winner for concurrent expected-version writes and synchronized Project timestamps.
-- Live browser checks confirmed owner-scoped Project opening, successful autosave and reload persistence, a deliberate 200/409 two-tab conflict, explicit load-latest recovery, a nonblank 3D canvas, no horizontal overflow at desktop and mobile widths, and no new console errors.
+- `pnpm test`, `pnpm test:db`, `pnpm lint`, and `pnpm build` pass. The versions slice is covered by 14 passing unit tests and 7 passing database integration tests; the production build uses the required `TRANSACTIONAL_EMAIL_PROVIDER` environment override.
+- Unit coverage includes browser-recovery parsing, stale-version classification, the in-flight-save/newer-draft race, and Product Definition-bound historical display snapshots. Database integration coverage confirms one winner for concurrent expected-version writes, synchronized Project timestamps, revision deduplication, cursor pagination, owner scoping, safe restore, stale-version rejection, and restoration of the pinned Product Definition identity.
+- Live browser checks on the Neon QA Project confirmed that the first explicit save returned 201, an identical repeat returned 200 without adding a duplicate, a later autosaved finish change remained separate, and restoring the earlier version returned 200 and added the displaced state as “Vor Wiederherstellung”.
+- At 1440×1000 the canvas remained nonblank, version history stayed cleanly contained in the configurator panel, and the document had no horizontal overflow. At 390×844 the document measured 390/390 for scroll/client width, retained one canvas, kept history usable, and moved the camera toolbar out of the history viewport instead of overlaying it.
+- Browser QA produced no new errors beyond the known `THREE.Clock` development warning and the expected development-origin warning when using the alternate `127.0.0.1` host.
 - The current Three.js deprecation and PostgreSQL SSL forward-compatibility warnings remain known non-blockers.
 
 ## Known Warnings
@@ -98,6 +103,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - The current GLB color mapping is heuristic. A production asset should expose named nodes/material slots for cabinet bodies, fronts, handles, countertop, appliances, and room surfaces.
 - No analytics/event tracking exists for configurator interactions.
 - The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
+- Shared Revision Links and Project Archive/Trash/lifecycle restoration are not implemented yet.
 - No accessibility audit has been formalized.
 - No performance budgets exist for 3D, images, or page-builder pages.
 
@@ -118,7 +124,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 
 ## Recommended Next Implementation Steps
 
-1. Implement the next Project lifecycle and checkpoint workflows: explicit version save, Shared Revision Links, Archive/Trash/restore, and the relevant UI.
+1. Implement the remaining Project lifecycle workflows: Shared Revision Links, Archive, Trash, restoring archived/trashed Projects, and the relevant UI.
 2. Add locale route structure for `/`, `/en`, and `/es`.
 3. Define the Sanity schema set:
    - site settings
@@ -136,7 +142,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
    - color change updates URL
    - share URL restores state
    - checkout summary matches state
-   - owner-only saved Project open, re-auth return, autosave/conflict recovery, and local recovery-draft decisions
+   - owner-only saved Project open, re-auth return, autosave/conflict recovery, local recovery-draft decisions, explicit version save/deduplication, paginated history, and safe version restore
 9. Replace the box prototype with the first production-ready 3D asset pipeline.
 
 ## Docs Still Needed

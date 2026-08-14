@@ -17,6 +17,7 @@ export function createAuth(input: {
   secret: string;
   baseURL: string;
   sendAuthenticationOtp: SendAuthenticationOtp;
+  rateLimitEnabled?: boolean;
 }) {
   return betterAuth({
     appName: "rotpunkt Signature",
@@ -29,7 +30,7 @@ export function createAuth(input: {
       }
     },
     rateLimit: {
-      enabled: true,
+      enabled: input.rateLimitEnabled ?? true,
       storage: "database",
       window: 60,
       max: 60,

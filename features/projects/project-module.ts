@@ -32,6 +32,20 @@ export type ProjectSummary = {
   updatedAt: Date;
 };
 
+export type ConfigurationRevisionSummary = {
+  id: ConfigurationRevisionId;
+  label: string | null;
+  trigger: "version-save" | "share" | "photo" | "quote";
+  displaySnapshot: JsonValue;
+  createdAt: Date;
+};
+
+export type ConfigurationRevisionPage = {
+  items: ConfigurationRevisionSummary[];
+  totalCount: number;
+  nextCursor: { createdAt: Date; id: ConfigurationRevisionId } | null;
+};
+
 export type SaveWorkingConfigurationResult =
   | {
       kind: "saved";
@@ -46,10 +60,28 @@ export type CheckpointRevisionResult =
   | {
       kind: "checkpointed";
       revisionId: ConfigurationRevisionId;
+      revision: ConfigurationRevisionSummary;
       outboxMessageId: string;
+      created: boolean;
     }
   | { kind: "conflict"; currentVersion: number }
   | { kind: "idempotency-conflict" }
+  | { kind: "unavailable" };
+
+export type RestoreRevisionResult =
+  | {
+      kind: "restored";
+      configuration: ConfiguratorState;
+      version: number;
+      updatedAt: Date;
+    }
+  | {
+      kind: "unchanged";
+      configuration: ConfiguratorState;
+      version: number;
+  }
+  | { kind: "conflict"; currentVersion: number }
+  | { kind: "unsupported-product-definition"; productDefinitionVersion: string }
   | { kind: "unavailable" };
 
 export type ProjectModule = {
@@ -70,6 +102,13 @@ export type ProjectModule = {
     ownerId: CustomerAccountId;
     projectId: ProjectId;
   }): Promise<ProjectWorkspace | null>;
+
+  listConfigurationRevisions(input: {
+    ownerId: CustomerAccountId;
+    projectId: ProjectId;
+    limit?: number;
+    cursor?: { createdAt: Date; id: ConfigurationRevisionId };
+  }): Promise<ConfigurationRevisionPage>;
 
   saveWorkingConfiguration(input: {
     ownerId: CustomerAccountId;
@@ -92,4 +131,13 @@ export type ProjectModule = {
       payload: JsonValue;
     };
   }): Promise<CheckpointRevisionResult>;
+
+  restoreRevision(input: {
+    ownerId: CustomerAccountId;
+    projectId: ProjectId;
+    revisionId: ConfigurationRevisionId;
+    expectedVersion: number;
+    safetyDisplaySnapshot: JsonValue;
+    supportedProductDefinitionVersions: readonly string[];
+  }): Promise<RestoreRevisionResult>;
 };

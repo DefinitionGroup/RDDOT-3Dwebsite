@@ -6,6 +6,7 @@ import { ConfiguratorShell } from "@/features/configurator/ui/configurator-shell
 import { CONFIG_QUERY_PARAM, getInitialConfiguratorState } from "@/features/configurator/state-codec";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
+import { parseRevisionDisplaySnapshot } from "@/features/projects/revision-display";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +34,17 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
       redirect(`/konto?next=${encodeURIComponent(`/configure?project=${projectId}`)}`);
     }
 
-    const workspace = await projects.getWorkspace({
-      ownerId: session.customerAccountId,
-      projectId
-    });
+    const [workspace, revisionPage] = await Promise.all([
+      projects.getWorkspace({
+        ownerId: session.customerAccountId,
+        projectId
+      }),
+      projects.listConfigurationRevisions({
+        ownerId: session.customerAccountId,
+        projectId,
+        limit: 20
+      })
+    ]);
     if (!workspace) notFound();
 
     return (
@@ -48,7 +56,21 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
           id: workspace.id,
           name: workspace.name,
           updatedAt: workspace.workingConfiguration.updatedAt.toISOString(),
-          version: workspace.workingConfiguration.version
+          version: workspace.workingConfiguration.version,
+          revisions: revisionPage.items.map((revision) => ({
+            ...revision,
+            createdAt: revision.createdAt.toISOString(),
+            displaySnapshot: parseRevisionDisplaySnapshot(
+              revision.displaySnapshot
+            )
+          })),
+          revisionTotalCount: revisionPage.totalCount,
+          revisionNextCursor: revisionPage.nextCursor
+            ? {
+                createdAt: revisionPage.nextCursor.createdAt.toISOString(),
+                id: revisionPage.nextCursor.id
+              }
+            : null
         }}
       />
     );

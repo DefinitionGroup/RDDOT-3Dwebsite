@@ -109,6 +109,18 @@ export const RDTD_KITCHEN_PRODUCT: ConfiguratorProductDefinition = {
 export const RDTD_KITCHEN_PRODUCT_VERSION =
   "rdtdot-signature-kitchen-v1@1";
 
+const PRODUCT_DEFINITIONS = new Map<string, ConfiguratorProductDefinition>([
+  [RDTD_KITCHEN_PRODUCT_VERSION, RDTD_KITCHEN_PRODUCT]
+]);
+
+export const SUPPORTED_PRODUCT_DEFINITION_VERSIONS = Object.freeze(
+  Array.from(PRODUCT_DEFINITIONS.keys())
+);
+
+export function findConfiguratorProductDefinition(version: string) {
+  return PRODUCT_DEFINITIONS.get(version) ?? null;
+}
+
 export const DEFAULT_CONFIGURATOR_STATE: ConfiguratorState = {
   schemaVersion: 1,
   productKey: RDTD_KITCHEN_PRODUCT.productKey,
@@ -153,15 +165,18 @@ export function normalizeConfiguratorState(
   };
 }
 
-export function getConfiguratorQuote(state: ConfiguratorState): ConfiguratorQuote {
-  const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT.cabinetColors, state.cabinetColorKey);
-  const frontColor = findFinish(RDTD_KITCHEN_PRODUCT.frontColors, state.frontColorKey);
-  const basePriceCents = RDTD_KITCHEN_PRODUCT.priceBook.basePriceCents;
+export function getConfiguratorQuote(
+  state: ConfiguratorState,
+  productDefinition = RDTD_KITCHEN_PRODUCT
+): ConfiguratorQuote {
+  const cabinetColor = findFinish(productDefinition.cabinetColors, state.cabinetColorKey);
+  const frontColor = findFinish(productDefinition.frontColors, state.frontColorKey);
+  const basePriceCents = productDefinition.priceBook.basePriceCents;
   const subtotalCents = basePriceCents + cabinetColor.priceDeltaCents + frontColor.priceDeltaCents;
-  const taxCents = Math.round(subtotalCents * RDTD_KITCHEN_PRODUCT.priceBook.taxRate);
+  const taxCents = Math.round(subtotalCents * productDefinition.priceBook.taxRate);
 
   return {
-    currency: RDTD_KITCHEN_PRODUCT.priceBook.currency,
+    currency: productDefinition.priceBook.currency,
     basePriceCents,
     cabinetDeltaCents: cabinetColor.priceDeltaCents,
     frontDeltaCents: frontColor.priceDeltaCents,

@@ -53,6 +53,7 @@ describe("PostgreSQL persistence contract", () => {
       database: authPool,
       secret: "integration-test-secret-that-is-longer-than-thirty-two-characters",
       baseURL: "http://localhost:3000",
+      rateLimitEnabled: false,
       async sendAuthenticationOtp(message) {
         deliveredOtp = message.otp;
       }
@@ -289,5 +290,185 @@ describe("PostgreSQL persistence contract", () => {
     expect(first).toMatchObject({ kind: "checkpointed" });
     expect(replay).toEqual(first);
     expect(mismatch).toEqual({ kind: "idempotency-conflict" });
+  });
+
+  it("lists immutable versions and safely restores an earlier Configuration", async () => {
+    const identity = createPostgresIdentityAdapter(context.database);
+    const projects = createPostgresProjectModule(context.database);
+    const ownerId = await identity.resolveCustomerAccount({
+      provider: "better-auth",
+      providerSubject: `auth-user-${crypto.randomUUID()}`
+    });
+    const workspace = await projects.createProject({
+      ownerId,
+      idempotencyKey: `create-${crypto.randomUUID()}`,
+      name: "Versionsküche",
+      configuration: initialConfiguration,
+      productDefinitionVersion: "signature-line@1"
+    });
+    const checkpoint = await projects.checkpointRevision({
+      ownerId,
+      projectId: workspace.id,
+      expectedVersion: 1,
+      trigger: "version-save",
+      displaySnapshot: { cabinetFinish: "Graphit", frontFinish: "Porzellan" },
+      intent: {
+        idempotencyKey: `version-${crypto.randomUUID()}`,
+        topic: "project.version-saved",
+        payload: { projectId: workspace.id }
+      }
+    });
+    expect(checkpoint).toMatchObject({ kind: "checkpointed", created: true });
+    if (checkpoint.kind !== "checkpointed") return;
+
+    const changed = await projects.saveWorkingConfiguration({
+      ownerId,
+      projectId: workspace.id,
+      expectedVersion: 1,
+      configuration: { ...initialConfiguration, cabinetColorKey: "oak" },
+      productDefinitionVersion: "signature-line@1"
+    });
+    expect(changed).toMatchObject({ kind: "saved", version: 2 });
+
+    const restored = await projects.restoreRevision({
+      ownerId,
+      projectId: workspace.id,
+      revisionId: checkpoint.revisionId,
+      expectedVersion: 2,
+      safetyDisplaySnapshot: {
+        cabinetFinish: "Eiche warm",
+        frontFinish: "Porzellan"
+      },
+      supportedProductDefinitionVersions: ["signature-line@1"]
+    });
+    expect(restored).toMatchObject({
+      kind: "restored",
+      configuration: initialConfiguration,
+      version: 3
+    });
+
+    const revisions = await projects.listConfigurationRevisions({
+      ownerId,
+      projectId: workspace.id
+    });
+    expect(revisions.totalCount).toBe(2);
+    expect(revisions.nextCursor).toBeNull();
+    expect(revisions.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: checkpoint.revisionId }),
+        expect.objectContaining({ label: "Vor Wiederherstellung" })
+      ])
+    );
+
+    const firstPage = await projects.listConfigurationRevisions({
+      ownerId,
+      projectId: workspace.id,
+      limit: 1
+    });
+    expect(firstPage).toMatchObject({ totalCount: 2 });
+    expect(firstPage.items).toHaveLength(1);
+    expect(firstPage.nextCursor).not.toBeNull();
+    const secondPage = await projects.listConfigurationRevisions({
+      ownerId,
+      projectId: workspace.id,
+      limit: 1,
+      cursor: firstPage.nextCursor!
+    });
+    expect(secondPage.items).toHaveLength(1);
+    expect(secondPage.items[0]?.id).not.toBe(firstPage.items[0]?.id);
+    expect(secondPage.nextCursor).toBeNull();
+
+    await expect(
+      projects.restoreRevision({
+        ownerId,
+        projectId: workspace.id,
+        revisionId: checkpoint.revisionId,
+        expectedVersion: 3,
+        safetyDisplaySnapshot: {},
+        supportedProductDefinitionVersions: ["signature-line@1"]
+      })
+    ).resolves.toMatchObject({ kind: "unchanged", version: 3 });
+
+    await expect(
+      projects.restoreRevision({
+        ownerId,
+        projectId: workspace.id,
+        revisionId: checkpoint.revisionId,
+        expectedVersion: 2,
+        safetyDisplaySnapshot: {},
+        supportedProductDefinitionVersions: ["signature-line@1"]
+      })
+    ).resolves.toEqual({ kind: "conflict", currentVersion: 3 });
+  });
+
+  it("restores the Product Definition identity even when selections match", async () => {
+    const identity = createPostgresIdentityAdapter(context.database);
+    const projects = createPostgresProjectModule(context.database);
+    const ownerId = await identity.resolveCustomerAccount({
+      provider: "better-auth",
+      providerSubject: `auth-user-${crypto.randomUUID()}`
+    });
+    const workspace = await projects.createProject({
+      ownerId,
+      idempotencyKey: `create-${crypto.randomUUID()}`,
+      name: "Definitionswechsel",
+      configuration: initialConfiguration,
+      productDefinitionVersion: "signature-line@1"
+    });
+    const checkpoint = await projects.checkpointRevision({
+      ownerId,
+      projectId: workspace.id,
+      expectedVersion: 1,
+      trigger: "version-save",
+      displaySnapshot: {},
+      intent: {
+        idempotencyKey: `version-${crypto.randomUUID()}`,
+        topic: "project.version-saved",
+        payload: { projectId: workspace.id }
+      }
+    });
+    expect(checkpoint.kind).toBe("checkpointed");
+    if (checkpoint.kind !== "checkpointed") return;
+
+    await expect(
+      projects.saveWorkingConfiguration({
+        ownerId,
+        projectId: workspace.id,
+        expectedVersion: 1,
+        configuration: initialConfiguration,
+        productDefinitionVersion: "signature-line@2"
+      })
+    ).resolves.toMatchObject({ kind: "saved", version: 2 });
+
+    await expect(
+      projects.restoreRevision({
+        ownerId,
+        projectId: workspace.id,
+        revisionId: checkpoint.revisionId,
+        expectedVersion: 2,
+        safetyDisplaySnapshot: {},
+        supportedProductDefinitionVersions: ["signature-line@2"]
+      })
+    ).resolves.toEqual({
+      kind: "unsupported-product-definition",
+      productDefinitionVersion: "signature-line@1"
+    });
+
+    await expect(
+      projects.restoreRevision({
+        ownerId,
+        projectId: workspace.id,
+        revisionId: checkpoint.revisionId,
+        expectedVersion: 2,
+        safetyDisplaySnapshot: {},
+        supportedProductDefinitionVersions: ["signature-line@1"]
+      })
+    ).resolves.toMatchObject({ kind: "restored", version: 3 });
+
+    await expect(
+      projects.getWorkspace({ ownerId, projectId: workspace.id })
+    ).resolves.toMatchObject({
+      workingConfiguration: { productDefinitionVersion: "signature-line@1" }
+    });
   });
 });

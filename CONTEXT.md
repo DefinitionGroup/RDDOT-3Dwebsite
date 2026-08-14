@@ -149,12 +149,16 @@ The mutable private name and notes used to organize a Project. Project Metadata 
 _Avoid_: Configuration fields, shared description
 
 **Working Configuration**:
-The single mutable, persistently saved Kitchen Configuration currently being edited inside a Project; meaningful milestones become Configuration Revisions.
+The single mutable, persistently saved Kitchen Configuration currently being edited inside a Project. Autosave updates it with optimistic concurrency but never creates history; an explicit version save creates or reuses a Configuration Revision from its confirmed state.
 _Avoid_: Draft order, revision
 
 **Configuration Revision**:
-An immutable, deduplicated milestone snapshot of a Kitchen Configuration within a Project that preserves the Product Definition version and display data needed to understand it historically. Shared Revision Links, Generated Photos, and Quote Requests refer to Configuration Revisions; autosave changes only the Working Configuration.
+An immutable, deduplicated milestone snapshot of a Kitchen Configuration within a Project that preserves the Product Definition version and a display snapshot derived from that version. The owner can inspect revisions through paginated history. Shared Revision Links, Generated Photos, and Quote Requests refer to Configuration Revisions; autosave changes only the Working Configuration.
 _Avoid_: Autosave, cart line
+
+**Configuration Revision Restore**:
+An owner-scoped, optimistic-concurrency-controlled replacement of the Working Configuration with a selected Configuration Revision, including its pinned Product Definition version. When the selected revision differs from current work, the application first creates or reuses a safety Configuration Revision for the displaced state.
+_Avoid_: Undo, rollback deployment, overwriting history
 
 **Archived Project**:
 A Project removed from the active workspace and made read-only until restored. It remains fully recoverable by its owner, and its existing Shared Revision Links remain available.

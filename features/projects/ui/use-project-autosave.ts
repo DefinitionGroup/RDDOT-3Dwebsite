@@ -8,16 +8,10 @@ import {
   shouldClearProjectDraftAfterSave,
   writeProjectDraftRecovery
 } from "@/features/projects/project-draft-recovery";
-
-export type EditableProject = {
-  id: string;
-  name: string;
-  updatedAt: string;
-  version: number;
-};
+import type { EditableProject } from "@/features/projects/ui/project-editor-types";
 
 export type ProjectAutosaveStatus =
-  | { phase: "saved"; savedAt: string }
+  | { phase: "saved"; savedAt: string; savedVersion: number }
   | { phase: "pending" }
   | { phase: "saving" }
   | { phase: "recovery"; configurationCode: string; updatedAt: string }
@@ -44,7 +38,8 @@ export function useProjectAutosave({
 }) {
   const [status, setStatus] = useState<ProjectAutosaveStatus>({
     phase: "saved",
-    savedAt: project.updatedAt
+    savedAt: project.updatedAt,
+    savedVersion: project.version
   });
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [drainAttempt, setDrainAttempt] = useState(0);
@@ -83,7 +78,11 @@ export function useProjectAutosave({
       clearProjectDraftRecovery(window.localStorage, project.id);
       const restoreTimer = window.setTimeout(() => {
         if (mounted.current) {
-          setStatus({ phase: "saved", savedAt: savedAt.current });
+          setStatus({
+            phase: "saved",
+            savedAt: savedAt.current,
+            savedVersion: version.current
+          });
         }
       }, 0);
       return () => window.clearTimeout(restoreTimer);
@@ -160,7 +159,11 @@ export function useProjectAutosave({
           }
           savedSuccessfully = true;
           if (mounted.current) {
-            setStatus({ phase: "saved", savedAt: payload.project.updatedAt });
+            setStatus({
+              phase: "saved",
+              savedAt: payload.project.updatedAt,
+              savedVersion: payload.project.version
+            });
           }
         })
         .catch(() => {
@@ -226,7 +229,11 @@ export function useProjectAutosave({
   function discardRecovery() {
     clearProjectDraftRecovery(window.localStorage, project.id);
     hasRecovery.current = false;
-    setStatus({ phase: "saved", savedAt: savedAt.current });
+    setStatus({
+      phase: "saved",
+      savedAt: savedAt.current,
+      savedVersion: version.current
+    });
   }
 
   return { discardRecovery, restoreRecovery, retry, status };

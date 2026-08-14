@@ -32,6 +32,9 @@ Customers typically browse and configure across desktop and mobile, may begin as
 - A signed-in customer opens only their own saved Project at `/configure?project=<uuid>`; an expired session returns through the email-code flow to that Project.
 - Active Project edits autosave with an expected Working Configuration version. A conflicting write is never overwritten, and the browser retains an unconfirmed local draft for recovery or saving as a new Project.
 - A confirmed Working Configuration save updates both its version and the Project's workspace timestamp.
+- “Version speichern” explicitly creates or reuses an immutable Configuration Revision from the confirmed Working Configuration; autosave never creates history entries.
+- A Project's owner can page through its immutable version history. Each entry's historical display snapshot is created from the Product Definition version pinned to that Configuration Revision rather than today's active definition.
+- Restoring a Configuration Revision requires the expected Working Configuration version. Before replacement, the application preserves the current state as a safety revision and then restores both the selected configuration and its Product Definition identity.
 - The current configurator supports one straight-line kitchen, cabinet color, and front color.
 - Sanity editorial content and future ecommerce remain behind replaceable adapters.
 - Production transactional email provider selection is deliberately open. Development email capture must never be active in production.

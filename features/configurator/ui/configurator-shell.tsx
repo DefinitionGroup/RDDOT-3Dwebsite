@@ -40,9 +40,10 @@ import type {
   VisualizationMode
 } from "@/features/configurator/types";
 import {
-  type EditableProject,
   useProjectAutosave
 } from "@/features/projects/ui/use-project-autosave";
+import type { EditableProject } from "@/features/projects/ui/project-editor-types";
+import { ProjectVersions } from "@/features/projects/ui/project-versions";
 
 type ConfiguratorShellProps = {
   initialState: ConfiguratorState;
@@ -589,20 +590,32 @@ function ProjectSaveControls({
   }
 
   return (
-    <div aria-live="polite" className="flex min-w-0 items-baseline justify-between gap-4">
-      <p className="min-w-0 truncate text-body text-ink" title={project.name}>
-        {project.name}
-      </p>
-      <p className="shrink-0 text-sm text-graphite">
-        {status.phase === "saving"
-          ? "Speichert …"
-          : status.phase === "pending"
-            ? "Änderung erkannt …"
-            : `Gespeichert ${new Intl.DateTimeFormat("de-DE", {
-                hour: "2-digit",
-                minute: "2-digit"
-              }).format(new Date(status.savedAt))}`}
-      </p>
+    <div className="space-y-5">
+      <div
+        aria-live="polite"
+        className="flex min-w-0 items-baseline justify-between gap-4"
+      >
+        <p className="min-w-0 truncate text-body text-ink" title={project.name}>
+          {project.name}
+        </p>
+        <p className="shrink-0 text-sm text-graphite">
+          {status.phase === "saving"
+            ? "Speichert …"
+            : status.phase === "pending"
+              ? "Änderung erkannt …"
+              : `Gespeichert ${new Intl.DateTimeFormat("de-DE", {
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }).format(new Date(status.savedAt))}`}
+        </p>
+      </div>
+      <ProjectVersions
+        initialRevisions={project.revisions}
+        initialNextCursor={project.revisionNextCursor}
+        initialTotalCount={project.revisionTotalCount}
+        projectId={project.id}
+        savedVersion={status.phase === "saved" ? status.savedVersion : null}
+      />
     </div>
   );
 }
@@ -735,10 +748,10 @@ function CameraControlOverlay({
 }) {
   return (
     <div
-      className={`pointer-events-auto fixed z-20 w-[min(calc(100vw-2.5rem),30rem)] -translate-x-1/2 ${
+      className={`pointer-events-auto z-20 w-[min(calc(100vw-2.5rem),30rem)] -translate-x-1/2 ${
         isConfigPanelOpen
-          ? "left-1/2 top-[calc(56vh-4.5rem)] lg:left-[calc((100vw-27rem)/2)] lg:top-auto lg:bottom-8"
-          : "bottom-6 left-1/2"
+          ? "absolute left-1/2 top-[calc(56vh-4.5rem)] lg:fixed lg:bottom-8 lg:left-[calc((100vw-27rem)/2)] lg:top-auto"
+          : "fixed bottom-6 left-1/2"
       }`}
     >
       <motion.div
