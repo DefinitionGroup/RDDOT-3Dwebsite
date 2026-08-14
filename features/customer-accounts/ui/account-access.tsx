@@ -20,7 +20,7 @@ function getErrorMessage(error: { message?: string; status?: number } | null) {
   return "Das hat noch nicht funktioniert. Prüfen Sie Ihre Eingabe und versuchen Sie es erneut.";
 }
 
-export function AccountAccess() {
+export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
   const router = useRouter();
   const emailId = useId();
   const codeId = useId();
@@ -81,7 +81,7 @@ export function AccountAccess() {
       return;
     }
 
-    startTransition(() => router.refresh());
+    startTransition(() => router.replace(returnTo));
   }
 
   function returnToEmail() {

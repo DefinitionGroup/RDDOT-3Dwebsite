@@ -29,6 +29,9 @@ Customers typically browse and configure across desktop and mobile, may begin as
 - Application-owned Customer Account UUIDs; authentication-provider subjects never own Projects or commercial data.
 - Guest Configurations import as copies after sign-in instead of becoming anonymous accounts.
 - Projects are private by default; Shared Revision Links expose one immutable Configuration Revision and remain revocable.
+- A signed-in customer opens only their own saved Project at `/configure?project=<uuid>`; an expired session returns through the email-code flow to that Project.
+- Active Project edits autosave with an expected Working Configuration version. A conflicting write is never overwritten, and the browser retains an unconfirmed local draft for recovery or saving as a new Project.
+- A confirmed Working Configuration save updates both its version and the Project's workspace timestamp.
 - The current configurator supports one straight-line kitchen, cabinet color, and front color.
 - Sanity editorial content and future ecommerce remain behind replaceable adapters.
 - Production transactional email provider selection is deliberately open. Development email capture must never be active in production.

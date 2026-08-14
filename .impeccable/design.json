@@ -247,9 +247,9 @@
     {
       "name": "Project Row",
       "kind": "custom",
-      "description": "A ruled workspace record that preserves information density without becoming a card.",
-      "html": "<div class=\"ds-project-row\"><div><div class=\"ds-project-name\">Küche Düsseldorf</div><div class=\"ds-project-meta\">Zuletzt geändert am 13.08.2026</div></div><span class=\"ds-project-state\">Gespeichert</span></div>",
-      "css": ".ds-project-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 4px 24px; padding: 20px 0; border-top: 1px solid rgb(var(--color-hairline)); color: rgb(var(--color-ink)); font-family: var(--font-sans), 'Helvetica Neue', Arial, sans-serif; } .ds-project-name { font-size: clamp(1.25rem,2vw,1.75rem); line-height: 1.3; letter-spacing: -.01em; } .ds-project-meta, .ds-project-state { color: rgb(var(--color-graphite)); font-size: .875rem; line-height: 1.5; } @media (max-width: 639px) { .ds-project-row { grid-template-columns: 1fr; align-items: start; } }"
+      "description": "A keyboard-focusable ruled workspace link that opens a private Project without turning the record into a card.",
+      "html": "<a class=\"ds-project-row\" href=\"#project\"><span><span class=\"ds-project-name\">Küche Düsseldorf</span><span class=\"ds-project-meta\">Zuletzt geändert am 14.08.2026</span></span><span class=\"ds-project-action\">Projekt öffnen →</span></a>",
+      "css": ".ds-project-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 8px 24px; padding: 20px 0; border-top: 1px solid rgb(var(--color-hairline)); color: rgb(var(--color-ink)); font-family: var(--font-sans), 'Helvetica Neue', Arial, sans-serif; text-decoration: none; } .ds-project-name, .ds-project-meta { display: block; } .ds-project-name { font-size: clamp(1.25rem,2vw,1.75rem); line-height: 1.3; letter-spacing: -.01em; } .ds-project-meta, .ds-project-action { color: rgb(var(--color-graphite)); font-size: .875rem; line-height: 1.5; } .ds-project-action { transition: color 300ms cubic-bezier(.22,1,.36,1); } .ds-project-row:hover .ds-project-action { color: rgb(var(--color-ink)); } .ds-project-row:focus-visible { outline: 2px solid rgb(var(--color-signature)); outline-offset: 4px; } @media (max-width: 639px) { .ds-project-row { grid-template-columns: 1fr; align-items: start; } }"
     }
   ],
   "narrative": {

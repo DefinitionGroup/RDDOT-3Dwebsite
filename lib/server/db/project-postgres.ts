@@ -215,51 +215,61 @@ export function createPostgresProjectModule(
       const configuration = parseConfiguration(input.configuration);
       const configurationHash = hashConfiguration(configuration);
 
-      const saved = await database
-        .withSchema("app")
-        .updateTable("workingConfiguration")
-        .set((expression) => ({
-          normalizedConfiguration: configuration,
-          configurationHash,
-          schemaVersion: configuration.schemaVersion,
-          productDefinitionVersion,
-          version: expression("version", "+", 1),
-          updatedAt: new Date()
-        }))
-        .where("projectId", "=", projectId)
-        .where("version", "=", expectedVersion)
-        .where("projectId", "in", (query) =>
-          query
-            .selectFrom("project")
-            .select("id")
+      return database.transaction().execute(async (transaction) => {
+        const saved = await transaction
+          .withSchema("app")
+          .updateTable("workingConfiguration")
+          .set((expression) => ({
+            normalizedConfiguration: configuration,
+            configurationHash,
+            schemaVersion: configuration.schemaVersion,
+            productDefinitionVersion,
+            version: expression("version", "+", 1),
+            updatedAt: new Date()
+          }))
+          .where("projectId", "=", projectId)
+          .where("version", "=", expectedVersion)
+          .where("projectId", "in", (query) =>
+            query
+              .selectFrom("project")
+              .select("id")
+              .where("ownerId", "=", ownerId)
+              .where("lifecycle", "=", "active")
+          )
+          .returning(["version", "updatedAt"])
+          .executeTakeFirst();
+
+        if (saved) {
+          await transaction
+            .withSchema("app")
+            .updateTable("project")
+            .set({ updatedAt: new Date(saved.updatedAt) })
+            .where("id", "=", projectId)
             .where("ownerId", "=", ownerId)
-            .where("lifecycle", "=", "active")
-        )
-        .returning(["version", "updatedAt"])
-        .executeTakeFirst();
+            .executeTakeFirstOrThrow();
 
-      if (saved) {
-        return {
-          kind: "saved",
-          version: Number(saved.version),
-          configurationHash,
-          updatedAt: new Date(saved.updatedAt)
-        };
-      }
+          return {
+            kind: "saved" as const,
+            version: Number(saved.version),
+            configurationHash,
+            updatedAt: new Date(saved.updatedAt)
+          };
+        }
 
-      const current = await database
-        .withSchema("app")
-        .selectFrom("workingConfiguration")
-        .innerJoin("project", "project.id", "workingConfiguration.projectId")
-        .select("workingConfiguration.version")
-        .where("project.id", "=", projectId)
-        .where("project.ownerId", "=", ownerId)
-        .where("project.lifecycle", "=", "active")
-        .executeTakeFirst();
+        const current = await transaction
+          .withSchema("app")
+          .selectFrom("workingConfiguration")
+          .innerJoin("project", "project.id", "workingConfiguration.projectId")
+          .select("workingConfiguration.version")
+          .where("project.id", "=", projectId)
+          .where("project.ownerId", "=", ownerId)
+          .where("project.lifecycle", "=", "active")
+          .executeTakeFirst();
 
-      return current
-        ? { kind: "conflict", currentVersion: currentVersion(current) }
-        : { kind: "unavailable" };
+        return current
+          ? { kind: "conflict" as const, currentVersion: currentVersion(current) }
+          : { kind: "unavailable" as const };
+      });
     },
 
     async checkpointRevision(input): Promise<CheckpointRevisionResult> {

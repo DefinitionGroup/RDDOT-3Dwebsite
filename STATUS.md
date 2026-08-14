@@ -1,11 +1,11 @@
-# RDTDOT Ecom Prototype Status
+# rotpunkt Signature Status
 
-Last updated: 2026-06-23  
-Branch: `3dapp`
+Last reconciled: 2026-08-14
+Working branch: `redesign/devstart`
 
 ## Current Goal
 
-Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Signature site, with a reusable page component path toward a 3D configurator, multilingual content, and later commerce.
+Deliver a German-first, branded kitchen configurator that lets a private customer move from a shareable guest configuration to a durable Project, while preserving the approved boundaries for identity, releases, future AI photos, Quote Requests, Sanity, and commerce.
 
 ## Done
 
@@ -39,6 +39,13 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
   - front
   - detail
 - Added shareable URL state using a compact `?c=` query parameter.
+- Added application-owned Customer Accounts with Better Auth email-code sign-in and server-side session resolution.
+- Added the PostgreSQL Project Module, migrations, and a Project/Working Configuration persistence contract behind server-only seams.
+- Connected guest “Als Projekt speichern” handoff to idempotent Project creation after sign-in.
+- Saved Projects now open at `/configure?project=<uuid>` only for their owner; an expired session returns to that Project after re-authentication.
+- Active saved Projects autosave the Working Configuration with expected-version optimistic concurrency. A 409 conflict leaves the remote Project unchanged and offers load-latest or save-as-new.
+- Added browser-local, Project-scoped recovery drafts for unconfirmed changes, including stale-draft save-as-new handling.
+- Confirmed autosaves advance the Working Configuration version and update the Project timestamp used in the account workspace.
 - Added `/checkout` as a fake checkout/request handoff that reads the shared configuration.
 - Added a temporary product-definition contract in `features/configurator/product-definition.ts`.
 - Added a Sanity adapter boundary in `features/configurator/adapters/sanity.ts`.
@@ -51,17 +58,17 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
   - `lz-string`
   - `lucide-react`
 
-## Verified
+## Verified Previously
 
-- `npm run lint` passes.
-- `npm run build` passes.
-- `/configure` renders on desktop and mobile.
-- The 3D canvas is nonblank.
-- Screenshot pixel checks confirmed color changes and camera changes affect the imported GLB scene.
-- `/checkout` preserves configuration through the shared URL.
-- Mobile checkout overflow was found and fixed.
-- Next.js runtime diagnostics reported no config or session errors.
-- Browser console had no errors during final verification.
+- The earlier configurator slice passed lint and build, rendered a nonblank 3D canvas on desktop and mobile, and showed that color and camera changes affect the imported GLB scene.
+- The shareable URL flow and fake checkout handoff preserved the configuration; mobile checkout overflow was fixed.
+
+## Current Slice Verified
+
+- `pnpm test`, `pnpm test:db`, `pnpm lint`, and `pnpm build` pass.
+- Unit coverage includes browser-recovery parsing, stale-version classification, and the in-flight-save/newer-draft race. Database integration coverage confirms one winner for concurrent expected-version writes and synchronized Project timestamps.
+- Live browser checks confirmed owner-scoped Project opening, successful autosave and reload persistence, a deliberate 200/409 two-tab conflict, explicit load-latest recovery, a nonblank 3D canvas, no horizontal overflow at desktop and mobile widths, and no new console errors.
+- The current Three.js deprecation and PostgreSQL SSL forward-compatibility warnings remain known non-blockers.
 
 ## Known Warnings
 
@@ -89,9 +96,8 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
 - The checkout page is a visual fake checkout only and performs no submission.
 - The configurator now loads `kitchen-line.glb`, but the asset uses generic mesh names and one shared material.
 - The current GLB color mapping is heuristic. A production asset should expose named nodes/material slots for cabinet bodies, fronts, handles, countertop, appliances, and room surfaces.
-- There is no saved configuration persistence beyond the shareable URL.
 - No analytics/event tracking exists for configurator interactions.
-- No automated Playwright test suite exists yet.
+- The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
 - No accessibility audit has been formalized.
 - No performance budgets exist for 3D, images, or page-builder pages.
 
@@ -112,24 +118,26 @@ Create the first modular ecommerce foundation for a Sanity-managed rotpunkt Sign
 
 ## Recommended Next Implementation Steps
 
-1. Add locale route structure for `/`, `/en`, and `/es`.
-2. Define the Sanity schema set:
+1. Implement the next Project lifecycle and checkpoint workflows: explicit version save, Shared Revision Links, Archive/Trash/restore, and the relevant UI.
+2. Add locale route structure for `/`, `/en`, and `/es`.
+3. Define the Sanity schema set:
    - site settings
    - page
    - localized slug
    - page-builder blocks
    - product definition
    - configurator block
-3. Add a Sanity client layer and typed query boundary.
-4. Replace `lib/content.ts` homepage content with Sanity-ready data shapes.
-5. Add the configurator smart component as a page-builder block renderer.
-6. Add a JSON schema or Zod schema for product definitions and URL configuration state.
-7. Add basic Playwright flows:
+4. Add a Sanity client layer and typed query boundary.
+5. Replace `lib/content.ts` homepage content with Sanity-ready data shapes.
+6. Add the configurator smart component as a page-builder block renderer.
+7. Add a JSON schema or Zod schema for product definitions and URL configuration state.
+8. Add basic Playwright flows:
    - homepage to configurator
    - color change updates URL
    - share URL restores state
    - checkout summary matches state
-8. Replace the box prototype with the first production-ready 3D asset pipeline.
+   - owner-only saved Project open, re-auth return, autosave/conflict recovery, and local recovery-draft decisions
+9. Replace the box prototype with the first production-ready 3D asset pipeline.
 
 ## Docs Still Needed
 

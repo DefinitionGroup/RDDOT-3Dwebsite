@@ -15,14 +15,15 @@ related_targets: ["features/customer-accounts/ui/account-access.tsx", "features/
 
 ## Job and Primary Task
 
-The visitor continues an existing planning relationship without facing a conventional account-registration funnel. Signed-out visitors request and verify a short-lived email code. Signed-in visitors scan their projects, continue configuration from the empty state, or sign out.
+The visitor continues an existing planning relationship without facing a conventional account-registration funnel. Signed-out visitors request and verify a short-lived email code, then return to a requested saved Project when their session expired. Signed-in visitors scan their projects, open a private Project in the configurator, continue configuration from the empty state, or sign out.
 
 ## Required Content and States
 
 - Hero-level rotpunkt Signature mark and a real kitchen image.
 - Short continuity promise tied to the customer's saved planning state.
 - Email entry, code verification, pending, error, and return-to-email states.
-- Authenticated heading, privacy context, sign-out action, project count, empty state or ruled project list, and session-expiry note.
+- Authenticated heading, privacy context, sign-out action, project count, empty state or a keyboard-focusable ruled project list with last-updated date and an explicit “Projekt öffnen” action, and session-expiry note.
+- A safe re-authentication return only for a requested `/configure?project=<uuid>` path; other post-sign-in destinations resolve to `/konto`.
 - Pending, failed, retried, and completed Guest Configuration import states.
 - Development email capture only outside production.
 
@@ -44,4 +45,4 @@ The planning relationship is made physical: the kitchen image and hero-level wor
 ## Unresolved Decisions
 
 - Production transactional-email provider selection remains open.
-- Opening and editing a saved Project from the account workspace remains a later integration step.
+- Project lifecycle controls, explicit version checkpoints, and Shared Revision Link UI remain follow-up workflows; opening and editing an active saved Project is implemented.

@@ -160,8 +160,12 @@ export function AccountWorkspace({
         ) : (
           <ul className="mt-4 divide-y divide-hairline border-b border-hairline">
             {projects.map((project) => (
-              <li className="grid gap-1 py-5 sm:grid-cols-[1fr_auto] sm:items-end" key={project.id}>
-                <div>
+              <li key={project.id}>
+                <Link
+                  className="group grid min-w-0 gap-2 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signature focus-visible:ring-offset-4 focus-visible:ring-offset-canvas sm:grid-cols-[1fr_auto] sm:items-end"
+                  href={`/configure?project=${project.id}`}
+                >
+                  <div className="min-w-0">
                   <p className="text-lead">{project.name}</p>
                   <p className="mt-1 text-sm text-graphite">
                     Zuletzt geändert am{" "}
@@ -171,8 +175,11 @@ export function AccountWorkspace({
                       year: "numeric"
                     }).format(new Date(project.updatedAt))}
                   </p>
-                </div>
-                <span className="text-sm text-graphite">Gespeichert</span>
+                  </div>
+                  <span className="text-sm text-graphite transition-colors group-hover:text-ink">
+                    Projekt öffnen →
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>

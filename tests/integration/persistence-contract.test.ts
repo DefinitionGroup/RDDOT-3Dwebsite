@@ -232,6 +232,8 @@ describe("PostgreSQL persistence contract", () => {
     expect(
       results.find((result) => result.kind === "conflict")
     ).toMatchObject({ currentVersion: 2 });
+    const saved = results.find((result) => result.kind === "saved");
+    expect(saved?.kind).toBe("saved");
 
     const ownerProjects = await projects.listProjects({ ownerId });
     expect(ownerProjects).toEqual([
@@ -241,6 +243,9 @@ describe("PostgreSQL persistence contract", () => {
         lifecycle: "active"
       })
     ]);
+    if (saved?.kind === "saved") {
+      expect(ownerProjects[0].updatedAt).toEqual(saved.updatedAt);
+    }
   });
 
   it("deduplicates checkpoints and rejects changed idempotent requests", async () => {

@@ -19,6 +19,7 @@ type AccountPageProps = {
     c?: string | string[];
     import?: string | string[];
     intent?: string | string[];
+    next?: string | string[];
   }>;
 };
 
@@ -74,7 +75,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             }))}
           />
         ) : (
-          <AccountAccess />
+          <AccountAccess
+            returnTo={
+              typeof params.next === "string" &&
+              params.next.startsWith("/configure?project=")
+                ? params.next
+                : "/konto"
+            }
+          />
         )}
       </section>
     </main>

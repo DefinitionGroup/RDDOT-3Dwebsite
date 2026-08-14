@@ -27,7 +27,11 @@ import {
 import { PHOTO_PRESETS } from "@/features/configurator/photo/photo-presets";
 import { PhotoPopover, type PhotoStatus } from "@/features/configurator/photo/photo-popover";
 import { useSceneCapture } from "@/features/configurator/photo/use-scene-capture";
-import { CONFIG_QUERY_PARAM, encodeConfiguration } from "@/features/configurator/state-codec";
+import {
+  CONFIG_QUERY_PARAM,
+  decodeConfiguration,
+  encodeConfiguration
+} from "@/features/configurator/state-codec";
 import type {
   CameraView,
   ConfiguratorState,
@@ -35,10 +39,15 @@ import type {
   LocaleCode,
   VisualizationMode
 } from "@/features/configurator/types";
+import {
+  type EditableProject,
+  useProjectAutosave
+} from "@/features/projects/ui/use-project-autosave";
 
 type ConfiguratorShellProps = {
   initialState: ConfiguratorState;
   locale?: LocaleCode;
+  project?: EditableProject;
 };
 
 const cameraViews: { key: CameraView; label: string }[] = [
@@ -47,7 +56,11 @@ const cameraViews: { key: CameraView; label: string }[] = [
   { key: "detail", label: "Detail" }
 ];
 
-export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorShellProps) {
+export function ConfiguratorShell({
+  initialState,
+  locale = "de",
+  project
+}: ConfiguratorShellProps) {
   const [config, setConfig] = useState(() => normalizeConfiguratorState(initialState));
   const [cameraView, setCameraView] = useState<CameraView>("signature");
   const [copied, setCopied] = useState(false);
@@ -69,9 +82,11 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
   const renderActive = pathTracing || renderRequested;
 
   useEffect(() => {
-    const path = `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
+    const path = project
+      ? `/configure?project=${project.id}`
+      : `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
     window.history.replaceState(null, "", path);
-  }, [encodedConfig]);
+  }, [encodedConfig, project]);
 
   useEffect(() => {
     const timeout = window.setTimeout(preloadApartmentModel, 450);
@@ -122,13 +137,21 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
     window.setTimeout(() => setCopied(false), 1800);
   }
 
-  function saveAsProject() {
+  function saveConfigurationAsProject(configurationCode: string) {
     const query = new URLSearchParams({
       intent: "save",
       import: crypto.randomUUID(),
-      [CONFIG_QUERY_PARAM]: encodedConfig
+      [CONFIG_QUERY_PARAM]: configurationCode
     });
     window.location.assign(`/konto?${query.toString()}`);
+  }
+
+  function restoreProjectDraft(configurationCode: string) {
+    const restored = decodeConfiguration(configurationCode);
+    if (!restored) return false;
+    stopRender();
+    setConfig(restored);
+    return true;
   }
 
   function openPhoto() {
@@ -260,7 +283,7 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
           <BrandLogo compact href="/" tone="dark" />
           <Link
             className="group inline-flex items-center gap-2 text-body leading-none text-graphite transition-colors hover:text-ink"
-            href="/"
+            href={project ? "/konto" : "/"}
           >
             <svg
               aria-hidden="true"
@@ -275,7 +298,7 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                 strokeWidth="1.2"
               />
             </svg>
-            Zurück
+            {project ? "Meine Projekte" : "Zurück"}
           </Link>
         </div>
 
@@ -370,13 +393,22 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                     </p>
                   </div>
 
-                  <button
-                    className="inline-flex min-h-12 w-full items-center justify-center bg-signature px-5 text-body leading-none text-paper transition-colors hover:bg-ink"
-                    onClick={saveAsProject}
-                    type="button"
-                  >
-                    Als Projekt speichern
-                  </button>
+                  {project ? (
+                    <ProjectSaveControls
+                      configurationCode={encodedConfig}
+                      onSaveAsNew={saveConfigurationAsProject}
+                      onRestore={restoreProjectDraft}
+                      project={project}
+                    />
+                  ) : (
+                    <button
+                      className="inline-flex min-h-12 w-full items-center justify-center bg-signature px-5 text-body leading-none text-paper transition-colors hover:bg-ink"
+                      onClick={() => saveConfigurationAsProject(encodedConfig)}
+                      type="button"
+                    >
+                      Als Projekt speichern
+                    </button>
+                  )}
 
                   <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                     <a
@@ -414,7 +446,9 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                       ? "Aktualisiere Szene …"
                       : copied
                         ? "Share-Link kopiert."
-                        : "Ihre Konfiguration wird in der URL gespeichert."}
+                        : project
+                          ? "Der Share-Link enthält einen unabhängigen Schnappschuss."
+                          : "Ihre Konfiguration wird in der URL gespeichert."}
                   </p>
                 </motion.div>
               </motion.div>
@@ -423,6 +457,153 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
         </AnimatePresence>
       </motion.div>
     </main>
+  );
+}
+
+function ProjectSaveControls({
+  configurationCode,
+  onSaveAsNew,
+  onRestore,
+  project
+}: {
+  configurationCode: string;
+  onSaveAsNew: (configurationCode: string) => void;
+  onRestore: (configurationCode: string) => boolean;
+  project: EditableProject;
+}) {
+  const { discardRecovery, restoreRecovery, retry, status } = useProjectAutosave({
+    configurationCode,
+    onRestore,
+    project
+  });
+
+  if (status.phase === "recovery") {
+    return (
+      <div aria-live="polite" className="border-y border-ink py-5">
+        <p className="text-body text-ink">Lokaler Entwurf gefunden.</p>
+        <p className="mt-2 text-sm leading-6 text-graphite">
+          Eine noch nicht bestätigte Änderung aus diesem Browser wartet seit{" "}
+          {new Intl.DateTimeFormat("de-DE", {
+            hour: "2-digit",
+            minute: "2-digit"
+          }).format(new Date(status.updatedAt))} Uhr auf Sie.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button
+            className="min-h-11 bg-ink px-4 text-body text-paper transition-colors hover:bg-signature"
+            onClick={restoreRecovery}
+            type="button"
+          >
+            Entwurf wiederherstellen
+          </button>
+          <button
+            className="min-h-11 border border-ink px-4 text-body text-ink transition-colors hover:bg-ink hover:text-paper"
+            onClick={discardRecovery}
+            type="button"
+          >
+            Entwurf verwerfen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.phase === "stale-recovery") {
+    return (
+      <div aria-live="assertive" className="border-y border-signature py-5">
+        <p className="text-body text-ink">Älterer lokaler Entwurf gefunden.</p>
+        <p className="mt-2 text-sm leading-6 text-graphite">
+          Das Projekt wurde seitdem geändert. Der lokale Entwurf kann deshalb nur
+          als neues Projekt gesichert oder verworfen werden.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button
+            className="min-h-11 bg-ink px-4 text-body text-paper transition-colors hover:bg-signature"
+            onClick={() => {
+              discardRecovery();
+              onSaveAsNew(status.configurationCode);
+            }}
+            type="button"
+          >
+            Als neues Projekt
+          </button>
+          <button
+            className="min-h-11 border border-ink px-4 text-body text-ink transition-colors hover:bg-ink hover:text-paper"
+            onClick={discardRecovery}
+            type="button"
+          >
+            Entwurf verwerfen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.phase === "conflict") {
+    return (
+      <div aria-live="assertive" className="border-y border-signature py-5">
+        <p className="text-body text-ink">Neuere Projektversion gefunden.</p>
+        <p className="mt-2 text-sm leading-6 text-graphite">
+          Ihre Änderung wurde nicht überschrieben. Laden Sie den neuesten Stand
+          oder sichern Sie diese Variante als neues Projekt.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <button
+            className="min-h-11 bg-ink px-4 text-body text-paper transition-colors hover:bg-signature"
+            onClick={() => {
+              discardRecovery();
+              window.location.reload();
+            }}
+            type="button"
+          >
+            Neueste Version laden
+          </button>
+          <button
+            className="min-h-11 border border-ink px-4 text-body text-ink transition-colors hover:bg-ink hover:text-paper"
+            onClick={() => {
+              discardRecovery();
+              onSaveAsNew(configurationCode);
+            }}
+            type="button"
+          >
+            Als neues Projekt
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status.phase === "error") {
+    return (
+      <div aria-live="assertive" className="border-y border-signature py-5">
+        <p className="text-sm leading-6 text-signature">{status.message}</p>
+        <button
+          className="mt-4 min-h-11 bg-ink px-5 text-body text-paper transition-colors hover:bg-signature"
+          onClick={status.requiresSignIn ? () => window.location.reload() : retry}
+          type="button"
+        >
+          {status.requiresSignIn ? "Erneut anmelden" : "Erneut speichern"}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div aria-live="polite" className="flex min-w-0 items-baseline justify-between gap-4">
+      <p className="min-w-0 truncate text-body text-ink" title={project.name}>
+        {project.name}
+      </p>
+      <p className="shrink-0 text-sm text-graphite">
+        {status.phase === "saving"
+          ? "Speichert …"
+          : status.phase === "pending"
+            ? "Änderung erkannt …"
+            : `Gespeichert ${new Intl.DateTimeFormat("de-DE", {
+                hour: "2-digit",
+                minute: "2-digit"
+              }).format(new Date(status.savedAt))}`}
+      </p>
+    </div>
   );
 }
 
