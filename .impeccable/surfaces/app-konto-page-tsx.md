@@ -23,6 +23,7 @@ The visitor continues an existing planning relationship without facing a convent
 - Short continuity promise tied to the customer's saved planning state.
 - Email entry, code verification, pending, error, and return-to-email states.
 - Authenticated heading, privacy context, sign-out action, project count, empty state or ruled project list, and session-expiry note.
+- Pending, failed, retried, and completed Guest Configuration import states.
 - Development email capture only outside production.
 
 ## Chosen Direction
@@ -43,4 +44,4 @@ The planning relationship is made physical: the kitchen image and hero-level wor
 ## Unresolved Decisions
 
 - Production transactional-email provider selection remains open.
-- Saving a configurator state into the authenticated project workspace is a later integration step.
+- Opening and editing a saved Project from the account workspace remains a later integration step.

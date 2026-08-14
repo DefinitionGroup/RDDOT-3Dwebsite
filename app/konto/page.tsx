@@ -14,7 +14,16 @@ export const metadata: Metadata = {
   description: "Anmelden und private Küchenprojekte weiterplanen."
 };
 
-export default async function AccountPage() {
+type AccountPageProps = {
+  searchParams: Promise<{
+    c?: string | string[];
+    import?: string | string[];
+    intent?: string | string[];
+  }>;
+};
+
+export default async function AccountPage({ searchParams }: AccountPageProps) {
+  const params = await searchParams;
   const session = await customerSessions.resolve(await headers());
   const accountProjects = session
     ? await projects.listProjects({ ownerId: session.customerAccountId })
@@ -49,6 +58,16 @@ export default async function AccountPage() {
         {session ? (
           <AccountWorkspace
             expiresAt={session.expiresAt.toISOString()}
+            pendingImport={
+              params.intent === "save" &&
+              typeof params.c === "string" &&
+              typeof params.import === "string"
+                ? {
+                    configurationCode: params.c,
+                    idempotencyKey: params.import
+                  }
+                : null
+            }
             projects={accountProjects.map((project) => ({
               ...project,
               updatedAt: project.updatedAt.toISOString()

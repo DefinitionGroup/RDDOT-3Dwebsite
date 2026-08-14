@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-13T21:46:12Z",
+  "generatedAt": "2026-08-14T06:14:07Z",
   "title": "Design System: rotpunkt Signature",
   "extensions": {
     "colorMeta": {
@@ -202,8 +202,8 @@
       "name": "Solid Button",
       "kind": "button",
       "refersTo": "button-solid",
-      "description": "The standard dark action for branded and configurator surfaces.",
-      "html": "<button class=\"ds-btn-solid\">Küche konfigurieren<svg aria-hidden=\"true\" viewBox=\"0 0 12 12\"><path d=\"M2 10 10 2M4 2h6v6\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"1.2\"/></svg></button>",
+      "description": "The secondary dark handoff action in the configurator and the standard solid action elsewhere.",
+      "html": "<button class=\"ds-btn-solid\">Konfiguration anfragen<svg aria-hidden=\"true\" viewBox=\"0 0 12 12\"><path d=\"M2 10 10 2M4 2h6v6\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"square\" stroke-width=\"1.2\"/></svg></button>",
       "css": ".ds-btn-solid { min-height: 44px; display: inline-flex; align-items: center; gap: 12px; padding: 12px 24px; border: 1px solid rgb(var(--color-ink)); border-radius: 0; background: rgb(var(--color-ink)); color: rgb(var(--color-paper)); font: 400 .9375rem/1 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; transition: color 300ms cubic-bezier(.22,1,.36,1), background-color 300ms cubic-bezier(.22,1,.36,1); } .ds-btn-solid svg { width: 12px; height: 12px; transition: transform 300ms cubic-bezier(.22,1,.36,1); } .ds-btn-solid:hover { background: transparent; color: rgb(var(--color-ink)); } .ds-btn-solid:hover svg { transform: translate(2px,-2px); } .ds-btn-solid:focus-visible { outline: auto; }"
     },
     {
@@ -218,8 +218,8 @@
       "name": "Signature Task Button",
       "kind": "button",
       "refersTo": "button-signature",
-      "description": "The decisive continuation action in authentication and empty workspace states.",
-      "html": "<button class=\"ds-btn-signature\">Sicher anmelden</button>",
+      "description": "The decisive continuation action for saving a configuration and authenticated account tasks.",
+      "html": "<button class=\"ds-btn-signature\">Als Projekt speichern</button>",
       "css": ".ds-btn-signature { width: 100%; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; padding: 12px 24px; border: 0; border-radius: 0; background: rgb(var(--color-signature)); color: rgb(var(--color-paper)); font: 400 .9375rem/1.7 var(--font-sans), 'Helvetica Neue', Arial, sans-serif; transition: background-color 300ms ease; } .ds-btn-signature:hover { background: rgb(var(--color-ink)); } .ds-btn-signature:focus-visible { outline: auto; } .ds-btn-signature:disabled { cursor: wait; background: rgb(var(--color-graphite)); }"
     },
     {

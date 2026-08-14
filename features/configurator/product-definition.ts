@@ -106,6 +106,9 @@ export const RDTD_KITCHEN_PRODUCT: ConfiguratorProductDefinition = {
   }
 };
 
+export const RDTD_KITCHEN_PRODUCT_VERSION =
+  "rdtdot-signature-kitchen-v1@1";
+
 export const DEFAULT_CONFIGURATOR_STATE: ConfiguratorState = {
   schemaVersion: 1,
   productKey: RDTD_KITCHEN_PRODUCT.productKey,

@@ -1,9 +1,9 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
 type AccountProject = {
@@ -15,13 +15,59 @@ type AccountProject = {
 
 export function AccountWorkspace({
   expiresAt,
+  pendingImport,
   projects
 }: {
   expiresAt: string;
+  pendingImport: {
+    configurationCode: string;
+    idempotencyKey: string;
+  } | null;
   projects: AccountProject[];
 }) {
   const router = useRouter();
+  const prefersReducedMotion = useReducedMotion();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importAttempt, setImportAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!pendingImport) return;
+
+    const abortController = new AbortController();
+
+    async function importProject() {
+      setImportError(null);
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pendingImport),
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setImportError(
+          result?.error ??
+            "Das Projekt konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+        );
+        return;
+      }
+
+      startTransition(() => router.replace("/konto"));
+    }
+
+    void importProject().catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setImportError(
+        "Das Projekt konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+      );
+    });
+
+    return () => abortController.abort();
+  }, [importAttempt, pendingImport, router]);
 
   async function signOut() {
     setIsSigningOut(true);
@@ -57,6 +103,40 @@ export function AccountWorkspace({
       </div>
 
       <section className="mt-12 border-t border-ink pt-5">
+        {pendingImport && (
+          <div
+            aria-live="polite"
+            className="mb-8 border-b border-hairline pb-6"
+          >
+            {importError ? (
+              <>
+                <p className="text-body text-signature">{importError}</p>
+                <button
+                  className="mt-4 min-h-11 bg-ink px-5 text-body text-paper transition-colors hover:bg-signature"
+                  onClick={() => setImportAttempt((attempt) => attempt + 1)}
+                  type="button"
+                >
+                  Erneut speichern
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-3 text-body text-graphite">
+                <motion.span
+                  animate={{ rotate: prefersReducedMotion ? 0 : 360 }}
+                  aria-hidden="true"
+                  className="size-3 border border-graphite border-t-transparent"
+                  transition={{
+                    duration: 0.8,
+                    ease: "linear",
+                    repeat: prefersReducedMotion ? 0 : Infinity
+                  }}
+                />
+                Konfiguration wird als privates Projekt gespeichert …
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-baseline justify-between gap-6">
           <h2 className="text-lead">Projekte</h2>
           <span className="text-sm text-graphite">
@@ -67,8 +147,8 @@ export function AccountWorkspace({
         {projects.length === 0 ? (
           <div className="py-10">
             <p className="max-w-[40ch] text-body text-graphite">
-              Noch ist hier alles offen. Starten Sie im Konfigurator; das
-              Speichern als Projekt verbinden wir im nächsten Schritt.
+              Noch ist hier alles offen. Starten Sie im Konfigurator und
+              speichern Sie Ihren Entwurf als privates Projekt.
             </p>
             <Link
               className="mt-7 inline-flex min-h-12 items-center bg-signature px-6 text-body text-paper transition-colors duration-300 hover:bg-ink"

@@ -122,6 +122,15 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
     window.setTimeout(() => setCopied(false), 1800);
   }
 
+  function saveAsProject() {
+    const query = new URLSearchParams({
+      intent: "save",
+      import: crypto.randomUUID(),
+      [CONFIG_QUERY_PARAM]: encodedConfig
+    });
+    window.location.assign(`/konto?${query.toString()}`);
+  }
+
   function openPhoto() {
     stopRender();
     setPhotoStatus({ phase: "idle" });
@@ -361,12 +370,20 @@ export function ConfiguratorShell({ initialState, locale = "de" }: ConfiguratorS
                     </p>
                   </div>
 
+                  <button
+                    className="inline-flex min-h-12 w-full items-center justify-center bg-signature px-5 text-body leading-none text-paper transition-colors hover:bg-ink"
+                    onClick={saveAsProject}
+                    type="button"
+                  >
+                    Als Projekt speichern
+                  </button>
+
                   <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                     <a
                       className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
                       href={checkoutHref}
                     >
-                      Zur Kasse
+                      Konfiguration anfragen
                     </a>
                     <button
                       aria-label="Share URL kopieren"
