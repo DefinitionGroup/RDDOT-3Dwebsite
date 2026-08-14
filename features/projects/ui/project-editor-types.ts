@@ -8,6 +8,14 @@ export type EditableProjectRevision = {
   createdAt: string;
 };
 
+export type EditableSharedRevisionLink = {
+  id: string;
+  revisionId: string;
+  createdAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+};
+
 export type EditableProject = {
   id: string;
   name: string;
@@ -16,4 +24,5 @@ export type EditableProject = {
   revisions: EditableProjectRevision[];
   revisionTotalCount: number;
   revisionNextCursor: { createdAt: string; id: string } | null;
+  shareLinks: EditableSharedRevisionLink[];
 };

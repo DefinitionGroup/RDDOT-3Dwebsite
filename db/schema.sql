@@ -124,6 +124,25 @@ CREATE TABLE app.project (
 
 
 --
+-- Name: shared_revision_link; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.shared_revision_link (
+    id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    configuration_revision_id uuid NOT NULL,
+    token_hash character(64) NOT NULL,
+    creation_idempotency_key text NOT NULL,
+    request_hash character(64) NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    revoked_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT shared_revision_link_check CHECK ((expires_at > created_at)),
+    CONSTRAINT shared_revision_link_check1 CHECK (((revoked_at IS NULL) OR (revoked_at >= created_at)))
+);
+
+
+--
 -- Name: working_configuration; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -293,6 +312,14 @@ ALTER TABLE ONLY app.configuration_revision
 
 
 --
+-- Name: configuration_revision configuration_revision_project_id_id_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.configuration_revision
+    ADD CONSTRAINT configuration_revision_project_id_id_key UNIQUE (project_id, id);
+
+
+--
 -- Name: configuration_revision configuration_revision_project_id_schema_version_product_de_key; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -338,6 +365,30 @@ ALTER TABLE ONLY app.project
 
 ALTER TABLE ONLY app.project
     ADD CONSTRAINT project_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shared_revision_link shared_revision_link_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.shared_revision_link
+    ADD CONSTRAINT shared_revision_link_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shared_revision_link shared_revision_link_project_id_creation_idempotency_key_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.shared_revision_link
+    ADD CONSTRAINT shared_revision_link_project_id_creation_idempotency_key_key UNIQUE (project_id, creation_idempotency_key);
+
+
+--
+-- Name: shared_revision_link shared_revision_link_token_hash_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.shared_revision_link
+    ADD CONSTRAINT shared_revision_link_token_hash_key UNIQUE (token_hash);
 
 
 --
@@ -457,6 +508,20 @@ CREATE INDEX project_owner_lifecycle_idx ON app.project USING btree (owner_id, l
 
 
 --
+-- Name: shared_revision_link_active_expiry_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX shared_revision_link_active_expiry_idx ON app.shared_revision_link USING btree (expires_at) WHERE (revoked_at IS NULL);
+
+
+--
+-- Name: shared_revision_link_project_created_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX shared_revision_link_project_created_idx ON app.shared_revision_link USING btree (project_id, created_at DESC);
+
+
+--
 -- Name: account_userId_idx; Type: INDEX; Schema: auth; Owner: -
 --
 
@@ -502,6 +567,14 @@ ALTER TABLE ONLY app.project
 
 
 --
+-- Name: shared_revision_link shared_revision_link_project_id_configuration_revision_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.shared_revision_link
+    ADD CONSTRAINT shared_revision_link_project_id_configuration_revision_id_fkey FOREIGN KEY (project_id, configuration_revision_id) REFERENCES app.configuration_revision(project_id, id) ON DELETE CASCADE;
+
+
+--
 -- Name: working_configuration working_configuration_project_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -539,4 +612,5 @@ ALTER TABLE ONLY auth.session
 INSERT INTO public.schema_migrations (version) VALUES
     ('20260813120000'),
     ('20260813123000'),
-    ('20260813230000');
+    ('20260813230000'),
+    ('20260814110000');

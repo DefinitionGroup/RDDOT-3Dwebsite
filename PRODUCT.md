@@ -28,7 +28,10 @@ Customers typically browse and configure across desktop and mobile, may begin as
 - Self-hosted Better Auth with hashed, short-lived email OTPs and database-backed sessions on Neon Postgres in Frankfurt.
 - Application-owned Customer Account UUIDs; authentication-provider subjects never own Projects or commercial data.
 - Guest Configurations import as copies after sign-in instead of becoming anonymous accounts.
-- Projects are private by default; Shared Revision Links expose one immutable Configuration Revision and remain revocable.
+- Projects are private by default. An owner can create, list, and permanently revoke 90-day Shared Revision Links fixed to one immutable Configuration Revision.
+- The browser generates each link's 32-byte secret and places it in the URL fragment; the database stores only its SHA-256 hash. The complete link cannot be reconstructed or shown again by the application.
+- The public shared-revision resolver accepts the fragment secret only through a POST request and returns private, no-store, noindex, nofollow, noarchive, and no-referrer responses. The page presents only the selected historical configuration and display snapshot, with no Project Metadata, Customer Account data, AI-photo action, configuration mutation, or Quote Request handoff.
+- Existing Shared Revision Links remain resolvable for archived Projects and are unavailable for trashed Projects. Public rendering currently fails closed unless the revision's Product Definition version matches the active supported version.
 - A signed-in customer opens only their own saved Project at `/configure?project=<uuid>`; an expired session returns through the email-code flow to that Project.
 - Active Project edits autosave with an expected Working Configuration version. A conflicting write is never overwritten, and the browser retains an unconfirmed local draft for recovery or saving as a new Project.
 - A confirmed Working Configuration save updates both its version and the Project's workspace timestamp.

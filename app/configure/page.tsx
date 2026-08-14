@@ -7,6 +7,7 @@ import { CONFIG_QUERY_PARAM, getInitialConfiguratorState } from "@/features/conf
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
 import { parseRevisionDisplaySnapshot } from "@/features/projects/revision-display";
+import { sharing } from "@/lib/server/sharing/sharing";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
       redirect(`/konto?next=${encodeURIComponent(`/configure?project=${projectId}`)}`);
     }
 
-    const [workspace, revisionPage] = await Promise.all([
+    const [workspace, revisionPage, shareLinks] = await Promise.all([
       projects.getWorkspace({
         ownerId: session.customerAccountId,
         projectId
@@ -43,6 +44,10 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
         ownerId: session.customerAccountId,
         projectId,
         limit: 20
+      }),
+      sharing.listLinks({
+        ownerId: session.customerAccountId,
+        projectId
       })
     ]);
     if (!workspace) notFound();
@@ -70,7 +75,14 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
                 createdAt: revisionPage.nextCursor.createdAt.toISOString(),
                 id: revisionPage.nextCursor.id
               }
-            : null
+            : null,
+          shareLinks: shareLinks.map((link) => ({
+            id: link.id,
+            revisionId: link.revisionId,
+            createdAt: link.createdAt.toISOString(),
+            expiresAt: link.expiresAt.toISOString(),
+            revokedAt: link.revokedAt?.toISOString() ?? null
+          }))
         }}
       />
     );

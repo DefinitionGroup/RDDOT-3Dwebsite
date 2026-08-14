@@ -18,7 +18,6 @@ import { preloadApartmentModel } from "@/features/configurator/engine/apartment-
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import {
   findFinish,
-  formatCurrency,
   getConfiguratorQuote,
   getLocalizedLabel,
   normalizeConfiguratorState,
@@ -39,16 +38,20 @@ import type {
   LocaleCode,
   VisualizationMode
 } from "@/features/configurator/types";
-import {
-  useProjectAutosave
-} from "@/features/projects/ui/use-project-autosave";
+import { useProjectAutosave } from "@/features/projects/ui/use-project-autosave";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
+import type { RevisionDisplaySnapshot } from "@/features/projects/revision-display";
+import { ProjectShareLinks } from "@/features/sharing/ui/project-share-links";
 
 type ConfiguratorShellProps = {
   initialState: ConfiguratorState;
   locale?: LocaleCode;
   project?: EditableProject;
+  sharedView?: {
+    displaySnapshot: RevisionDisplaySnapshot | null;
+    expiresAt: string;
+  };
 };
 
 const cameraViews: { key: CameraView; label: string }[] = [
@@ -60,7 +63,8 @@ const cameraViews: { key: CameraView; label: string }[] = [
 export function ConfiguratorShell({
   initialState,
   locale = "de",
-  project
+  project,
+  sharedView
 }: ConfiguratorShellProps) {
   const [config, setConfig] = useState(() => normalizeConfiguratorState(initialState));
   const [cameraView, setCameraView] = useState<CameraView>("signature");
@@ -78,16 +82,21 @@ export function ConfiguratorShell({
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT.cabinetColors, config.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT.frontColors, config.frontColorKey);
   const quote = getConfiguratorQuote(config);
+  const displayedTotalCents =
+    sharedView?.displaySnapshot?.totalCents ?? quote.totalCents;
+  const displayedCurrency =
+    sharedView?.displaySnapshot?.currency ?? quote.currency;
   const encodedConfig = encodeConfiguration(config);
   const checkoutHref = `/checkout?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
   const renderActive = pathTracing || renderRequested;
 
   useEffect(() => {
+    if (sharedView) return;
     const path = project
       ? `/configure?project=${project.id}`
       : `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
     window.history.replaceState(null, "", path);
-  }, [encodedConfig, project]);
+  }, [encodedConfig, project, sharedView]);
 
   useEffect(() => {
     const timeout = window.setTimeout(preloadApartmentModel, 450);
@@ -114,6 +123,7 @@ export function ConfiguratorShell({
   }
 
   function updateConfig(next: Partial<ConfiguratorState>) {
+    if (sharedView) return;
     stopRender();
     startTransition(() => {
       setConfig((current) => normalizeConfiguratorState({ ...current, ...next }));
@@ -237,30 +247,34 @@ export function ConfiguratorShell({
       <VisualizationPreloader active={visualization === "apartment"} />
 
       <CameraControlOverlay
+        accentSelection={!sharedView}
         activeView={cameraView}
         isConfigPanelOpen={isConfigPanelOpen}
         onPhoto={openPhoto}
         onRender={togglePathTracing}
         onSelect={selectCameraView}
+        showPhoto={!sharedView}
         renderActive={renderActive}
       />
 
-      <PhotoPopover
-        locale={locale}
-        onClose={() => setPhotoOpen(false)}
-        onGenerate={generatePhoto}
-        onSelectPreset={setPhotoPresetKey}
-        open={isPhotoOpen}
-        selectedPresetKey={photoPresetKey}
-        status={photoStatus}
-      />
+      {!sharedView && (
+        <PhotoPopover
+          locale={locale}
+          onClose={() => setPhotoOpen(false)}
+          onGenerate={generatePhoto}
+          onSelectPreset={setPhotoPresetKey}
+          open={isPhotoOpen}
+          selectedPresetKey={photoPresetKey}
+          status={photoStatus}
+        />
+      )}
 
       <AnimatePresence initial={false}>
         {!isConfigPanelOpen && (
           <motion.button
             animate={{ opacity: 1, x: 0 }}
             aria-expanded={false}
-            aria-label="Konfiguration einblenden"
+            aria-label={sharedView ? "Details einblenden" : "Konfiguration einblenden"}
             className="fixed right-4 top-20 z-30 inline-flex min-h-11 items-center gap-2.5 border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink lg:right-8 lg:top-8"
             exit={{ opacity: 0, x: 14 }}
             initial={{ opacity: 0, x: 14 }}
@@ -269,7 +283,7 @@ export function ConfiguratorShell({
             type="button"
           >
             <SlidersHorizontal aria-hidden="true" size={15} strokeWidth={1.5} />
-            Konfiguration
+            {sharedView ? "Details" : "Konfiguration"}
           </motion.button>
         )}
       </AnimatePresence>
@@ -327,12 +341,14 @@ export function ConfiguratorShell({
                   }}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <p className="text-body uppercase tracking-[0.22em] text-graphite">
-                      Konfigurator
-                    </p>
+                    {!sharedView && (
+                      <p className="text-body uppercase tracking-[0.22em] text-graphite">
+                        Konfigurator
+                      </p>
+                    )}
                     <button
                       aria-expanded={true}
-                      aria-label="Konfiguration ausblenden"
+                      aria-label={sharedView ? "Details ausblenden" : "Konfiguration ausblenden"}
                       className="grid size-9 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
                       onClick={() => setConfigPanelOpen(false)}
                       type="button"
@@ -340,45 +356,61 @@ export function ConfiguratorShell({
                       <PanelRightClose aria-hidden="true" size={15} strokeWidth={1.5} />
                     </button>
                   </div>
-                  <h1 className="mt-5 text-lead text-ink">
-                    {getLocalizedLabel(RDTD_KITCHEN_PRODUCT.title, locale)}
-                    <span className="text-signature">.</span>
+                  <h1 className={`${sharedView ? "mt-0" : "mt-5"} text-lead text-ink`}>
+                    {sharedView
+                      ? sharedView.displaySnapshot?.productTitle ?? "Signature Küche"
+                      : getLocalizedLabel(RDTD_KITCHEN_PRODUCT.title, locale)}
+                    {!sharedView && <span className="text-signature">.</span>}
                   </h1>
                   <p className="mt-3 text-pretty text-body text-graphite">
-                    {getLocalizedLabel(RDTD_KITCHEN_PRODUCT.description, locale)}
+                    {sharedView
+                      ? "Geteilter, unveränderlicher Küchenstand ohne private Projektdaten."
+                      : getLocalizedLabel(RDTD_KITCHEN_PRODUCT.description, locale)}
                   </p>
                 </motion.div>
 
                 <VisualizationTabs active={visualization} onSelect={selectVisualization} />
 
-                <motion.div
-                  className="mt-8 flex items-baseline justify-between gap-4 border-t border-hairline pt-6"
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-                  }}
-                >
-                  <p className="text-body text-graphite">Layout</p>
-                  <p className="text-body text-ink">Küchenzeile, gerade</p>
-                </motion.div>
-
-                <ControlGroup title="Korpus">
-                  <FinishPicker
-                    activeKey={cabinetColor.key}
+                {sharedView ? (
+                  <SharedRevisionDetails
+                    cabinetColor={cabinetColor}
+                    displaySnapshot={sharedView.displaySnapshot}
+                    expiresAt={sharedView.expiresAt}
+                    frontColor={frontColor}
                     locale={locale}
-                    onSelect={(key) => updateConfig({ cabinetColorKey: key })}
-                    options={RDTD_KITCHEN_PRODUCT.cabinetColors}
                   />
-                </ControlGroup>
+                ) : (
+                  <>
+                    <motion.div
+                      className="mt-8 flex items-baseline justify-between gap-4 border-t border-hairline pt-6"
+                      variants={{
+                        hidden: { opacity: 0, y: 12 },
+                        show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+                      }}
+                    >
+                      <p className="text-body text-graphite">Layout</p>
+                      <p className="text-body text-ink">Küchenzeile, gerade</p>
+                    </motion.div>
 
-                <ControlGroup title="Front">
-                  <FinishPicker
-                    activeKey={frontColor.key}
-                    locale={locale}
-                    onSelect={(key) => updateConfig({ frontColorKey: key })}
-                    options={RDTD_KITCHEN_PRODUCT.frontColors}
-                  />
-                </ControlGroup>
+                    <ControlGroup title="Korpus">
+                      <FinishPicker
+                        activeKey={cabinetColor.key}
+                        locale={locale}
+                        onSelect={(key) => updateConfig({ cabinetColorKey: key })}
+                        options={RDTD_KITCHEN_PRODUCT.cabinetColors}
+                      />
+                    </ControlGroup>
+
+                    <ControlGroup title="Front">
+                      <FinishPicker
+                        activeKey={frontColor.key}
+                        locale={locale}
+                        onSelect={(key) => updateConfig({ frontColorKey: key })}
+                        options={RDTD_KITCHEN_PRODUCT.frontColors}
+                      />
+                    </ControlGroup>
+                  </>
+                )}
 
                 <motion.div
                   className="mt-8 space-y-5 border-t border-hairline pt-6"
@@ -390,11 +422,15 @@ export function ConfiguratorShell({
                   <div className="flex items-baseline justify-between gap-4">
                     <p className="text-body text-graphite">Richtpreis</p>
                     <p className="text-lead text-ink">
-                      {formatCurrency(quote.totalCents, locale)}
+                      {new Intl.NumberFormat("de-DE", {
+                        currency: displayedCurrency,
+                        maximumFractionDigits: 0,
+                        style: "currency"
+                      }).format(displayedTotalCents / 100)}
                     </p>
                   </div>
 
-                  {project ? (
+                  {sharedView ? null : project ? (
                     <ProjectSaveControls
                       configurationCode={encodedConfig}
                       onSaveAsNew={saveConfigurationAsProject}
@@ -411,44 +447,58 @@ export function ConfiguratorShell({
                     </button>
                   )}
 
-                  <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                  <div
+                    className={`grid gap-2 ${
+                      sharedView
+                        ? "grid-cols-1"
+                        : project
+                          ? "grid-cols-[1fr_auto]"
+                          : "grid-cols-[1fr_auto_auto]"
+                    }`}
+                  >
                     <a
                       className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
-                      href={checkoutHref}
+                      href={sharedView ? "/configure" : checkoutHref}
                     >
-                      Konfiguration anfragen
+                      {sharedView ? "Eigene Küche konfigurieren" : "Konfiguration anfragen"}
                     </a>
-                    <button
-                      aria-label="Share URL kopieren"
-                      className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
-                      onClick={copyShareUrl}
-                      title="Share URL kopieren"
-                      type="button"
-                    >
-                      {copied ? (
-                        <Check aria-hidden="true" size={16} strokeWidth={1.5} />
-                      ) : (
-                        <Copy aria-hidden="true" size={16} strokeWidth={1.5} />
-                      )}
-                    </button>
-                    <button
-                      aria-label="Konfiguration zurücksetzen"
-                      className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
-                      onClick={resetConfiguration}
-                      title="Konfiguration zurücksetzen"
-                      type="button"
-                    >
-                      <RotateCcw aria-hidden="true" size={16} strokeWidth={1.5} />
-                    </button>
+                    {!project && !sharedView && (
+                      <button
+                        aria-label="Share URL kopieren"
+                        className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
+                        onClick={copyShareUrl}
+                        title="Share URL kopieren"
+                        type="button"
+                      >
+                        {copied ? (
+                          <Check aria-hidden="true" size={16} strokeWidth={1.5} />
+                        ) : (
+                          <Copy aria-hidden="true" size={16} strokeWidth={1.5} />
+                        )}
+                      </button>
+                    )}
+                    {!sharedView && (
+                      <button
+                        aria-label="Konfiguration zurücksetzen"
+                        className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
+                        onClick={resetConfiguration}
+                        title="Konfiguration zurücksetzen"
+                        type="button"
+                      >
+                        <RotateCcw aria-hidden="true" size={16} strokeWidth={1.5} />
+                      </button>
+                    )}
                   </div>
 
                   <p className="min-h-5 text-body text-ash">
-                    {isPending
+                    {sharedView
+                      ? "Der Link zeigt genau den freigegebenen Stand."
+                      : isPending
                       ? "Aktualisiere Szene …"
                       : copied
                         ? "Share-Link kopiert."
                         : project
-                          ? "Der Share-Link enthält einen unabhängigen Schnappschuss."
+                          ? "Sichere Links bleiben auf einen festen Stand begrenzt."
                           : "Ihre Konfiguration wird in der URL gespeichert."}
                   </p>
                 </motion.div>
@@ -616,6 +666,11 @@ function ProjectSaveControls({
         projectId={project.id}
         savedVersion={status.phase === "saved" ? status.savedVersion : null}
       />
+      <ProjectShareLinks
+        initialLinks={project.shareLinks}
+        projectId={project.id}
+        savedVersion={status.phase === "saved" ? status.savedVersion : null}
+      />
     </div>
   );
 }
@@ -732,18 +787,22 @@ function VisualizationTabs({
 }
 
 function CameraControlOverlay({
+  accentSelection,
   activeView,
   isConfigPanelOpen,
   onPhoto,
   onRender,
   onSelect,
+  showPhoto,
   renderActive
 }: {
+  accentSelection: boolean;
   activeView: CameraView;
   isConfigPanelOpen: boolean;
   onPhoto: () => void;
   onRender: () => void;
   onSelect: (view: CameraView) => void;
+  showPhoto: boolean;
   renderActive: boolean;
 }) {
   return (
@@ -756,28 +815,35 @@ function CameraControlOverlay({
     >
       <motion.div
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] divide-x divide-hairline border border-hairline bg-canvas sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto]"
+        className={`grid divide-x divide-hairline border border-hairline bg-canvas ${
+          showPhoto
+            ? "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto]"
+            : "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto]"
+        }`}
         initial={{ opacity: 0, y: 12 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
         {cameraViews.map((viewOption) => (
           <CameraViewButton
+            accent={accentSelection}
             active={activeView === viewOption.key}
             key={viewOption.key}
             label={viewOption.label}
             onClick={() => onSelect(viewOption.key)}
           />
         ))}
-        <button
-          aria-label="AI Foto"
-          className="inline-flex min-h-11 items-center justify-center gap-2 bg-ink px-3 text-body leading-none text-paper transition-colors hover:bg-graphite"
-          onClick={onPhoto}
-          title="AI Foto"
-          type="button"
-        >
-          <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
-          <span className="hidden sm:inline">Foto</span>
-        </button>
+        {showPhoto && (
+          <button
+            aria-label="AI Foto"
+            className="inline-flex min-h-11 items-center justify-center gap-2 bg-ink px-3 text-body leading-none text-paper transition-colors hover:bg-graphite"
+            onClick={onPhoto}
+            title="AI Foto"
+            type="button"
+          >
+            <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
+            <span className="hidden sm:inline">Foto</span>
+          </button>
+        )}
         <button
           aria-label={renderActive ? "3D Render beenden" : "3D Render starten"}
           aria-pressed={renderActive}
@@ -799,10 +865,12 @@ function CameraControlOverlay({
 }
 
 function CameraViewButton({
+  accent,
   active,
   label,
   onClick
 }: {
+  accent: boolean;
   active: boolean;
   label: string;
   onClick: () => void;
@@ -816,7 +884,12 @@ function CameraViewButton({
       onClick={onClick}
       type="button"
     >
-      {active && <span aria-hidden="true" className="size-1.5 rounded-full bg-signature" />}
+      {active && (
+        <span
+          aria-hidden="true"
+          className={`size-1.5 rounded-full ${accent ? "bg-signature" : "bg-ink"}`}
+        />
+      )}
       {label}
     </button>
   );
@@ -834,6 +907,89 @@ function ControlGroup({ children, title }: { children: React.ReactNode; title: s
       <h2 className="mb-4 text-body text-ink">{title}</h2>
       {children}
     </motion.div>
+  );
+}
+
+function SharedRevisionDetails({
+  cabinetColor,
+  displaySnapshot,
+  expiresAt,
+  frontColor,
+  locale
+}: {
+  cabinetColor: FinishOption;
+  displaySnapshot: RevisionDisplaySnapshot | null;
+  expiresAt: string;
+  frontColor: FinishOption;
+  locale: LocaleCode;
+}) {
+  const expiry = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(new Date(expiresAt));
+
+  return (
+    <motion.dl
+      className="mt-8 border-t border-hairline"
+      variants={{
+        hidden: { opacity: 0, y: 12 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+      }}
+    >
+      <RevisionDetailRow
+        label="Layout"
+        value={displaySnapshot?.layoutLabel ?? "Küchenzeile, gerade"}
+      />
+      <RevisionFinishRow
+        finish={cabinetColor}
+        label="Korpus"
+        value={displaySnapshot?.cabinetFinish ?? getLocalizedLabel(cabinetColor.label, locale)}
+      />
+      <RevisionFinishRow
+        finish={frontColor}
+        label="Front"
+        value={displaySnapshot?.frontFinish ?? getLocalizedLabel(frontColor.label, locale)}
+      />
+      <RevisionDetailRow label="Gültig bis" value={expiry} />
+    </motion.dl>
+  );
+}
+
+function RevisionDetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-5 border-b border-hairline py-4">
+      <dt className="text-body text-graphite">{label}</dt>
+      <dd className="text-right text-body text-ink">{value}</dd>
+    </div>
+  );
+}
+
+function RevisionFinishRow({
+  finish,
+  label,
+  value
+}: {
+  finish: FinishOption;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-5 border-b border-hairline py-4">
+      <dt className="text-body text-graphite">{label}</dt>
+      <dd className="flex items-center justify-end gap-3 text-right text-body text-ink">
+        <span
+          aria-hidden="true"
+          className="size-8 shrink-0 border border-hairline bg-cover bg-center"
+          style={
+            finish.textureUrl
+              ? { backgroundColor: finish.hex, backgroundImage: `url(${finish.textureUrl})` }
+              : { backgroundColor: finish.hex }
+          }
+        />
+        {value}
+      </dd>
+    </div>
   );
 }
 

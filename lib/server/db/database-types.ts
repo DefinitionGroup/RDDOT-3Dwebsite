@@ -75,11 +75,24 @@ export type OutboxMessageTable = {
   processedAt: Timestamp | null;
 };
 
+export type SharedRevisionLinkTable = {
+  id: string;
+  projectId: string;
+  configurationRevisionId: string;
+  tokenHash: string;
+  creationIdempotencyKey: string;
+  requestHash: string;
+  expiresAt: Timestamp;
+  revokedAt: Timestamp | null;
+  createdAt: Timestamp;
+};
+
 export type Database = {
   customerAccount: CustomerAccountTable;
   authIdentity: AuthIdentityTable;
   project: ProjectTable;
   workingConfiguration: WorkingConfigurationTable;
   configurationRevision: ConfigurationRevisionTable;
+  sharedRevisionLink: SharedRevisionLinkTable;
   outboxMessage: OutboxMessageTable;
 };

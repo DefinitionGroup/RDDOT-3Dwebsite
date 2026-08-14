@@ -23,3 +23,11 @@ The active-Project configurator now exposes an explicit version-save action and 
 Historical display snapshots are built from the Product Definition version pinned to the Configuration Revision. If that definition is unavailable, the checkpoint fails instead of presenting current labels or prices as historical truth.
 
 Revision listing and restoration are owner-scoped. Restore locks and checks the expected Working Configuration version, rejects stale callers, and restores the revision's configuration together with its Product Definition identity. Before replacing a different current state, it creates or reuses a labeled safety revision so the displaced work remains recoverable; restoring an already active revision is a no-op.
+
+## Implemented Shared Revision Link slice
+
+An authenticated owner can create, list, and revoke 90-day Shared Revision Links for an active Project. Creation locks and checks the expected Working Configuration version, creates or reuses the matching immutable Configuration Revision, and stores the link in the same transaction. Later autosaves cannot change what the link presents. Listing and revocation are owner-scoped; existing links remain available while a Project is archived and are unavailable when it is trashed.
+
+The browser generates a 32-byte random secret, places it after the URL fragment, and sends it only in the creation or public-resolution POST body. PostgreSQL stores only the SHA-256 hash. The complete link is shown only at creation time and cannot be reconstructed from server or database state.
+
+The public `/share/[linkId]` route exposes a read-only, selected-state presentation of the revision and its historical display snapshot. Its resolver returns private `no-store`, `noindex`, `nofollow`, `noarchive`, and `no-referrer` policy headers. It returns no Project Metadata, Customer Account data, AI-photo capability, configuration mutation, or Quote Request handoff. Until historical Product Definition releases can be loaded independently, public resolution fails closed unless the revision matches the active supported Product Definition version.

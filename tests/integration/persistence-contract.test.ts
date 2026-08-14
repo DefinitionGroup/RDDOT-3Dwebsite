@@ -4,6 +4,7 @@ import { createAuth } from "@/lib/server/auth/create-auth";
 import { createBetterAuthCustomerSessionResolver } from "@/lib/server/auth/customer-session-better-auth";
 import { createPostgresIdentityAdapter } from "@/lib/server/db/identity-postgres";
 import { createPostgresProjectModule } from "@/lib/server/db/project-postgres";
+import { createPostgresSharingModule } from "@/lib/server/db/sharing-postgres";
 import {
   startPostgresTestContext,
   type PostgresTestContext
@@ -16,6 +17,12 @@ const initialConfiguration = {
   cabinetColorKey: "carbon",
   frontColorKey: "clay"
 } as const;
+
+function randomShareToken() {
+  return `${crypto.randomUUID().replaceAll("-", "")}${crypto
+    .randomUUID()
+    .replaceAll("-", "")}`.slice(0, 43);
+}
 
 describe("PostgreSQL persistence contract", () => {
   let context: PostgresTestContext;
@@ -470,5 +477,124 @@ describe("PostgreSQL persistence contract", () => {
     ).resolves.toMatchObject({
       workingConfiguration: { productDefinitionVersion: "signature-line@1" }
     });
+  });
+
+  it("creates, resolves, scopes, and revokes an immutable Shared Revision Link", async () => {
+    const identity = createPostgresIdentityAdapter(context.database);
+    const projects = createPostgresProjectModule(context.database);
+    let now = new Date("2026-08-14T08:00:00.000Z");
+    const sharing = createPostgresSharingModule(context.database, () => now);
+    const ownerId = await identity.resolveCustomerAccount({
+      provider: "better-auth",
+      providerSubject: `auth-user-${crypto.randomUUID()}`
+    });
+    const otherOwnerId = await identity.resolveCustomerAccount({
+      provider: "better-auth",
+      providerSubject: `auth-user-${crypto.randomUUID()}`
+    });
+    const workspace = await projects.createProject({
+      ownerId,
+      idempotencyKey: `create-${crypto.randomUUID()}`,
+      name: "Geteilte Küche",
+      configuration: initialConfiguration,
+      productDefinitionVersion: "signature-line@1"
+    });
+    const token = randomShareToken();
+    const differentToken = randomShareToken();
+    const input = {
+      ownerId,
+      projectId: workspace.id,
+      expectedVersion: 1,
+      idempotencyKey: `share-${crypto.randomUUID()}`,
+      token,
+      displaySnapshot: { cabinetFinish: "Carbon", frontFinish: "Clay" }
+    };
+
+    const created = await sharing.createLink(input);
+    expect(created).toMatchObject({ kind: "created" });
+    if (created.kind !== "created") return;
+    await expect(
+      sharing.resolveLink({ linkId: created.link.id, token: input.token })
+    ).resolves.toMatchObject({ configuration: initialConfiguration });
+    await expect(
+      sharing.resolveLink({ linkId: created.link.id, token: differentToken })
+    ).resolves.toBeNull();
+
+    await expect(
+      projects.saveWorkingConfiguration({
+        ownerId,
+        projectId: workspace.id,
+        expectedVersion: 1,
+        configuration: { ...initialConfiguration, cabinetColorKey: "oak" },
+        productDefinitionVersion: "signature-line@1"
+      })
+    ).resolves.toMatchObject({ kind: "saved", version: 2 });
+    await expect(sharing.createLink(input)).resolves.toMatchObject({
+      kind: "replayed",
+      link: { id: created.link.id }
+    });
+    await expect(
+      sharing.createLink({ ...input, token: differentToken })
+    ).resolves.toEqual({ kind: "idempotency-conflict" });
+    await expect(
+      sharing.resolveLink({ linkId: created.link.id, token: input.token })
+    ).resolves.toMatchObject({ configuration: initialConfiguration });
+
+    await expect(
+      sharing.listLinks({ ownerId: otherOwnerId, projectId: workspace.id })
+    ).resolves.toEqual([]);
+    await expect(
+      sharing.revokeLink({
+        ownerId: otherOwnerId,
+        projectId: workspace.id,
+        linkId: created.link.id
+      })
+    ).resolves.toEqual({ kind: "unavailable" });
+
+    const revoked = await sharing.revokeLink({
+      ownerId,
+      projectId: workspace.id,
+      linkId: created.link.id
+    });
+    expect(revoked).toMatchObject({ kind: "revoked", revokedAt: now });
+    await expect(
+      sharing.resolveLink({ linkId: created.link.id, token: input.token })
+    ).resolves.toBeNull();
+    await expect(
+      sharing.revokeLink({ ownerId, projectId: workspace.id, linkId: created.link.id })
+    ).resolves.toMatchObject({ kind: "unchanged", revokedAt: now });
+
+    const expiringInput = {
+      ...input,
+      expectedVersion: 2,
+      idempotencyKey: `share-${crypto.randomUUID()}`,
+      token: randomShareToken()
+    };
+    const concurrent = await Promise.all([
+      sharing.createLink(expiringInput),
+      sharing.createLink(expiringInput)
+    ]);
+    expect(new Set(concurrent.map((result) => result.kind))).toEqual(
+      new Set(["created", "replayed"])
+    );
+    expect(
+      new Set(
+        concurrent.flatMap((result) =>
+          result.kind === "created" || result.kind === "replayed"
+            ? [result.link.id]
+            : []
+        )
+      ).size
+    ).toBe(1);
+    const expiring = concurrent.find(
+      (result) => result.kind === "created" || result.kind === "replayed"
+    );
+    if (!expiring || (expiring.kind !== "created" && expiring.kind !== "replayed")) {
+      return;
+    }
+    now = new Date("2026-11-13T08:00:00.001Z");
+    await expect(
+      sharing.resolveLink({ linkId: expiring.link.id, token: expiringInput.token })
+    ).resolves.toBeNull();
   });
 });

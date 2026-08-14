@@ -49,6 +49,10 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added explicit “Version speichern” checkpoints for active Projects. They create or reuse an immutable Configuration Revision from the confirmed Working Configuration and remain separate from autosave.
 - Added an owner-scoped, cursor-paginated Project version history with historical finish and price display snapshots resolved from the Configuration Revision's pinned Product Definition version.
 - Added optimistic-concurrency-controlled version restoration. A restore first preserves the displaced Working Configuration as an immutable “Vor Wiederherstellung” safety version, then restores the selected Configuration Revision and its Product Definition identity.
+- Added owner-scoped Shared Revision Links for active saved Projects. Owners can create, list, and permanently revoke 90-day links fixed to an immutable Configuration Revision.
+- Shared-link secrets are generated in the browser and placed in the URL fragment. The database stores only the SHA-256 hash, and the complete link is shown only at creation time.
+- Added the public `/share/[linkId]` selected-state presentation. Its POST-only resolver is private/no-store, noindex/nofollow/noarchive, and no-referrer; it exposes no Project or Customer Account data, AI-photo action, configuration mutation, or Quote Request handoff.
+- Existing links remain available while a Project is archived and become unavailable when it is trashed. Public resolution currently fails closed unless the revision uses the active supported Product Definition version.
 - Added `/checkout` as a fake checkout/request handoff that reads the shared configuration.
 - Added a temporary product-definition contract in `features/configurator/product-definition.ts`.
 - Added a Sanity adapter boundary in `features/configurator/adapters/sanity.ts`.
@@ -68,11 +72,11 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 
 ## Current Slice Verified
 
-- `pnpm test`, `pnpm test:db`, `pnpm lint`, and `pnpm build` pass. The versions slice is covered by 14 passing unit tests and 7 passing database integration tests; the production build uses the required `TRANSACTIONAL_EMAIL_PROVIDER` environment override.
-- Unit coverage includes browser-recovery parsing, stale-version classification, the in-flight-save/newer-draft race, and Product Definition-bound historical display snapshots. Database integration coverage confirms one winner for concurrent expected-version writes, synchronized Project timestamps, revision deduplication, cursor pagination, owner scoping, safe restore, stale-version rejection, and restoration of the pinned Product Definition identity.
-- Live browser checks on the Neon QA Project confirmed that the first explicit save returned 201, an identical repeat returned 200 without adding a duplicate, a later autosaved finish change remained separate, and restoring the earlier version returned 200 and added the displaced state as “Vor Wiederherstellung”.
-- At 1440×1000 the canvas remained nonblank, version history stayed cleanly contained in the configurator panel, and the document had no horizontal overflow. At 390×844 the document measured 390/390 for scroll/client width, retained one canvas, kept history usable, and moved the camera toolbar out of the history viewport instead of overlaying it.
-- Browser QA produced no new errors beyond the known `THREE.Clock` development warning and the expected development-origin warning when using the alternate `127.0.0.1` host.
+- The Shared Revision Link migration was applied to the Neon QA database.
+- `pnpm test` passes 14/14 unit tests, `pnpm test:db` passes 8/8 database integration tests, and `pnpm lint`, `pnpm build`, and `git diff --check` pass. The production build uses the required `TRANSACTIONAL_EMAIL_PROVIDER` environment override.
+- Database coverage confirms immutable checkpointing, idempotent concurrent creation, owner scoping, secret mismatch rejection, revocation, expiry, and independence from later Working Configuration changes.
+- At 1440px desktop and 390px mobile widths, the public shared-revision surface retained one nonblank canvas, had no horizontal overflow, and produced no browser-console errors.
+- The Impeccable finish reviewer returned `PASS` for the public share surface.
 - The current Three.js deprecation and PostgreSQL SSL forward-compatibility warnings remain known non-blockers.
 
 ## Known Warnings
@@ -103,7 +107,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - The current GLB color mapping is heuristic. A production asset should expose named nodes/material slots for cabinet bodies, fronts, handles, countertop, appliances, and room surfaces.
 - No analytics/event tracking exists for configurator interactions.
 - The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
-- Shared Revision Links and Project Archive/Trash/lifecycle restoration are not implemented yet.
+- Project Archive/Trash/lifecycle restoration is not implemented yet. The sharing persistence boundary already treats archived links as available and trashed links as unavailable.
 - No accessibility audit has been formalized.
 - No performance budgets exist for 3D, images, or page-builder pages.
 
@@ -124,7 +128,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 
 ## Recommended Next Implementation Steps
 
-1. Implement the remaining Project lifecycle workflows: Shared Revision Links, Archive, Trash, restoring archived/trashed Projects, and the relevant UI.
+1. Implement the remaining Project lifecycle workflows: Archive, Trash, restoring archived/trashed Projects, and the relevant UI.
 2. Add locale route structure for `/`, `/en`, and `/es`.
 3. Define the Sanity schema set:
    - site settings

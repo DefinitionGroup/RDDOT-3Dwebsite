@@ -169,8 +169,12 @@ A Project blocked from further activity and scheduled for permanent deletion aft
 _Avoid_: Archived Project, soft-deleted Project
 
 **Shared Revision Link**:
-A revocable, unguessable, read-only link fixed to one Configuration Revision. It expires after 90 days unless renewed and exposes no Project Metadata, Customer Account data, or Quote Requests.
+A revocable, unguessable, read-only link fixed to one Configuration Revision. It expires after 90 days unless renewed. Its client-generated secret travels only in the URL fragment and is represented in persistent storage only by a SHA-256 hash, so the application cannot reconstruct the complete link after creation. Existing links remain available for an Archived Project and are unavailable for a Trashed Project.
 _Avoid_: Shared project, collaboration link
+
+**Shared Revision View**:
+The public, selected-state-only presentation resolved from a Shared Revision Link through a POST request. It is private and non-cacheable, non-indexable, sends no referrer, and exposes no Project Metadata, Customer Account data, AI-photo action, configuration mutation, or Quote Request handoff. It fails closed when the Configuration Revision's Product Definition version is not currently supported.
+_Avoid_: Public Project, shared workspace, quote page
 
 **Generated Photo**:
 A persistently stored illustrative AI-rendered image associated with the Configuration Revision that produced it. It may provide visual context but cannot establish product or commercial truth.
