@@ -1,0 +1,186 @@
+{
+  "modules": [
+    {
+      "key": "wall-big-L",
+      "type": "wall-big",
+      "prefab": "module__wall-big-L",
+      "xMin": 2.101,
+      "width": 0.619,
+      "meshCount": 7
+    },
+    {
+      "key": "island-end-L",
+      "type": "island-end",
+      "prefab": "module__island-end-L",
+      "xMin": 2.3334,
+      "width": 0.019,
+      "meshCount": 1
+    },
+    {
+      "key": "island-back-90-L",
+      "type": "island-back-90",
+      "prefab": "module__island-back-90-L",
+      "xMin": 2.3524,
+      "width": 0.9,
+      "meshCount": 5
+    },
+    {
+      "key": "island-front-1",
+      "type": "island-front",
+      "prefab": "module__island-front-1",
+      "xMin": 2.3524,
+      "width": 0.769,
+      "meshCount": 6
+    },
+    {
+      "key": "wall-device-A",
+      "type": "wall-device",
+      "prefab": "module__wall-device-A",
+      "xMin": 2.72,
+      "width": 0.638,
+      "meshCount": 17
+    },
+    {
+      "key": "island-front-2",
+      "type": "island-front",
+      "prefab": "module__island-front-2",
+      "xMin": 3.1221,
+      "width": 0.7684,
+      "meshCount": 6
+    },
+    {
+      "key": "island-back-60-1",
+      "type": "island-back-60",
+      "prefab": "module__island-back-60-1",
+      "xMin": 3.2524,
+      "width": 0.638,
+      "meshCount": 7
+    },
+    {
+      "key": "wall-small-1",
+      "type": "wall-small",
+      "prefab": "module__wall-small-1",
+      "xMin": 3.358,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-small-2",
+      "type": "wall-small",
+      "prefab": "module__wall-small-2",
+      "xMin": 3.658,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "island-back-60-2",
+      "type": "island-back-60",
+      "prefab": "module__island-back-60-2",
+      "xMin": 3.8904,
+      "width": 0.619,
+      "meshCount": 6
+    },
+    {
+      "key": "island-front-3",
+      "type": "island-front",
+      "prefab": "module__island-front-3",
+      "xMin": 3.891,
+      "width": 0.7684,
+      "meshCount": 6
+    },
+    {
+      "key": "wall-small-3",
+      "type": "wall-small",
+      "prefab": "module__wall-small-3",
+      "xMin": 3.958,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-small-4",
+      "type": "wall-small",
+      "prefab": "module__wall-small-4",
+      "xMin": 4.258,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "island-back-90-R",
+      "type": "island-back-90",
+      "prefab": "module__island-back-90-R",
+      "xMin": 4.5094,
+      "width": 0.9,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-device-B",
+      "type": "wall-device",
+      "prefab": "module__wall-device-B",
+      "xMin": 4.558,
+      "width": 0.638,
+      "meshCount": 17
+    },
+    {
+      "key": "island-front-4",
+      "type": "island-front",
+      "prefab": "module__island-front-4",
+      "xMin": 4.66,
+      "width": 0.7494,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-big-R",
+      "type": "wall-big",
+      "prefab": "module__wall-big-R",
+      "xMin": 5.196,
+      "width": 0.619,
+      "meshCount": 7
+    },
+    {
+      "key": "island-end-R",
+      "type": "island-end",
+      "prefab": "module__island-end-R",
+      "xMin": 5.4094,
+      "width": 0.019,
+      "meshCount": 1
+    }
+  ],
+  "continuous": [
+    {
+      "key": "wall-backwall",
+      "prefab": "continuous__wall-backwall",
+      "xMin": 2.096,
+      "width": 3.724
+    },
+    {
+      "key": "wall-backpanel",
+      "prefab": "continuous__wall-backpanel",
+      "xMin": 2.1362,
+      "width": 3.6435
+    },
+    {
+      "key": "wall-plinth-strip",
+      "prefab": "continuous__wall-plinth-strip",
+      "xMin": 2.1473,
+      "width": 3.6213
+    },
+    {
+      "key": "island-countertop",
+      "prefab": "continuous__island-countertop",
+      "xMin": 2.3304,
+      "width": 3.101
+    },
+    {
+      "key": "island-midpanel",
+      "prefab": "continuous__island-midpanel",
+      "xMin": 2.3524,
+      "width": 3.057
+    },
+    {
+      "key": "island-back-plinth",
+      "prefab": "continuous__island-back-plinth",
+      "xMin": 2.455,
+      "width": 2.8518
+    }
+  ]
+}

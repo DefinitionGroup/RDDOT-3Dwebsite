@@ -7,6 +7,7 @@ import {
   BufferAttribute,
   Color,
   DataTexture,
+  Group,
   LinearFilter,
   Mesh,
   MeshPhysicalMaterial,
@@ -19,6 +20,10 @@ import {
   type BufferGeometry,
   type Texture
 } from "three";
+import {
+  getContinuousManifest,
+  getDefaultModuleLayout
+} from "@/features/configurator/modules/kitchen-modules";
 import { RDTD_KITCHEN_PRODUCT } from "@/features/configurator/product-definition";
 import type { FinishOption } from "@/features/configurator/types";
 
@@ -28,7 +33,7 @@ type KitchenModelProps = {
   frontFinish: FinishOption;
 };
 
-const KITCHEN_MODEL_PATH = "/models/kitchen-line.glb";
+const KITCHEN_MODEL_PATH = "/models/kitchen-modules.glb";
 const MODEL_SCALE = 1.18;
 
 const ALL_FINISHES = [
@@ -264,7 +269,33 @@ type ModelRole =
   | "plinth";
 
 function prepareKitchenModel(sourceScene: Object3D) {
-  const scene = sourceScene.clone(true);
+  const prefabs = new Map<string, Object3D>();
+  for (const child of sourceScene.children) {
+    prefabs.set(child.name, child);
+  }
+
+  // Compose the kitchen from module prefabs. Each prefab root carries the
+  // module's X offset; placements re-position it, so slice S4 can rearrange
+  // modules by changing the layout alone.
+  const scene = new Group();
+  for (const placement of getDefaultModuleLayout()) {
+    const prefab = prefabs.get(placement.prefab);
+    if (!prefab) {
+      throw new Error(`Kitchen module prefab missing: ${placement.prefab}`);
+    }
+    const instance = prefab.clone(true);
+    instance.position.x = placement.x;
+    scene.add(instance);
+  }
+  for (const continuous of getContinuousManifest()) {
+    const prefab = prefabs.get(continuous.prefab);
+    if (!prefab) {
+      throw new Error(`Kitchen continuous prefab missing: ${continuous.prefab}`);
+    }
+    scene.add(prefab.clone(true));
+  }
+  scene.updateMatrixWorld(true);
+
   const ownedGeometries: BufferGeometry[] = [];
   const bounds = new Box3().setFromObject(scene);
   const center = new Vector3();
@@ -280,7 +311,7 @@ function prepareKitchenModel(sourceScene: Object3D) {
     // so each render pipeline needs an isolated geometry instance.
     object.geometry = object.geometry.clone();
     ownedGeometries.push(object.geometry);
-    object.userData.configuratorRole = classifyMesh(object);
+    object.userData.configuratorRole = getBakedRole(object) ?? classifyMesh(object);
     ensurePlanarUVs(object.geometry);
     normalizeMaterialGroups(object.geometry);
   });
@@ -290,6 +321,16 @@ function prepareKitchenModel(sourceScene: Object3D) {
     scene,
     offset: [-center.x, -bounds.min.y, -center.z] as [number, number, number]
   };
+}
+
+/** Roles are baked into mesh names by the segmentation step: `<role>__<name>`. */
+function getBakedRole(mesh: Mesh): ModelRole | null {
+  const separator = mesh.name.indexOf("__");
+  if (separator <= 0) {
+    return null;
+  }
+  const prefix = mesh.name.slice(0, separator);
+  return isModelRole(prefix) ? prefix : null;
 }
 
 function normalizeMaterialGroups(geometry: BufferGeometry) {

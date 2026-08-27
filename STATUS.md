@@ -31,6 +31,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added a straight-line kitchen scene using React Three Fiber, drei, and Three.js.
 - Loaded `public/models/kitchen-line.glb` into the configurator as the active kitchen model.
 - Added heuristic GLB material mapping so cabinet/korpus and front colors affect the imported model.
+- Segmented the kitchen asset into named module prefabs (`kitchen-modules.glb` + manifest) via a headless Blender pipeline: 8 wall modules, 8 island units, 2 island ends, 6 continuous elements, roles baked into mesh names. The runtime now composes the scene from prefab placements with verified exact geometric parity (per-mesh world bounds within 1e-6) against the previous monolithic model — the foundation for module-level configurability.
 - Added color configuration for:
   - cabinet/korpus finish
   - front finish
@@ -103,8 +104,8 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - No Studio page-builder block exists yet for dropping the configurator into a page.
 - No real product catalog, SKU model, pricing engine, cart, checkout, order, CRM, or payment integration exists yet.
 - The checkout page is a visual fake checkout only and performs no submission.
-- The configurator now loads `kitchen-line.glb`, but the asset uses generic mesh names and one shared material.
-- The current GLB color mapping is heuristic. A production asset should expose named nodes/material slots for cabinet bodies, fronts, handles, countertop, appliances, and room surfaces.
+- The configurator loads `kitchen-modules.glb`: the kitchen segmented into 18 named module prefabs (wall cabinets, island units, ends) plus 6 continuous elements, with semantic roles baked into mesh names. Layout composition is still fixed to the as-authored default; module add/remove/rearrange arrives with the module configurability slices.
+- The 6 continuous elements (countertop, plinths, back panels) are placed as-is and must become procedurally generated once layouts can change width.
 - No analytics/event tracking exists for configurator interactions.
 - The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
 - Project Archive/Trash/lifecycle restoration is not implemented yet. The sharing persistence boundary already treats archived links as available and trashed links as unavailable.
