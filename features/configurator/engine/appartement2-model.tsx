@@ -32,9 +32,10 @@ type Appartement2ModelProps = {
 const APARTMENT2_MODEL_PATH = "/models/appartement2.glb";
 
 // Source scene is Z-up Blender; the exporter converts to Y-up. The painting
-// wall's inner face sits at x ~ -4.42, the room's depth midline at z ~ 0.55.
-// The kitchen rotates 90deg so its wall line backs onto the painting wall.
-const KITCHEN_POSITION: [number, number, number] = [-2.63, 0, 0.55];
+// wall's inner face sits at x ~ -4.42, the walkable floor at y = -1.369
+// (raycast-measured), the room's depth midline at z ~ 0.55. The kitchen
+// rotates 90deg so its wall line backs onto the painting wall.
+const KITCHEN_POSITION: [number, number, number] = [-2.63, -1.369, 0.55];
 const KITCHEN_ROTATION: [number, number, number] = [0, Math.PI / 2, 0];
 const REFLECTION_PROBE_Y = 1.25;
 

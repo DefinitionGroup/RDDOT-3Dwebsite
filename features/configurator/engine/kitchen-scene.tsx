@@ -79,16 +79,17 @@ const apartmentCameraPresets: Record<CameraView, CameraPreset> = {
   detail: [3.6, 1.8, 2.5, 0.2, 1.02, 0.45]
 };
 
+// Floor level in the baked scene is y = -1.369; eye heights are relative to it.
 const apartment2CameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [1.85, 1.95, 3.4, -3.0, 1.0, 0.1],
-  front: [1.1, 1.5, 0.55, -2.63, 1.35, 0.55],
-  detail: [-0.7, 1.35, 1.9, -3.3, 1.05, 0.2]
+  signature: [1.85, 0.55, 3.4, -3.0, -0.3, 0.1],
+  front: [1.1, 0.15, 0.55, -2.63, 0.05, 0.55],
+  detail: [-0.7, 0.05, 1.9, -3.3, -0.25, 0.2]
 };
 
 const mobileApartment2CameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [1.2, 1.95, 4.6, -2.6, 1.0, 0.3],
-  front: [1.3, 1.6, 0.55, -2.63, 1.2, 0.55],
-  detail: [0.2, 1.5, 2.7, -3.2, 1.0, 0.2]
+  signature: [1.2, 0.6, 4.6, -2.6, -0.3, 0.3],
+  front: [1.4, 0.25, 0.55, -2.63, -0.1, 0.55],
+  detail: [0.2, 0.15, 2.7, -3.2, -0.3, 0.2]
 };
 
 const mobileApartmentCameraPresets: Record<CameraView, CameraPreset> = {

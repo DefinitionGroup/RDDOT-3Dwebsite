@@ -37,7 +37,8 @@ PANO_RES = (768, 384) if DRAFT else (2048, 1024)
 
 # Kitchen anchor in the source scene (Blender coords, meters): room center in
 # front of the painting wall, at standing eye height for the panorama.
-KITCHEN_ANCHOR = Vector((-2.0, -0.55, 1.35))
+# Floor sits at z=-1.369 in the source scene; pano eye ~1.45m above it.
+KITCHEN_ANCHOR = Vector((-2.0, -0.55, 0.08))
 
 # Objects whose polycount is wildly out of budget get decimated to this.
 DECIMATE_OVER = 20000
@@ -68,13 +69,32 @@ for obj in list(scene.objects):
     if obj.type == "CAMERA":
         bpy.data.objects.remove(obj, do_unlink=True)
 
-# Plane.002 duplicates the shell floor exactly (coplanar): it bakes black
-# and occludes the real floor's bake. The shell carries the board texture.
-for name in ("Plane.002",):
-    doomed = scene.objects.get(name)
-    if doomed:
-        bpy.data.objects.remove(doomed, do_unlink=True)
-        log(f"removed duplicate surface {name}")
+# Plane.002 is a glossy overlay coplanar with the shell's wood floor: it has
+# no diffuse response, bakes black, and would hide the real floor when
+# rendered unlit. The walkable floor surface lives in the shell (Cube.017).
+overlay = scene.objects.get("Plane.002")
+if overlay:
+    bpy.data.objects.remove(overlay, do_unlink=True)
+    log("removed glossy floor overlay Plane.002")
+
+# Remove the east and south walls of the room shell so orbiting the kitchen
+# never puts a wall between camera and product (dollhouse cut). The painting
+# wall (west), window wall (north), floor, and ceiling stay.
+shell = scene.objects.get("Cube.017")
+if shell:
+    import bmesh
+
+    bm = bmesh.new()
+    bm.from_mesh(shell.data)
+    doomed_faces = []
+    for face in bm.faces:
+        center = shell.matrix_world @ face.calc_center_median()
+        if center.x > 1.9 or center.y < -4.85:
+            doomed_faces.append(face)
+    bmesh.ops.delete(bm, geom=doomed_faces, context="FACES")
+    bm.to_mesh(shell.data)
+    bm.free()
+    log(f"removed {len(doomed_faces)} blocking wall faces from shell")
 
 for obj in list(scene.objects):
     if obj.type == "CURVE":
@@ -121,9 +141,13 @@ def bake_resolution(obj):
     return max(MAX_TEX // 8, 128)
 
 
+# The window backdrop uses camera-ray-only visibility, so GI rays (and
+# bakes) see black. Its original photo material exports fine as-is.
+BAKE_EXCLUDE = {"face"}
+
 bake_targets = []
 for obj in meshes:
-    if not obj.data.polygons:
+    if not obj.data.polygons or obj.name in BAKE_EXCLUDE:
         continue
     bpy.context.view_layer.objects.active = obj
     for selected in bpy.context.selected_objects:
