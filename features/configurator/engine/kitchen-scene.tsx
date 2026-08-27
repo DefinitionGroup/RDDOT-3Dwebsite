@@ -39,6 +39,7 @@ import type {
 } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
 import { ApartmentModel } from "@/features/configurator/engine/apartment-model";
+import { Appartement2Model } from "@/features/configurator/engine/appartement2-model";
 import {
   KitchenModel,
   type KitchenEditProps
@@ -78,6 +79,18 @@ const apartmentCameraPresets: Record<CameraView, CameraPreset> = {
   detail: [3.6, 1.8, 2.5, 0.2, 1.02, 0.45]
 };
 
+const apartment2CameraPresets: Record<CameraView, CameraPreset> = {
+  signature: [1.85, 1.95, 3.4, -3.0, 1.0, 0.1],
+  front: [1.1, 1.5, 0.55, -2.63, 1.35, 0.55],
+  detail: [-0.7, 1.35, 1.9, -3.3, 1.05, 0.2]
+};
+
+const mobileApartment2CameraPresets: Record<CameraView, CameraPreset> = {
+  signature: [1.2, 1.95, 4.6, -2.6, 1.0, 0.3],
+  front: [1.3, 1.6, 0.55, -2.63, 1.2, 0.55],
+  detail: [0.2, 1.5, 2.7, -3.2, 1.0, 0.2]
+};
+
 const mobileApartmentCameraPresets: Record<CameraView, CameraPreset> = {
   signature: [7.2, 2.9, 6.2, 0, 1.05, 0],
   front: [6.8, 2.1, 0.2, 0, 1.08, 0],
@@ -94,24 +107,39 @@ export function KitchenScene({
 }: KitchenSceneProps) {
   const controlsRef = useRef<ElementRef<typeof CameraControls> | null>(null);
   const width = useThree((rootState) => rootState.size.width);
+
   const floorTexture = useMemo(() => createTexturedFloorTexture(), []);
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, state.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, state.frontColorKey);
   const isCompactViewport = width < 720;
   const isApartment = visualization === "apartment";
+  const isApartment2 = visualization === "apartment2";
   const reflectionResolution = isCompactViewport ? 128 : 256;
 
   useEffect(() => {
-    const presets = isApartment
+    const presets = isApartment2
       ? isCompactViewport
-        ? mobileApartmentCameraPresets
-        : apartmentCameraPresets
-      : isCompactViewport
-        ? mobileCameraPresets
-        : cameraPresets;
+        ? mobileApartment2CameraPresets
+        : apartment2CameraPresets
+      : isApartment
+        ? isCompactViewport
+          ? mobileApartmentCameraPresets
+          : apartmentCameraPresets
+        : isCompactViewport
+          ? mobileCameraPresets
+          : cameraPresets;
     const preset = presets[cameraView];
+    // A first switch into a visualization suspends on its assets, which can
+    // swallow the initial setLookAt (the controls remount around it). Retry
+    // on a short schedule; the damped transition makes this imperceptible.
     controlsRef.current?.setLookAt(...preset, !pathTracing);
-  }, [cameraView, isApartment, isCompactViewport, pathTracing]);
+    const retries = [300, 900, 1800].map((delay) =>
+      window.setTimeout(() => {
+        controlsRef.current?.setLookAt(...preset, !pathTracing);
+      }, delay)
+    );
+    return () => retries.forEach((timer) => window.clearTimeout(timer));
+  }, [cameraView, isApartment, isApartment2, isCompactViewport, pathTracing]);
 
   useEffect(() => {
     return () => {
@@ -128,18 +156,25 @@ export function KitchenScene({
         near={0.08}
         position={[4.2, 2.4, 5.6]}
       />
-      {!pathTracing && (
+      {!pathTracing && !isApartment2 && (
         <fog
           args={isApartment ? ["#bdc5c4", 14, 32] : ["#aeb7b3", 9.5, 21]}
           attach="fog"
         />
       )}
-      {isApartment ? (
+      {isApartment2 ? (
+        <Appartement2LightRig pathTracing={pathTracing} />
+      ) : isApartment ? (
         <ApartmentLightRig pathTracing={pathTracing} />
       ) : (
         <StudioLightRig pathTracing={pathTracing} />
       )}
-      {isApartment ? (
+      {isApartment2 ? (
+        <Environment
+          environmentIntensity={pathTracing ? 1.1 : 1.2}
+          files="/hdri/appartement2_pano.hdr"
+        />
+      ) : isApartment ? (
         <Environment
           background
           backgroundBlurriness={0.055}
@@ -153,7 +188,18 @@ export function KitchenScene({
         <StudioEnvironment compact={isCompactViewport} pathTracing={pathTracing} />
       )}
 
-      {isApartment ? (
+      {isApartment2 ? (
+        <Suspense fallback={null}>
+          <Appartement2Model
+            cabinetFinish={cabinetColor}
+            frontFinish={frontColor}
+            pathTracing={pathTracing}
+            reflectionProbe={!pathTracing}
+            reflectionResolution={reflectionResolution}
+            state={state}
+          />
+        </Suspense>
+      ) : isApartment ? (
         <Suspense
           fallback={
             <StudioKitchen
@@ -187,7 +233,7 @@ export function KitchenScene({
         />
       )}
 
-      {!pathTracing && !isApartment && (
+      {!pathTracing && !isApartment && !isApartment2 && (
         <ContactShadows
           blur={3.2}
           color="#514b45"
@@ -199,14 +245,14 @@ export function KitchenScene({
       )}
       {!pathTracing && (
         <CinematicEffects
-          apartment={isApartment}
+          apartment={isApartment || isApartment2}
           compact={isCompactViewport}
         />
       )}
       <CameraControls
         dollySpeed={0.65}
         makeDefault
-        maxDistance={isApartment ? 11 : isCompactViewport ? 13 : 8.4}
+        maxDistance={isApartment || isApartment2 ? 11 : isCompactViewport ? 13 : 8.4}
         maxPolarAngle={Math.PI / 2.08}
         minDistance={2.2}
         minPolarAngle={Math.PI / 8}
@@ -309,6 +355,31 @@ function StudioEnvironment({
           scale={8}
         />
       </Environment>
+    </>
+  );
+}
+
+function Appartement2LightRig({ pathTracing }: { pathTracing: boolean }) {
+  return (
+    <>
+      <hemisphereLight args={["#e8ecef", "#6d6862", 0.6]} />
+      <ambientLight color="#d9dce0" intensity={0.22} />
+      <directionalLight
+        castShadow
+        color="#fff2e2"
+        intensity={pathTracing ? 1.8 : 1.55}
+        position={[0.8, 4.6, -8.5]}
+        shadow-bias={-0.0002}
+        shadow-blurSamples={24}
+        shadow-mapSize={[2048, 2048]}
+        shadow-normalBias={0.025}
+        shadow-radius={7}
+      />
+      <directionalLight
+        color="#e6ecf2"
+        intensity={pathTracing ? 0.9 : 0.4}
+        position={[5.0, 3.0, 4.2]}
+      />
     </>
   );
 }

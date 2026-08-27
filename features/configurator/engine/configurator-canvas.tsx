@@ -139,15 +139,15 @@ function PathTracingPipeline({
 }: Omit<RenderPipelineProps, "pathTracing"> & { compact: boolean }) {
   return (
     <Pathtracer
-      bounces={compact ? 4 : visualization === "apartment" ? 4 : 5}
+      bounces={compact ? 4 : visualization !== "studio" ? 4 : 5}
       dynamicLowRes
       fadeDuration={320}
       filteredGlossyFactor={0.32}
       minSamples={2}
       rasterizeScene
       ref={configurePathTracer}
-      resolutionFactor={compact ? 0.68 : visualization === "apartment" ? 0.62 : 0.82}
-      samples={compact ? 32 : visualization === "apartment" ? 40 : 72}
+      resolutionFactor={compact ? 0.68 : visualization !== "studio" ? 0.62 : 0.82}
+      samples={compact ? 32 : visualization !== "studio" ? 40 : 72}
       tiles={compact ? [1, 1] : [2, 1]}
     >
       <KitchenScene

@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { preloadApartmentModel } from "@/features/configurator/engine/apartment-model";
+import { preloadAppartement2Model } from "@/features/configurator/engine/appartement2-model";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import {
   findFinish,
@@ -124,9 +125,13 @@ export function ConfiguratorShell({
   }, [encodedConfig, project, sharedView]);
 
   useEffect(() => {
-    const timeout = window.setTimeout(preloadApartmentModel, 450);
+    const apartmentTimer = window.setTimeout(preloadApartmentModel, 450);
+    const apartment2Timer = window.setTimeout(preloadAppartement2Model, 1200);
 
-    return () => window.clearTimeout(timeout);
+    return () => {
+      window.clearTimeout(apartmentTimer);
+      window.clearTimeout(apartment2Timer);
+    };
   }, []);
 
   useEffect(() => {
@@ -325,7 +330,7 @@ export function ConfiguratorShell({
         />
       </div>
 
-      <VisualizationPreloader active={visualization === "apartment"} />
+      <VisualizationPreloader active={visualization !== "studio"} />
 
       <CameraControlOverlay
         accentSelection={!sharedView}
@@ -871,7 +876,8 @@ function VisualizationTabs({
 }) {
   const options: { key: VisualizationMode; label: string }[] = [
     { key: "studio", label: "Studio" },
-    { key: "apartment", label: "Appartement" }
+    { key: "apartment", label: "Appartement" },
+    { key: "apartment2", label: "Appartement2" }
   ];
 
   return (
@@ -885,7 +891,7 @@ function VisualizationTabs({
       <p className="mb-4 text-body text-graphite">Visualisierung</p>
       <div
         aria-label="Visualisierung"
-        className="grid grid-cols-2 divide-x divide-hairline border border-hairline"
+        className="grid grid-cols-3 divide-x divide-hairline border border-hairline"
         role="tablist"
       >
         {options.map((option) => {
