@@ -139,6 +139,15 @@ export function KitchenModel({
         metalness: 0.92,
         roughness: 0.23
       }),
+      appliance: new MeshPhysicalMaterial({
+        clearcoat: 0.9,
+        clearcoatRoughness: 0.08,
+        color: "#101011",
+        envMap: environmentMap ?? null,
+        envMapIntensity: 1.35,
+        metalness: 0.42,
+        roughness: 0.12
+      }),
       countertop: new MeshPhysicalMaterial({
         bumpMap: microSurfaceTexture,
         bumpScale: 0.0018,
@@ -328,6 +337,7 @@ function getFinishProfile(
 }
 
 type ModelRole =
+  | "appliance"
   | "backdrop"
   | "cabinet"
   | "countertop"
@@ -359,6 +369,9 @@ function composeKitchenScene(sourceScene: Object3D, layout: KitchenLayout) {
     } else {
       instance.userData.islandPart = true;
     }
+    if (placement.prefab.startsWith("module__wall-device")) {
+      addApplianceFront(instance);
+    }
     scene.add(instance);
   }
   for (const continuous of layout.continuous) {
@@ -386,6 +399,24 @@ function composeKitchenScene(sourceScene: Object3D, layout: KitchenLayout) {
   }
   scene.updateMatrixWorld(true);
   return scene;
+}
+
+/**
+ * Stylized oven front for the device cabinet niche (local X spans the
+ * module width; Y/Z are as-authored world coordinates). A dark glass
+ * inset panel plus a slim handle bar make the appliance module read as
+ * an appliance without pretending to be a product spec.
+ */
+function addApplianceFront(moduleInstance: Object3D) {
+  const front = new Mesh(new BoxGeometry(0.55, 0.42, 0.018));
+  front.name = "appliance__generated-oven-front";
+  front.position.set(0.319, 1.215, -4.716);
+  moduleInstance.add(front);
+
+  const handle = new Mesh(new BoxGeometry(0.48, 0.016, 0.016));
+  handle.name = "handle__generated-oven-handle";
+  handle.position.set(0.319, 1.385, -4.7);
+  moduleInstance.add(handle);
 }
 
 const defaultBoundsCache = new WeakMap<Object3D, Box3>();
@@ -650,6 +681,7 @@ function getModelRole(mesh: Mesh): ModelRole {
 
 function isModelRole(role: unknown): role is ModelRole {
   return (
+    role === "appliance" ||
     role === "backdrop" ||
     role === "cabinet" ||
     role === "countertop" ||
