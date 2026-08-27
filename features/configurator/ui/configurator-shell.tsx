@@ -38,6 +38,7 @@ import type {
   LocaleCode,
   VisualizationMode
 } from "@/features/configurator/types";
+import { PriceBreakdown } from "@/features/configurator/ui/price-breakdown";
 import { useProjectAutosave } from "@/features/projects/ui/use-project-autosave";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
@@ -435,6 +436,8 @@ export function ConfiguratorShell({
                           }).format(displayedTotalCents / 100)}
                     </p>
                   </div>
+
+                  {!sharedView && <PriceBreakdown locale={locale} quote={quote} />}
 
                   {sharedView ? null : project ? (
                     <ProjectSaveControls

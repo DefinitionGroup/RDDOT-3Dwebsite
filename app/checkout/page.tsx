@@ -101,7 +101,17 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
           </dl>
 
           <div className="mt-8 space-y-2 text-sm">
-            <PriceRow label="Module" value={formatCurrency(quote.modulesCents)} />
+            {quote.lineItems.map((item) => (
+              <PriceRow
+                key={item.key}
+                label={`${getLocalizedLabel(item.label, "de")} (${
+                  item.key === "island-worktop"
+                    ? `${item.quantity.toLocaleString("de-DE", { maximumFractionDigits: 1 })} m`
+                    : `${item.quantity} ×`
+                })`}
+                value={formatCurrency(item.totalCents)}
+              />
+            ))}
             <PriceRow label="Korpus Finish" value={formatCurrency(quote.cabinetDeltaCents)} />
             <PriceRow label="Front Finish" value={formatCurrency(quote.frontDeltaCents)} />
             <PriceRow label="MwSt. Indikator" value={formatCurrency(quote.taxCents)} />
