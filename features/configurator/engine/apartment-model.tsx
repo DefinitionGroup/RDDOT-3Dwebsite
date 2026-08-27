@@ -10,7 +10,7 @@ import {
   type Texture
 } from "three";
 import { KitchenModel } from "@/features/configurator/engine/kitchen-model";
-import type { FinishOption } from "@/features/configurator/types";
+import type { ConfiguratorState, FinishOption } from "@/features/configurator/types";
 
 type ApartmentModelProps = {
   cabinetFinish: FinishOption;
@@ -18,6 +18,7 @@ type ApartmentModelProps = {
   pathTracing?: boolean;
   reflectionProbe?: boolean;
   reflectionResolution?: number;
+  state?: ConfiguratorState;
 };
 
 const APARTMENT_MODEL_PATH = "/kitchen1.glb";
@@ -56,7 +57,8 @@ export function ApartmentModel({
   frontFinish,
   pathTracing = false,
   reflectionProbe = true,
-  reflectionResolution = 256
+  reflectionResolution = 256,
+  state
 }: ApartmentModelProps) {
   const gltf = useGLTF(APARTMENT_MODEL_PATH, "/draco/gltf/", true);
   const apartment = useMemo(
@@ -89,6 +91,7 @@ export function ApartmentModel({
               <group position={[0, -REFLECTION_PROBE_Y, 0]}>
                 <KitchenModel
                   cabinetFinish={cabinetFinish}
+                  state={state}
                   environmentMap={environmentMap}
                   frontFinish={frontFinish}
                 />
@@ -96,7 +99,7 @@ export function ApartmentModel({
             )}
           </CubeCamera>
         ) : (
-          <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} />
+          <KitchenModel cabinetFinish={cabinetFinish} state={state} frontFinish={frontFinish} />
         )}
       </group>
     </group>

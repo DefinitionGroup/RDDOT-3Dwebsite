@@ -1,15 +1,18 @@
 "use client";
 
 import { useGLTF, useTexture } from "@react-three/drei";
+import type { ThreeEvent } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo } from "react";
 import {
   Box3,
+  BoxGeometry,
   BufferAttribute,
   Color,
   DataTexture,
   Group,
   LinearFilter,
   Mesh,
+  MeshBasicMaterial,
   MeshPhysicalMaterial,
   Object3D,
   RGBAFormat,
@@ -21,16 +24,32 @@ import {
   type Texture
 } from "three";
 import {
-  getContinuousManifest,
-  getDefaultModuleLayout
+  computeKitchenLayout,
+  getModuleManifest,
+  type KitchenLayout
 } from "@/features/configurator/modules/kitchen-modules";
-import { RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
-import type { FinishOption } from "@/features/configurator/types";
+import {
+  DEFAULT_CONFIGURATOR_STATE,
+  RDTD_KITCHEN_PRODUCT_V2
+} from "@/features/configurator/product-definition";
+import type { ConfiguratorState, FinishOption } from "@/features/configurator/types";
+
+export type EditTarget = number | "island" | null;
+
+export type KitchenEditProps = {
+  selected: EditTarget;
+  canAddStart: boolean;
+  canAddEnd: boolean;
+  onSelect: (target: EditTarget) => void;
+  onAddSlot: (end: "start" | "end") => void;
+};
 
 type KitchenModelProps = {
   cabinetFinish: FinishOption;
+  edit?: KitchenEditProps;
   environmentMap?: Texture;
   frontFinish: FinishOption;
+  state?: ConfiguratorState;
 };
 
 const KITCHEN_MODEL_PATH = "/models/kitchen-modules.glb";
@@ -58,12 +77,20 @@ const FINISH_TEXTURE_URLS = [
 
 export function KitchenModel({
   cabinetFinish,
+  edit,
   environmentMap,
-  frontFinish
+  frontFinish,
+  state = DEFAULT_CONFIGURATOR_STATE
 }: KitchenModelProps) {
   const gltf = useGLTF(KITCHEN_MODEL_PATH);
   const finishTextures = useTexture(FINISH_TEXTURE_URLS);
   const microSurfaceTexture = useMemo(() => createMicroSurfaceTexture(), []);
+
+  const layoutKey = `${state.wallModules.join(",")}|${state.islandSize}`;
+  const editActive = Boolean(edit);
+  const editSelected = edit?.selected ?? null;
+  const editCanAddStart = edit?.canAddStart ?? false;
+  const editCanAddEnd = edit?.canAddEnd ?? false;
 
   const texturesByUrl = useMemo(() => {
     const entries = FINISH_TEXTURE_URLS.map((url, index) => {
@@ -89,7 +116,7 @@ export function KitchenModel({
   }, [microSurfaceTexture, texturesByUrl]);
 
   const model = useMemo(() => {
-    const preparedModel = prepareKitchenModel(gltf.scene);
+    const preparedModel = prepareKitchenModel(gltf.scene, state);
     const materials = {
       cabinet: createFinishMaterial(
         cabinetFinish,
@@ -153,26 +180,66 @@ export function KitchenModel({
       object.receiveShadow = true;
     });
 
-    return { ...preparedModel, materials };
+    const editResources = edit
+      ? applyEditTreatment(preparedModel.scene, preparedModel.layout, edit)
+      : null;
+
+    return { ...preparedModel, materials, editResources };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     cabinetFinish,
     environmentMap,
     frontFinish,
     gltf.scene,
+    layoutKey,
     microSurfaceTexture,
-    texturesByUrl
+    texturesByUrl,
+    editActive,
+    editSelected,
+    editCanAddStart,
+    editCanAddEnd
   ]);
 
   useLayoutEffect(() => {
     return () => {
       Object.values(model.materials).forEach((material) => material.dispose());
       model.ownedGeometries.forEach((geometry) => geometry.dispose());
+      model.editResources?.dispose();
     };
   }, [model]);
 
+  const handleSceneClick = (event: ThreeEvent<MouseEvent>) => {
+    if (!edit) return;
+    event.stopPropagation();
+    let node: Object3D | null = event.object;
+    while (node) {
+      if (node.userData.ghostSlot) {
+        edit.onAddSlot(node.userData.ghostSlot as "start" | "end");
+        return;
+      }
+      if (typeof node.userData.wallIndex === "number") {
+        edit.onSelect(node.userData.wallIndex);
+        return;
+      }
+      if (node.userData.islandPart) {
+        edit.onSelect("island");
+        return;
+      }
+      node = node.parent;
+    }
+    edit.onSelect(null);
+  };
+
   return (
     <group scale={MODEL_SCALE}>
-      <primitive object={model.scene} position={model.offset} />
+      <primitive
+        object={model.scene}
+        onClick={edit ? handleSceneClick : undefined}
+        onPointerMissed={edit ? () => edit.onSelect(null) : undefined}
+        onPointerOut={edit ? () => void (document.body.style.cursor = "auto") : undefined}
+        onPointerOver={edit ? () => void (document.body.style.cursor = "pointer") : undefined}
+        position={model.offset}
+      />
     </group>
   );
 }
@@ -268,39 +335,78 @@ type ModelRole =
   | "handle"
   | "plinth";
 
-function prepareKitchenModel(sourceScene: Object3D) {
+function composeKitchenScene(sourceScene: Object3D, layout: KitchenLayout) {
   const prefabs = new Map<string, Object3D>();
   for (const child of sourceScene.children) {
     prefabs.set(child.name, child);
   }
-
-  // Compose the kitchen from module prefabs. Each prefab root carries the
-  // module's X offset; placements re-position it, so slice S4 can rearrange
-  // modules by changing the layout alone.
-  const scene = new Group();
-  for (const placement of getDefaultModuleLayout()) {
-    const prefab = prefabs.get(placement.prefab);
+  const requirePrefab = (name: string) => {
+    const prefab = prefabs.get(name);
     if (!prefab) {
-      throw new Error(`Kitchen module prefab missing: ${placement.prefab}`);
+      throw new Error(`Kitchen prefab missing: ${name}`);
     }
-    const instance = prefab.clone(true);
+    return prefab;
+  };
+
+  const scene = new Group();
+  let wallIndex = 0;
+  for (const placement of layout.modules) {
+    const instance = requirePrefab(placement.prefab).clone(true);
     instance.position.x = placement.x;
+    if (placement.prefab.startsWith("module__wall-")) {
+      instance.userData.wallIndex = wallIndex;
+      wallIndex += 1;
+    } else {
+      instance.userData.islandPart = true;
+    }
     scene.add(instance);
   }
-  for (const continuous of getContinuousManifest()) {
-    const prefab = prefabs.get(continuous.prefab);
-    if (!prefab) {
-      throw new Error(`Kitchen continuous prefab missing: ${continuous.prefab}`);
-    }
-    scene.add(prefab.clone(true));
+  for (const continuous of layout.continuous) {
+    const instance = requirePrefab(continuous.prefab).clone(true);
+    // Continuous prefab children carry absolute as-authored X; scaling the
+    // root scales those, so the root shifts to land the left edge on x.
+    instance.scale.x = continuous.scaleX;
+    instance.position.x = continuous.x - continuous.scaleX * continuous.sourceXMin;
+    scene.add(instance);
+  }
+  for (const box of layout.generated) {
+    const size = [
+      box.max[0] - box.min[0],
+      box.max[1] - box.min[1],
+      box.max[2] - box.min[2]
+    ] as const;
+    const mesh = new Mesh(new BoxGeometry(size[0], size[1], size[2]));
+    mesh.name = `${box.role}__generated-${box.key}`;
+    mesh.position.set(
+      box.min[0] + size[0] / 2,
+      box.min[1] + size[1] / 2,
+      box.min[2] + size[2] / 2
+    );
+    scene.add(mesh);
   }
   scene.updateMatrixWorld(true);
+  return scene;
+}
+
+const defaultBoundsCache = new WeakMap<Object3D, Box3>();
+
+function prepareKitchenModel(sourceScene: Object3D, state: ConfiguratorState) {
+  const layout = computeKitchenLayout(state);
+  const scene = composeKitchenScene(sourceScene, layout);
+
+  // The stage offset comes from the default layout only: editing modules
+  // must never slide the whole kitchen around the studio.
+  let defaultBounds = defaultBoundsCache.get(sourceScene);
+  if (!defaultBounds) {
+    defaultBounds = new Box3().setFromObject(
+      composeKitchenScene(sourceScene, computeKitchenLayout(DEFAULT_CONFIGURATOR_STATE))
+    );
+    defaultBoundsCache.set(sourceScene, defaultBounds);
+  }
+  const center = new Vector3();
+  defaultBounds.getCenter(center);
 
   const ownedGeometries: BufferGeometry[] = [];
-  const bounds = new Box3().setFromObject(scene);
-  const center = new Vector3();
-  bounds.getCenter(center);
-
   scene.traverse((object) => {
     if (!(object instanceof Mesh)) {
       return;
@@ -317,9 +423,160 @@ function prepareKitchenModel(sourceScene: Object3D) {
   });
 
   return {
+    layout,
     ownedGeometries,
     scene,
-    offset: [-center.x, -bounds.min.y, -center.z] as [number, number, number]
+    offset: [-center.x, -defaultBounds.min.y, -center.z] as [number, number, number]
+  };
+}
+
+
+/**
+ * Holo-wireframe presentation for the Edit Session, in the Galerie voice:
+ * modules become ghosted volumes with hairline wireframes, the selected
+ * element carries the signature red, and translucent ghost slots at the
+ * line ends invite adding modules. Returns the disposables it created.
+ */
+function applyEditTreatment(
+  scene: Group,
+  layout: KitchenLayout,
+  edit: KitchenEditProps
+) {
+  const disposables: Array<{ dispose: () => void }> = [];
+  const own = <T extends { dispose: () => void }>(resource: T): T => {
+    disposables.push(resource);
+    return resource;
+  };
+
+  const ghostFill = own(
+    new MeshBasicMaterial({
+      color: "#3a3833",
+      depthWrite: false,
+      opacity: 0.16,
+      transparent: true
+    })
+  );
+  const ghostWire = own(
+    new MeshBasicMaterial({
+      color: "#96938c",
+      opacity: 0.5,
+      transparent: true,
+      wireframe: true
+    })
+  );
+  const staticFill = own(
+    new MeshBasicMaterial({
+      color: "#2c2b28",
+      depthWrite: false,
+      opacity: 0.08,
+      transparent: true
+    })
+  );
+  const selectedFill = own(
+    new MeshBasicMaterial({
+      color: "#e2001a",
+      depthWrite: false,
+      opacity: 0.14,
+      transparent: true
+    })
+  );
+  const selectedWire = own(
+    new MeshBasicMaterial({
+      color: "#e2001a",
+      opacity: 0.85,
+      transparent: true,
+      wireframe: true
+    })
+  );
+  const slotFill = own(
+    new MeshBasicMaterial({
+      color: "#e2001a",
+      depthWrite: false,
+      opacity: 0.07,
+      transparent: true
+    })
+  );
+  const slotWire = own(
+    new MeshBasicMaterial({
+      color: "#e2001a",
+      opacity: 0.4,
+      transparent: true,
+      wireframe: true
+    })
+  );
+
+  for (const instance of scene.children) {
+    const wallIndex = instance.userData.wallIndex as number | undefined;
+    const isIsland = Boolean(instance.userData.islandPart);
+    const isModule = typeof wallIndex === "number" || isIsland;
+    const isSelected =
+      (typeof wallIndex === "number" && edit.selected === wallIndex) ||
+      (isIsland && edit.selected === "island");
+
+    const overlays: Mesh[] = [];
+    instance.traverse((object) => {
+      if (!(object instanceof Mesh) || object.userData.holoOverlay) {
+        return;
+      }
+      object.material = isModule
+        ? isSelected
+          ? selectedFill
+          : ghostFill
+        : staticFill;
+      object.castShadow = false;
+      object.receiveShadow = false;
+      if (isModule) {
+        const overlay = new Mesh(
+          object.geometry,
+          isSelected ? selectedWire : ghostWire
+        );
+        overlay.userData.holoOverlay = true;
+        overlay.raycast = () => undefined;
+        object.add(overlay);
+        overlays.push(overlay);
+      }
+    });
+    void overlays;
+  }
+
+  // Ghost slots at the wall line ends.
+  const wallPlacements = layout.modules.filter((placement) =>
+    placement.prefab.startsWith("module__wall-")
+  );
+  if (wallPlacements.length > 0) {
+    const first = wallPlacements[0];
+    const last = wallPlacements[wallPlacements.length - 1];
+    const lastEntry = getModuleManifest().find(
+      (entry) => `module__${entry.key}` === last.prefab
+    );
+    const slotWidth = 0.3;
+    const slotSpecs: Array<{ end: "start" | "end"; x: number; enabled: boolean }> = [
+      { end: "start", x: first.x - slotWidth - 0.02, enabled: edit.canAddStart },
+      {
+        end: "end",
+        x: last.x + (lastEntry?.width ?? 0.62) + 0.02,
+        enabled: edit.canAddEnd
+      }
+    ];
+    for (const spec of slotSpecs) {
+      if (!spec.enabled) continue;
+      const geometry = own(new BoxGeometry(slotWidth, 2.47, 0.58));
+      const slot = new Mesh(geometry, slotFill);
+      slot.name = "ghost-slot";
+      slot.userData.ghostSlot = spec.end;
+      slot.position.set(spec.x + slotWidth / 2, 0.14 + 2.47 / 2, -5.02);
+      const wire = new Mesh(geometry, slotWire);
+      wire.userData.holoOverlay = true;
+      wire.raycast = () => undefined;
+      slot.add(wire);
+      scene.add(slot);
+    }
+  }
+
+  return {
+    dispose: () => {
+      disposables.forEach((resource) => resource.dispose());
+    }
   };
 }
 

@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   PanelRightClose,
+  Pencil,
   RotateCcw,
   ScanLine,
   SlidersHorizontal
@@ -38,7 +39,16 @@ import type {
   LocaleCode,
   VisualizationMode
 } from "@/features/configurator/types";
+import {
+  canAddModule,
+  ModuleEditor,
+  type EditDraft
+} from "@/features/configurator/ui/module-editor";
 import { PriceBreakdown } from "@/features/configurator/ui/price-breakdown";
+import type {
+  EditTarget,
+  KitchenEditProps
+} from "@/features/configurator/engine/kitchen-model";
 import { useProjectAutosave } from "@/features/projects/ui/use-project-autosave";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
@@ -78,11 +88,21 @@ export function ConfiguratorShell({
   const [renderRequested, setRenderRequested] = useState(false);
   const [photoPresetKey, setPhotoPresetKey] = useState(PHOTO_PRESETS[0].key);
   const [photoStatus, setPhotoStatus] = useState<PhotoStatus>({ phase: "idle" });
+  const [editSession, setEditSession] = useState<{
+    draft: EditDraft;
+    selected: EditTarget;
+  } | null>(null);
   const { captureRef, capturePhoto } = useSceneCapture();
 
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, config.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, config.frontColorKey);
-  const quote = getConfiguratorQuote(config);
+  // While an Edit Session is open, the scene and price preview the staged
+  // draft; the committed configuration (URL, autosave, checkout) is
+  // untouched until the session is applied.
+  const effectiveConfig = editSession
+    ? normalizeConfiguratorState({ ...config, ...editSession.draft })
+    : config;
+  const quote = getConfiguratorQuote(effectiveConfig);
   // A shared view must never fall back to the live recomputed price: the
   // pinned snapshot is the only truthful source for a historical revision.
   const displayedTotalCents = sharedView
@@ -125,6 +145,34 @@ export function ConfiguratorShell({
   function stopRender() {
     setRenderRequested(false);
     setPathTracing(false);
+  }
+
+  function enterEditSession() {
+    if (sharedView || editSession) return;
+    stopRender();
+    setPhotoOpen(false);
+    setVisualization("studio");
+    setCameraView("front");
+    setEditSession({
+      draft: {
+        wallModules: [...config.wallModules],
+        islandSize: config.islandSize
+      },
+      selected: null
+    });
+  }
+
+  function commitEditSession() {
+    if (!editSession) return;
+    updateConfig({
+      wallModules: editSession.draft.wallModules,
+      islandSize: editSession.draft.islandSize
+    });
+    setEditSession(null);
+  }
+
+  function discardEditSession() {
+    setEditSession(null);
   }
 
   function updateConfig(next: Partial<ConfiguratorState>) {
@@ -236,15 +284,43 @@ export function ConfiguratorShell({
     setCameraView("signature");
   }
 
+  const canvasEdit: KitchenEditProps | undefined =
+    editSession && visualization === "studio" && !pathTracing
+      ? {
+          selected: editSession.selected,
+          canAddStart: canAddModule(editSession.draft.wallModules),
+          canAddEnd: canAddModule(editSession.draft.wallModules),
+          onSelect: (target) =>
+            setEditSession((session) =>
+              session ? { ...session, selected: target } : session
+            ),
+          onAddSlot: (end) =>
+            setEditSession((session) => {
+              if (!session || !canAddModule(session.draft.wallModules)) {
+                return session;
+              }
+              const wallModules =
+                end === "start"
+                  ? (["small", ...session.draft.wallModules] as EditDraft["wallModules"])
+                  : ([...session.draft.wallModules, "small"] as EditDraft["wallModules"]);
+              return {
+                draft: { ...session.draft, wallModules },
+                selected: end === "start" ? 0 : wallModules.length - 1
+              };
+            })
+        }
+      : undefined;
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-canvas text-ink">
       <div className="absolute inset-0">
         <ConfiguratorCanvas
           cameraView={cameraView}
           captureRef={captureRef}
+          edit={canvasEdit}
           onCameraInteraction={stopRender}
           pathTracing={pathTracing}
-          state={config}
+          state={effectiveConfig}
           visualization={visualization}
         />
       </div>
@@ -254,7 +330,9 @@ export function ConfiguratorShell({
       <CameraControlOverlay
         accentSelection={!sharedView}
         activeView={cameraView}
+        editActive={Boolean(editSession)}
         isConfigPanelOpen={isConfigPanelOpen}
+        onEdit={editSession ? commitEditSession : enterEditSession}
         onPhoto={openPhoto}
         onRender={togglePathTracing}
         onSelect={selectCameraView}
@@ -374,7 +452,9 @@ export function ConfiguratorShell({
                   </p>
                 </motion.div>
 
-                <VisualizationTabs active={visualization} onSelect={selectVisualization} />
+                {!editSession && (
+                  <VisualizationTabs active={visualization} onSelect={selectVisualization} />
+                )}
 
                 {sharedView ? (
                   <SharedRevisionDetails
@@ -384,6 +464,27 @@ export function ConfiguratorShell({
                     frontColor={frontColor}
                     locale={locale}
                   />
+                ) : editSession ? (
+                  <div className="mt-8 border-t border-hairline pt-6">
+                    <ModuleEditor
+                      draft={editSession.draft}
+                      locale={locale}
+                      onChange={(draft) =>
+                        setEditSession((session) =>
+                          session ? { ...session, draft } : session
+                        )
+                      }
+                      onCommit={commitEditSession}
+                      onDiscard={discardEditSession}
+                      onSelect={(target) =>
+                        setEditSession((session) =>
+                          session ? { ...session, selected: target } : session
+                        )
+                      }
+                      quote={quote}
+                      selected={editSession.selected}
+                    />
+                  </div>
                 ) : (
                   <>
                     <motion.div
@@ -393,8 +494,21 @@ export function ConfiguratorShell({
                         show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                       }}
                     >
-                      <p className="text-body text-graphite">Layout</p>
-                      <p className="text-body text-ink">Küchenzeile, gerade</p>
+                      <div className="flex w-full items-baseline justify-between gap-4">
+                        <p className="text-body text-graphite">Layout</p>
+                        <button
+                          className="hidden items-center gap-2 text-body text-ink transition-colors hover:text-signature sm:inline-flex"
+                          onClick={enterEditSession}
+                          type="button"
+                        >
+                          <Pencil aria-hidden="true" size={13} strokeWidth={1.5} />
+                          {effectiveConfig.wallModules.length} Module ·{" "}
+                          {effectiveConfig.islandSize > 0 ? "mit Insel" : "ohne Insel"} · Bearbeiten
+                        </button>
+                        <span className="text-body text-ink sm:hidden">
+                          Küchenzeile · Bearbeitung am Desktop
+                        </span>
+                      </div>
                     </motion.div>
 
                     <ControlGroup title="Korpus">
@@ -417,6 +531,7 @@ export function ConfiguratorShell({
                   </>
                 )}
 
+                {editSession ? null : (
                 <motion.div
                   className="mt-8 space-y-5 border-t border-hairline pt-6"
                   variants={{
@@ -511,6 +626,7 @@ export function ConfiguratorShell({
                           : "Ihre Konfiguration wird in der URL gespeichert."}
                   </p>
                 </motion.div>
+                )}
               </motion.div>
             </motion.section>
           )}
@@ -798,7 +914,9 @@ function VisualizationTabs({
 function CameraControlOverlay({
   accentSelection,
   activeView,
+  editActive,
   isConfigPanelOpen,
+  onEdit,
   onPhoto,
   onRender,
   onSelect,
@@ -807,7 +925,9 @@ function CameraControlOverlay({
 }: {
   accentSelection: boolean;
   activeView: CameraView;
+  editActive: boolean;
   isConfigPanelOpen: boolean;
+  onEdit: () => void;
   onPhoto: () => void;
   onRender: () => void;
   onSelect: (view: CameraView) => void;
@@ -826,7 +946,7 @@ function CameraControlOverlay({
         animate={{ opacity: 1, y: 0 }}
         className={`grid divide-x divide-hairline border border-hairline bg-canvas ${
           showPhoto
-            ? "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto]"
+            ? "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto_auto]"
             : "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto]"
         }`}
         initial={{ opacity: 0, y: 12 }}
@@ -841,6 +961,25 @@ function CameraControlOverlay({
             onClick={() => onSelect(viewOption.key)}
           />
         ))}
+        {showPhoto && (
+          <button
+            aria-label={editActive ? "Bearbeitung übernehmen" : "Module bearbeiten"}
+            aria-pressed={editActive}
+            className={`hidden min-h-11 items-center justify-center gap-2 px-3 text-body leading-none transition-colors sm:inline-flex ${
+              editActive
+                ? "bg-signature text-paper hover:bg-ink"
+                : "bg-canvas text-ink hover:bg-signature hover:text-paper"
+            }`}
+            onClick={onEdit}
+            title={editActive ? "Bearbeitung übernehmen" : "Module bearbeiten"}
+            type="button"
+          >
+            <Pencil aria-hidden="true" size={15} strokeWidth={1.5} />
+            <span className="hidden sm:inline">
+              {editActive ? "Fertig" : "Bearbeiten"}
+            </span>
+          </button>
+        )}
         {showPhoto && (
           <button
             aria-label="AI Foto"

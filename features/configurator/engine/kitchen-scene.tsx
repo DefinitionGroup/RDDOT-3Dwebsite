@@ -39,10 +39,14 @@ import type {
 } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
 import { ApartmentModel } from "@/features/configurator/engine/apartment-model";
-import { KitchenModel } from "@/features/configurator/engine/kitchen-model";
+import {
+  KitchenModel,
+  type KitchenEditProps
+} from "@/features/configurator/engine/kitchen-model";
 
 type KitchenSceneProps = {
   cameraView: CameraView;
+  edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   pathTracing: boolean;
   state: ConfiguratorState;
@@ -82,6 +86,7 @@ const mobileApartmentCameraPresets: Record<CameraView, CameraPreset> = {
 
 export function KitchenScene({
   cameraView,
+  edit,
   onCameraInteraction,
   pathTracing,
   state,
@@ -157,6 +162,7 @@ export function KitchenScene({
               frontFinish={frontColor}
               reflectionProbe={!pathTracing}
               reflectionResolution={reflectionResolution}
+              state={state}
             />
           }
         >
@@ -166,15 +172,18 @@ export function KitchenScene({
             pathTracing={pathTracing}
             reflectionProbe={!pathTracing}
             reflectionResolution={reflectionResolution}
+            state={state}
           />
         </Suspense>
       ) : (
         <StudioKitchen
           cabinetFinish={cabinetColor}
+          edit={edit}
           floorTexture={floorTexture}
           frontFinish={frontColor}
           reflectionProbe={!pathTracing}
           reflectionResolution={reflectionResolution}
+          state={state}
         />
       )}
 
@@ -357,18 +366,22 @@ function ApartmentLightRig({ pathTracing }: { pathTracing: boolean }) {
 
 type StudioKitchenProps = {
   cabinetFinish: FinishOption;
+  edit?: KitchenEditProps;
   floorTexture: Texture;
   frontFinish: FinishOption;
   reflectionProbe: boolean;
   reflectionResolution: number;
+  state: ConfiguratorState;
 };
 
 function StudioKitchen({
   cabinetFinish,
+  edit,
   floorTexture,
   frontFinish,
   reflectionProbe,
-  reflectionResolution
+  reflectionResolution,
+  state
 }: StudioKitchenProps) {
   return (
     <group position={[0, STUDIO_STAGE_Y, 0]}>
@@ -385,14 +398,21 @@ function StudioKitchen({
               <group position={[0, -STUDIO_REFLECTION_PROBE_Y, 0]}>
                 <KitchenModel
                   cabinetFinish={cabinetFinish}
+                  edit={edit}
                   environmentMap={environmentMap}
                   frontFinish={frontFinish}
+                  state={state}
                 />
               </group>
             )}
           </CubeCamera>
         ) : (
-          <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} />
+          <KitchenModel
+            cabinetFinish={cabinetFinish}
+            edit={edit}
+            frontFinish={frontFinish}
+            state={state}
+          />
         )}
       </group>
     </group>

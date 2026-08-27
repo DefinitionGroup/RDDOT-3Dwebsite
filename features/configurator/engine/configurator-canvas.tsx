@@ -10,11 +10,13 @@ import type {
   VisualizationMode
 } from "@/features/configurator/types";
 import type { SceneCaptureRef } from "@/features/configurator/photo/use-scene-capture";
+import type { KitchenEditProps } from "@/features/configurator/engine/kitchen-model";
 import { KitchenScene } from "@/features/configurator/engine/kitchen-scene";
 
 type ConfiguratorCanvasProps = {
   cameraView: CameraView;
   captureRef?: SceneCaptureRef;
+  edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   pathTracing: boolean;
   state: ConfiguratorState;
@@ -51,6 +53,7 @@ function configurePathTracer(pathTracer: WebGLPathTracer | null) {
 export function ConfiguratorCanvas({
   cameraView,
   captureRef,
+  edit,
   onCameraInteraction,
   pathTracing,
   state,
@@ -72,6 +75,7 @@ export function ConfiguratorCanvas({
       <Suspense fallback={null}>
         <RenderPipeline
           cameraView={cameraView}
+          edit={edit}
           onCameraInteraction={onCameraInteraction}
           pathTracing={pathTracing}
           state={state}
@@ -85,6 +89,7 @@ export function ConfiguratorCanvas({
 
 type RenderPipelineProps = {
   cameraView: CameraView;
+  edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   pathTracing: boolean;
   state: ConfiguratorState;
@@ -93,6 +98,7 @@ type RenderPipelineProps = {
 
 function RenderPipeline({
   cameraView,
+  edit,
   onCameraInteraction,
   pathTracing,
   state,
@@ -105,6 +111,7 @@ function RenderPipeline({
     return (
       <KitchenScene
         cameraView={cameraView}
+        edit={edit}
         pathTracing={false}
         state={state}
         visualization={visualization}
@@ -167,7 +174,14 @@ function PathTracingSync({
   useEffect(() => {
     const frame = window.requestAnimationFrame(update);
     return () => window.cancelAnimationFrame(frame);
-  }, [state.cabinetColorKey, state.frontColorKey, update, visualization]);
+  }, [
+    state.cabinetColorKey,
+    state.frontColorKey,
+    state.islandSize,
+    state.wallModules,
+    update,
+    visualization
+  ]);
 
   return null;
 }

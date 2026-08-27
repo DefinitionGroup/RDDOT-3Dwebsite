@@ -160,6 +160,10 @@ _Avoid_: Mesh, prefab, SKU
 The customer-selectable island extent expressed as its front drawer-unit count from the approved size set. The back-row composition and worktop length derive from it deterministically; the island is never freely resizable.
 _Avoid_: Island width, free resizing, drawer count
 
+**Edit Session**:
+The transactional module-editing state of the configurator. Layout changes are staged against a draft with live price preview and become part of the Working Configuration only when the customer applies them; discarding leaves the committed configuration untouched.
+_Avoid_: Autosave, live edit, mode toggle
+
 **Configuration Revision**:
 An immutable, deduplicated milestone snapshot of a Kitchen Configuration within a Project that preserves the Product Definition version and a display snapshot derived from that version. The owner can inspect revisions through paginated history. Shared Revision Links, Generated Photos, and Quote Requests refer to Configuration Revisions; autosave changes only the Working Configuration.
 _Avoid_: Autosave, cart line
