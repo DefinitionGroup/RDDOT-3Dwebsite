@@ -1,4 +1,4 @@
-import type { ConfiguratorState } from "@/features/configurator/types";
+import type { AnyConfiguratorState } from "@/features/configurator/types";
 
 export type CustomerAccountId = string;
 export type ProjectId = string;
@@ -17,7 +17,7 @@ export type ProjectWorkspace = {
   name: string;
   lifecycle: "active" | "archived" | "trashed";
   workingConfiguration: {
-    configuration: ConfiguratorState;
+    configuration: AnyConfiguratorState;
     version: number;
     configurationHash: string;
     productDefinitionVersion: string;
@@ -71,13 +71,13 @@ export type CheckpointRevisionResult =
 export type RestoreRevisionResult =
   | {
       kind: "restored";
-      configuration: ConfiguratorState;
+      configuration: AnyConfiguratorState;
       version: number;
       updatedAt: Date;
     }
   | {
       kind: "unchanged";
-      configuration: ConfiguratorState;
+      configuration: AnyConfiguratorState;
       version: number;
   }
   | { kind: "conflict"; currentVersion: number }

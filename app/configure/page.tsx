@@ -6,6 +6,7 @@ import { ConfiguratorShell } from "@/features/configurator/ui/configurator-shell
 import { CONFIG_QUERY_PARAM, getInitialConfiguratorState } from "@/features/configurator/state-codec";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
+import { normalizeConfiguratorState } from "@/features/configurator/product-definition";
 import { parseRevisionDisplaySnapshot } from "@/features/projects/revision-display";
 import { sharing } from "@/lib/server/sharing/sharing";
 
@@ -54,7 +55,7 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
 
     return (
       <ConfiguratorShell
-        initialState={workspace.workingConfiguration.configuration}
+        initialState={normalizeConfiguratorState(workspace.workingConfiguration.configuration)}
         key={`${workspace.id}:${workspace.workingConfiguration.version}`}
         locale="de"
         project={{

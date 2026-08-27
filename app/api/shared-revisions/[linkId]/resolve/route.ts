@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { RDTD_KITCHEN_PRODUCT_VERSION } from "@/features/configurator/product-definition";
+import { SUPPORTED_PRODUCT_DEFINITION_VERSIONS } from "@/features/configurator/product-definition";
 import { parseRevisionDisplaySnapshot } from "@/features/projects/revision-display";
 import { sharing } from "@/lib/server/sharing/sharing";
 
@@ -36,7 +36,13 @@ export async function POST(
       { status: 404, headers: privateHeaders }
     );
   }
-  if (resolved.productDefinitionVersion !== RDTD_KITCHEN_PRODUCT_VERSION) {
+  // Allowlist check, not current-version equality: a supported-but-not-current
+  // version must keep resolving, mirroring the restore path.
+  if (
+    !SUPPORTED_PRODUCT_DEFINITION_VERSIONS.includes(
+      resolved.productDefinitionVersion
+    )
+  ) {
     return NextResponse.json(
       { error: "Diese historische Produktversion kann derzeit nicht angezeigt werden." },
       { status: 410, headers: privateHeaders }

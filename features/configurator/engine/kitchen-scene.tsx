@@ -37,7 +37,7 @@ import type {
   FinishOption,
   VisualizationMode
 } from "@/features/configurator/types";
-import { findFinish, RDTD_KITCHEN_PRODUCT } from "@/features/configurator/product-definition";
+import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
 import { ApartmentModel } from "@/features/configurator/engine/apartment-model";
 import { KitchenModel } from "@/features/configurator/engine/kitchen-model";
 
@@ -90,8 +90,8 @@ export function KitchenScene({
   const controlsRef = useRef<ElementRef<typeof CameraControls> | null>(null);
   const width = useThree((rootState) => rootState.size.width);
   const floorTexture = useMemo(() => createTexturedFloorTexture(), []);
-  const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT.cabinetColors, state.cabinetColorKey);
-  const frontColor = findFinish(RDTD_KITCHEN_PRODUCT.frontColors, state.frontColorKey);
+  const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, state.cabinetColorKey);
+  const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, state.frontColorKey);
   const isCompactViewport = width < 720;
   const isApartment = visualization === "apartment";
   const reflectionResolution = isCompactViewport ? 128 : 256;

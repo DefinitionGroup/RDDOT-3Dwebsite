@@ -24,7 +24,7 @@ import {
   getContinuousManifest,
   getDefaultModuleLayout
 } from "@/features/configurator/modules/kitchen-modules";
-import { RDTD_KITCHEN_PRODUCT } from "@/features/configurator/product-definition";
+import { RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
 import type { FinishOption } from "@/features/configurator/types";
 
 type KitchenModelProps = {
@@ -37,8 +37,8 @@ const KITCHEN_MODEL_PATH = "/models/kitchen-modules.glb";
 const MODEL_SCALE = 1.18;
 
 const ALL_FINISHES = [
-  ...RDTD_KITCHEN_PRODUCT.cabinetColors,
-  ...RDTD_KITCHEN_PRODUCT.frontColors
+  ...RDTD_KITCHEN_PRODUCT_V2.cabinetColors,
+  ...RDTD_KITCHEN_PRODUCT_V2.frontColors
 ];
 
 // Albedo maps are sRGB photos; normal/roughness maps stay linear.

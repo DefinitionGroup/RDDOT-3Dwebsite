@@ -1,10 +1,10 @@
 import type {
-  ConfiguratorProductDefinition,
-  ConfiguratorState
+  AnyConfiguratorState,
+  ConfiguratorProductDefinitionV1
 } from "@/features/configurator/types";
 import { normalizeConfiguratorState } from "@/features/configurator/product-definition";
 
-export type SanityProductDefinitionDocument = ConfiguratorProductDefinition & {
+export type SanityProductDefinitionDocument = ConfiguratorProductDefinitionV1 & {
   _id: string;
   _type: "productDefinition";
 };
@@ -13,12 +13,12 @@ export type SanityConfiguratorBlock = {
   _key?: string;
   _type: "configuratorBlock";
   product?: SanityProductDefinitionDocument;
-  defaultState?: Partial<ConfiguratorState>;
+  defaultState?: Partial<AnyConfiguratorState>;
 };
 
 export function productDefinitionFromSanity(
   document: SanityProductDefinitionDocument
-): ConfiguratorProductDefinition {
+): ConfiguratorProductDefinitionV1 {
   return {
     availableLayouts: document.availableLayouts,
     cabinetColors: document.cabinetColors,

@@ -21,7 +21,7 @@ import {
   getConfiguratorQuote,
   getLocalizedLabel,
   normalizeConfiguratorState,
-  RDTD_KITCHEN_PRODUCT
+  RDTD_KITCHEN_PRODUCT_V2
 } from "@/features/configurator/product-definition";
 import { PHOTO_PRESETS } from "@/features/configurator/photo/photo-presets";
 import { PhotoPopover, type PhotoStatus } from "@/features/configurator/photo/photo-popover";
@@ -79,13 +79,17 @@ export function ConfiguratorShell({
   const [photoStatus, setPhotoStatus] = useState<PhotoStatus>({ phase: "idle" });
   const { captureRef, capturePhoto } = useSceneCapture();
 
-  const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT.cabinetColors, config.cabinetColorKey);
-  const frontColor = findFinish(RDTD_KITCHEN_PRODUCT.frontColors, config.frontColorKey);
+  const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, config.cabinetColorKey);
+  const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, config.frontColorKey);
   const quote = getConfiguratorQuote(config);
-  const displayedTotalCents =
-    sharedView?.displaySnapshot?.totalCents ?? quote.totalCents;
-  const displayedCurrency =
-    sharedView?.displaySnapshot?.currency ?? quote.currency;
+  // A shared view must never fall back to the live recomputed price: the
+  // pinned snapshot is the only truthful source for a historical revision.
+  const displayedTotalCents = sharedView
+    ? sharedView.displaySnapshot?.totalCents ?? null
+    : quote.totalCents;
+  const displayedCurrency = sharedView
+    ? sharedView.displaySnapshot?.currency ?? "EUR"
+    : quote.currency;
   const encodedConfig = encodeConfiguration(config);
   const checkoutHref = `/checkout?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
   const renderActive = pathTracing || renderRequested;
@@ -359,13 +363,13 @@ export function ConfiguratorShell({
                   <h1 className={`${sharedView ? "mt-0" : "mt-5"} text-lead text-ink`}>
                     {sharedView
                       ? sharedView.displaySnapshot?.productTitle ?? "Signature Küche"
-                      : getLocalizedLabel(RDTD_KITCHEN_PRODUCT.title, locale)}
+                      : getLocalizedLabel(RDTD_KITCHEN_PRODUCT_V2.title, locale)}
                     {!sharedView && <span className="text-signature">.</span>}
                   </h1>
                   <p className="mt-3 text-pretty text-body text-graphite">
                     {sharedView
                       ? "Geteilter, unveränderlicher Küchenstand ohne private Projektdaten."
-                      : getLocalizedLabel(RDTD_KITCHEN_PRODUCT.description, locale)}
+                      : getLocalizedLabel(RDTD_KITCHEN_PRODUCT_V2.description, locale)}
                   </p>
                 </motion.div>
 
@@ -397,7 +401,7 @@ export function ConfiguratorShell({
                         activeKey={cabinetColor.key}
                         locale={locale}
                         onSelect={(key) => updateConfig({ cabinetColorKey: key })}
-                        options={RDTD_KITCHEN_PRODUCT.cabinetColors}
+                        options={RDTD_KITCHEN_PRODUCT_V2.cabinetColors}
                       />
                     </ControlGroup>
 
@@ -406,7 +410,7 @@ export function ConfiguratorShell({
                         activeKey={frontColor.key}
                         locale={locale}
                         onSelect={(key) => updateConfig({ frontColorKey: key })}
-                        options={RDTD_KITCHEN_PRODUCT.frontColors}
+                        options={RDTD_KITCHEN_PRODUCT_V2.frontColors}
                       />
                     </ControlGroup>
                   </>
@@ -422,11 +426,13 @@ export function ConfiguratorShell({
                   <div className="flex items-baseline justify-between gap-4">
                     <p className="text-body text-graphite">Richtpreis</p>
                     <p className="text-lead text-ink">
-                      {new Intl.NumberFormat("de-DE", {
-                        currency: displayedCurrency,
-                        maximumFractionDigits: 0,
-                        style: "currency"
-                      }).format(displayedTotalCents / 100)}
+                      {displayedTotalCents === null
+                        ? "Preis nicht verfügbar"
+                        : new Intl.NumberFormat("de-DE", {
+                            currency: displayedCurrency,
+                            maximumFractionDigits: 0,
+                            style: "currency"
+                          }).format(displayedTotalCents / 100)}
                     </p>
                   </div>
 

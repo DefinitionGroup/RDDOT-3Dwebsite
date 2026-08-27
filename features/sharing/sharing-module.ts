@@ -1,4 +1,4 @@
-import type { ConfiguratorState } from "@/features/configurator/types";
+import type { AnyConfiguratorState } from "@/features/configurator/types";
 import type {
   ConfigurationRevisionId,
   CustomerAccountId,
@@ -32,7 +32,7 @@ export type RevokeSharedRevisionLinkResult =
   | { kind: "unavailable" };
 
 export type ResolvedSharedRevision = {
-  configuration: ConfiguratorState;
+  configuration: AnyConfiguratorState;
   productDefinitionVersion: string;
   displaySnapshot: JsonValue;
   expiresAt: Date;

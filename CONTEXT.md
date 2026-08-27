@@ -152,6 +152,14 @@ _Avoid_: Configuration fields, shared description
 The single mutable, persistently saved Kitchen Configuration currently being edited inside a Project. Autosave updates it with optimistic concurrency but never creates history; an explicit version save creates or reuses a Configuration Revision from its confirmed state.
 _Avoid_: Draft order, revision
 
+**Wall Module**:
+One customer-selectable cabinet element of the wall line, chosen from the versioned module catalog of a Product Definition and placed in an ordered left-to-right sequence on the 0.30-meter slot grid. Its type determines its geometry variant, width, price contribution, and finish weight.
+_Avoid_: Mesh, prefab, SKU
+
+**Island Size**:
+The customer-selectable island extent expressed as its front drawer-unit count from the approved size set. The back-row composition and worktop length derive from it deterministically; the island is never freely resizable.
+_Avoid_: Island width, free resizing, drawer count
+
 **Configuration Revision**:
 An immutable, deduplicated milestone snapshot of a Kitchen Configuration within a Project that preserves the Product Definition version and a display snapshot derived from that version. The owner can inspect revisions through paginated history. Shared Revision Links, Generated Photos, and Quote Requests refer to Configuration Revisions; autosave changes only the Working Configuration.
 _Avoid_: Autosave, cart line

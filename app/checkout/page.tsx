@@ -6,7 +6,7 @@ import {
   formatCurrency,
   getConfiguratorQuote,
   getLocalizedLabel,
-  RDTD_KITCHEN_PRODUCT
+  RDTD_KITCHEN_PRODUCT_V2
 } from "@/features/configurator/product-definition";
 import { CONFIG_QUERY_PARAM, getInitialConfiguratorState } from "@/features/configurator/state-codec";
 
@@ -24,8 +24,8 @@ type CheckoutPageProps = {
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
   const params = await searchParams;
   const config = getInitialConfiguratorState(params[CONFIG_QUERY_PARAM]);
-  const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT.cabinetColors, config.cabinetColorKey);
-  const frontColor = findFinish(RDTD_KITCHEN_PRODUCT.frontColors, config.frontColorKey);
+  const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, config.cabinetColorKey);
+  const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, config.frontColorKey);
   const quote = getConfiguratorQuote(config);
 
   return (
@@ -84,7 +84,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
           <dl className="mt-5 space-y-4 text-sm">
             <div className="flex justify-between gap-6 border-b border-ink/10 pb-3">
               <dt className="text-graphite">Produkt</dt>
-              <dd className="text-right font-medium">{getLocalizedLabel(RDTD_KITCHEN_PRODUCT.title, "de")}</dd>
+              <dd className="text-right font-medium">{getLocalizedLabel(RDTD_KITCHEN_PRODUCT_V2.title, "de")}</dd>
             </div>
             <div className="flex justify-between gap-6 border-b border-ink/10 pb-3">
               <dt className="text-graphite">Layout</dt>
@@ -101,7 +101,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
           </dl>
 
           <div className="mt-8 space-y-2 text-sm">
-            <PriceRow label="Basis" value={formatCurrency(quote.basePriceCents)} />
+            <PriceRow label="Module" value={formatCurrency(quote.modulesCents)} />
             <PriceRow label="Korpus Finish" value={formatCurrency(quote.cabinetDeltaCents)} />
             <PriceRow label="Front Finish" value={formatCurrency(quote.frontDeltaCents)} />
             <PriceRow label="MwSt. Indikator" value={formatCurrency(quote.taxCents)} />

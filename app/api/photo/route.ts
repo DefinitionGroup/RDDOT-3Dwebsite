@@ -6,7 +6,7 @@ import {
 } from "@/features/configurator/photo/photo-presets";
 import {
   findFinish,
-  RDTD_KITCHEN_PRODUCT
+  RDTD_KITCHEN_PRODUCT_V2
 } from "@/features/configurator/product-definition";
 
 export const maxDuration = 120;
@@ -81,11 +81,11 @@ export async function POST(request: NextRequest) {
 
   const preset = findPhotoPreset(typeof presetKey === "string" ? presetKey : null);
   const cabinetFinish = findFinish(
-    RDTD_KITCHEN_PRODUCT.cabinetColors,
+    RDTD_KITCHEN_PRODUCT_V2.cabinetColors,
     typeof cabinetColorKey === "string" ? cabinetColorKey : ""
   );
   const frontFinish = findFinish(
-    RDTD_KITCHEN_PRODUCT.frontColors,
+    RDTD_KITCHEN_PRODUCT_V2.frontColors,
     typeof frontColorKey === "string" ? frontColorKey : ""
   );
   const prompt = buildPhotoPrompt(preset, cabinetFinish, frontFinish);
