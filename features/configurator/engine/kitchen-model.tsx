@@ -21,6 +21,7 @@ import {
   Vector2,
   Vector3,
   type BufferGeometry,
+  type Material,
   type Texture
 } from "three";
 import {
@@ -463,10 +464,11 @@ function prepareKitchenModel(sourceScene: Object3D, state: ConfiguratorState) {
 
 
 /**
- * Holo-wireframe presentation for the Edit Session, in the Galerie voice:
- * modules become ghosted volumes with hairline wireframes, the selected
- * element carries the signature red, and translucent ghost slots at the
- * line ends invite adding modules. Returns the disposables it created.
+ * Edit Session presentation: the kitchen keeps its real materials, with the
+ * editable modules rendered slightly transparent so the scene stays true to
+ * the product; the selected element carries a signature-red wireframe, and
+ * translucent ghost slots at the line ends invite adding modules. Returns
+ * the disposables it created.
  */
 function applyEditTreatment(
   scene: Group,
@@ -479,42 +481,10 @@ function applyEditTreatment(
     return resource;
   };
 
-  const ghostFill = own(
-    new MeshBasicMaterial({
-      color: "#3a3833",
-      depthWrite: false,
-      opacity: 0.16,
-      transparent: true
-    })
-  );
-  const ghostWire = own(
-    new MeshBasicMaterial({
-      color: "#96938c",
-      opacity: 0.5,
-      transparent: true,
-      wireframe: true
-    })
-  );
-  const staticFill = own(
-    new MeshBasicMaterial({
-      color: "#2c2b28",
-      depthWrite: false,
-      opacity: 0.08,
-      transparent: true
-    })
-  );
-  const selectedFill = own(
-    new MeshBasicMaterial({
-      color: "#e2001a",
-      depthWrite: false,
-      opacity: 0.14,
-      transparent: true
-    })
-  );
   const selectedWire = own(
     new MeshBasicMaterial({
       color: "#e2001a",
-      opacity: 0.85,
+      opacity: 0.9,
       transparent: true,
       wireframe: true
     })
@@ -536,38 +506,42 @@ function applyEditTreatment(
     })
   );
 
+  // One slightly-transparent clone per source material, shared across meshes.
+  const translucentClones = new Map<Material, Material>();
+  const translucent = (source: Material) => {
+    let clone = translucentClones.get(source);
+    if (!clone) {
+      clone = own(source.clone());
+      clone.transparent = true;
+      clone.opacity = 0.72;
+      translucentClones.set(source, clone);
+    }
+    return clone;
+  };
+
   for (const instance of scene.children) {
     const wallIndex = instance.userData.wallIndex as number | undefined;
     const isIsland = Boolean(instance.userData.islandPart);
     const isModule = typeof wallIndex === "number" || isIsland;
+    if (!isModule) {
+      continue;
+    }
     const isSelected =
       (typeof wallIndex === "number" && edit.selected === wallIndex) ||
       (isIsland && edit.selected === "island");
 
-    const overlays: Mesh[] = [];
     instance.traverse((object) => {
       if (!(object instanceof Mesh) || object.userData.holoOverlay) {
         return;
       }
-      object.material = isModule
-        ? isSelected
-          ? selectedFill
-          : ghostFill
-        : staticFill;
-      object.castShadow = false;
-      object.receiveShadow = false;
-      if (isModule) {
-        const overlay = new Mesh(
-          object.geometry,
-          isSelected ? selectedWire : ghostWire
-        );
+      object.material = translucent(object.material as Material);
+      if (isSelected) {
+        const overlay = new Mesh(object.geometry, selectedWire);
         overlay.userData.holoOverlay = true;
         overlay.raycast = () => undefined;
         object.add(overlay);
-        overlays.push(overlay);
       }
     });
-    void overlays;
   }
 
   // Ghost slots at the wall line ends.
