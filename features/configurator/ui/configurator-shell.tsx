@@ -35,6 +35,7 @@ import {
 } from "@/features/configurator/state-codec";
 import type {
   CameraView,
+  ConfiguratorQuote,
   ConfiguratorState,
   FinishOption,
   LocaleCode,
@@ -42,7 +43,7 @@ import type {
 } from "@/features/configurator/types";
 import {
   canAddModule,
-  ModuleEditor,
+  SceneEditBar,
   type EditDraft
 } from "@/features/configurator/ui/module-editor";
 import { PriceBreakdown } from "@/features/configurator/ui/price-breakdown";
@@ -335,14 +336,22 @@ export function ConfiguratorShell({
       <CameraControlOverlay
         accentSelection={!sharedView}
         activeView={cameraView}
-        editActive={Boolean(editSession)}
+        editSession={editSession}
         isConfigPanelOpen={isConfigPanelOpen}
-        onEdit={editSession ? commitEditSession : enterEditSession}
+        locale={locale}
+        onEdit={enterEditSession}
+        onEditChange={(draft) =>
+          setEditSession((session) => (session ? { ...session, draft } : session))
+        }
+        onEditCommit={commitEditSession}
+        onEditDiscard={discardEditSession}
+        onEditSelect={(target) =>
+          setEditSession((session) => (session ? { ...session, selected: target } : session))
+        }
         onPhoto={openPhoto}
-        onRender={togglePathTracing}
         onSelect={selectCameraView}
-        showPhoto={!sharedView}
-        renderActive={renderActive}
+        quote={quote}
+        showActions={!sharedView}
       />
 
       {!sharedView && (
@@ -457,9 +466,12 @@ export function ConfiguratorShell({
                   </p>
                 </motion.div>
 
-                {!editSession && (
-                  <VisualizationTabs active={visualization} onSelect={selectVisualization} />
-                )}
+                <VisualizationTabs
+                  active={visualization}
+                  onRender={togglePathTracing}
+                  onSelect={selectVisualization}
+                  renderActive={renderActive}
+                />
 
                 {sharedView ? (
                   <SharedRevisionDetails
@@ -469,27 +481,6 @@ export function ConfiguratorShell({
                     frontColor={frontColor}
                     locale={locale}
                   />
-                ) : editSession ? (
-                  <div className="mt-8 border-t border-hairline pt-6">
-                    <ModuleEditor
-                      draft={editSession.draft}
-                      locale={locale}
-                      onChange={(draft) =>
-                        setEditSession((session) =>
-                          session ? { ...session, draft } : session
-                        )
-                      }
-                      onCommit={commitEditSession}
-                      onDiscard={discardEditSession}
-                      onSelect={(target) =>
-                        setEditSession((session) =>
-                          session ? { ...session, selected: target } : session
-                        )
-                      }
-                      quote={quote}
-                      selected={editSession.selected}
-                    />
-                  </div>
                 ) : (
                   <>
                     <motion.div
@@ -499,21 +490,11 @@ export function ConfiguratorShell({
                         show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                       }}
                     >
-                      <div className="flex w-full items-baseline justify-between gap-4">
-                        <p className="text-body text-graphite">Layout</p>
-                        <button
-                          className="hidden items-center gap-2 text-body text-ink transition-colors hover:text-signature sm:inline-flex"
-                          onClick={enterEditSession}
-                          type="button"
-                        >
-                          <Pencil aria-hidden="true" size={13} strokeWidth={1.5} />
-                          {effectiveConfig.wallModules.length} Module ·{" "}
-                          {effectiveConfig.islandSize > 0 ? "mit Insel" : "ohne Insel"} · Bearbeiten
-                        </button>
-                        <span className="text-body text-ink sm:hidden">
-                          Küchenzeile · Bearbeitung am Desktop
-                        </span>
-                      </div>
+                      <p className="text-body text-graphite">Layout</p>
+                      <p className="text-body text-ink">
+                        {effectiveConfig.wallModules.length} Module ·{" "}
+                        {effectiveConfig.islandSize > 0 ? "mit Insel" : "ohne Insel"}
+                      </p>
                     </motion.div>
 
                     <ControlGroup title="Korpus">
@@ -536,7 +517,6 @@ export function ConfiguratorShell({
                   </>
                 )}
 
-                {editSession ? null : (
                 <motion.div
                   className="mt-8 space-y-5 border-t border-hairline pt-6"
                   variants={{
@@ -631,7 +611,6 @@ export function ConfiguratorShell({
                           : "Ihre Konfiguration wird in der URL gespeichert."}
                   </p>
                 </motion.div>
-                )}
               </motion.div>
             </motion.section>
           )}
@@ -869,10 +848,14 @@ function VisualizationPreloader({ active }: { active: boolean }) {
 
 function VisualizationTabs({
   active,
-  onSelect
+  onRender,
+  onSelect,
+  renderActive
 }: {
   active: VisualizationMode;
+  onRender: () => void;
   onSelect: (mode: VisualizationMode) => void;
+  renderActive: boolean;
 }) {
   const options: { key: VisualizationMode; label: string }[] = [
     { key: "studio", label: "Studio" },
@@ -888,7 +871,20 @@ function VisualizationTabs({
         show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
       }}
     >
-      <p className="mb-4 text-body text-graphite">Visualisierung</p>
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <p className="text-body text-graphite">Visualisierung</p>
+        <button
+          aria-pressed={renderActive}
+          className={`inline-flex items-center gap-2 text-body transition-colors ${
+            renderActive ? "text-signature" : "text-graphite hover:text-ink"
+          }`}
+          onClick={onRender}
+          type="button"
+        >
+          <ScanLine aria-hidden="true" size={13} strokeWidth={1.5} />
+          {renderActive ? "Render beenden" : "Render"}
+        </button>
+      </div>
       <div
         aria-label="Visualisierung"
         className="grid grid-cols-3 divide-x divide-hairline border border-hairline"
@@ -920,100 +916,117 @@ function VisualizationTabs({
 function CameraControlOverlay({
   accentSelection,
   activeView,
-  editActive,
+  editSession,
   isConfigPanelOpen,
+  locale,
   onEdit,
+  onEditChange,
+  onEditCommit,
+  onEditDiscard,
+  onEditSelect,
   onPhoto,
-  onRender,
   onSelect,
-  showPhoto,
-  renderActive
+  quote,
+  showActions
 }: {
   accentSelection: boolean;
   activeView: CameraView;
-  editActive: boolean;
+  editSession: { draft: EditDraft; selected: EditTarget } | null;
   isConfigPanelOpen: boolean;
+  locale: LocaleCode;
   onEdit: () => void;
+  onEditChange: (draft: EditDraft) => void;
+  onEditCommit: () => void;
+  onEditDiscard: () => void;
+  onEditSelect: (target: EditTarget) => void;
   onPhoto: () => void;
-  onRender: () => void;
   onSelect: (view: CameraView) => void;
-  showPhoto: boolean;
-  renderActive: boolean;
+  quote: ConfiguratorQuote;
+  showActions: boolean;
 }) {
+  const editing = Boolean(editSession);
+
   return (
     <div
-      className={`pointer-events-auto z-20 w-[min(calc(100vw-2.5rem),30rem)] -translate-x-1/2 ${
+      className={`pointer-events-auto z-20 -translate-x-1/2 ${
+        editing
+          ? "w-[min(calc(100vw-2.5rem),42rem)]"
+          : "w-[min(calc(100vw-2.5rem),30rem)]"
+      } ${
         isConfigPanelOpen
           ? "absolute left-1/2 top-[calc(56vh-4.5rem)] lg:fixed lg:bottom-8 lg:left-[calc((100vw-27rem)/2)] lg:top-auto"
           : "fixed bottom-6 left-1/2"
       }`}
     >
-      <motion.div
-        animate={{ opacity: 1, y: 0 }}
-        className={`grid divide-x divide-hairline border border-hairline bg-canvas ${
-          showPhoto
-            ? "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto_auto]"
-            : "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto]"
-        }`}
-        initial={{ opacity: 0, y: 12 }}
-        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {cameraViews.map((viewOption) => (
-          <CameraViewButton
-            accent={accentSelection}
-            active={activeView === viewOption.key}
-            key={viewOption.key}
-            label={viewOption.label}
-            onClick={() => onSelect(viewOption.key)}
-          />
-        ))}
-        {showPhoto && (
-          <button
-            aria-label={editActive ? "Bearbeitung übernehmen" : "Module bearbeiten"}
-            aria-pressed={editActive}
-            className={`hidden min-h-11 items-center justify-center gap-2 px-3 text-body leading-none transition-colors sm:inline-flex ${
-              editActive
-                ? "bg-signature text-paper hover:bg-ink"
-                : "bg-canvas text-ink hover:bg-signature hover:text-paper"
+      <AnimatePresence initial={false} mode="wait">
+        {editSession ? (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 8 }}
+            key="edit"
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <SceneEditBar
+              draft={editSession.draft}
+              locale={locale}
+              onChange={onEditChange}
+              onCommit={onEditCommit}
+              onDiscard={onEditDiscard}
+              onSelect={onEditSelect}
+              quote={quote}
+              selected={editSession.selected}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className={`grid divide-x divide-hairline border border-hairline bg-canvas ${
+              showActions
+                ? "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto]"
+                : "grid-cols-3"
             }`}
-            onClick={onEdit}
-            title={editActive ? "Bearbeitung übernehmen" : "Module bearbeiten"}
-            type="button"
+            exit={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 8 }}
+            key="nav"
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
-            <Pencil aria-hidden="true" size={15} strokeWidth={1.5} />
-            <span className="hidden sm:inline">
-              {editActive ? "Fertig" : "Bearbeiten"}
-            </span>
-          </button>
+            {cameraViews.map((viewOption) => (
+              <CameraViewButton
+                accent={accentSelection}
+                active={activeView === viewOption.key}
+                key={viewOption.key}
+                label={viewOption.label}
+                onClick={() => onSelect(viewOption.key)}
+              />
+            ))}
+            {showActions && (
+              <>
+                <button
+                  aria-label="Module bearbeiten"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 bg-graphite px-3 text-body leading-none text-paper transition-colors hover:bg-signature"
+                  onClick={onEdit}
+                  title="Module bearbeiten"
+                  type="button"
+                >
+                  <Pencil aria-hidden="true" size={15} strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Bearbeiten</span>
+                </button>
+                <button
+                  aria-label="AI Foto"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 bg-ink px-3 text-body leading-none text-paper transition-colors hover:bg-graphite"
+                  onClick={onPhoto}
+                  title="AI Foto"
+                  type="button"
+                >
+                  <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Foto</span>
+                </button>
+              </>
+            )}
+          </motion.div>
         )}
-        {showPhoto && (
-          <button
-            aria-label="AI Foto"
-            className="inline-flex min-h-11 items-center justify-center gap-2 bg-ink px-3 text-body leading-none text-paper transition-colors hover:bg-graphite"
-            onClick={onPhoto}
-            title="AI Foto"
-            type="button"
-          >
-            <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
-            <span className="hidden sm:inline">Foto</span>
-          </button>
-        )}
-        <button
-          aria-label={renderActive ? "3D Render beenden" : "3D Render starten"}
-          aria-pressed={renderActive}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-body leading-none transition-colors ${
-            renderActive
-              ? "bg-signature text-paper hover:bg-ink"
-              : "bg-graphite text-paper hover:bg-signature"
-          }`}
-          onClick={onRender}
-          title={renderActive ? "3D Render beenden" : "3D Render starten"}
-          type="button"
-        >
-          <ScanLine aria-hidden="true" size={15} strokeWidth={1.5} />
-          <span className="hidden sm:inline">Render</span>
-        </button>
-      </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
