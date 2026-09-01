@@ -1,7 +1,13 @@
 # rotpunkt Signature Status
 
-Last reconciled: 2026-08-14
-Working branch: `redesign/devstart`
+Last reconciled: 2026-09-01
+Working branch: `cc/devstart-001` (11 commits ahead of `redesign/devstart`, pushed to
+origin, **not yet merged**). Integration back into `redesign/devstart` is outstanding.
+
+Gates at reconciliation: `pnpm test` 39/39, `pnpm test:db` 8/8 (Neon), `pnpm lint`
+clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
+**unset** — with the local `development-capture` value it fails closed by design
+(ADR 0010). See Build & Verification Gates below.
 
 ## Current Goal
 
@@ -39,6 +45,9 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added the Appartement2 visualization: a Cycles-baked living-room environment produced by a reproducible headless pipeline (`scripts/bake-appartement2.py` — per-object Smart-UV bake of combined lighting with filmic exposure compression, lampshade decimation, Draco GLB export, plus an equirectangular HDR panorama rendered at the kitchen anchor that lights the dynamic kitchen through the same reflection-probe pattern as the first Appartement). The kitchen line backs onto the painting wall, rotated into the room with the island toward the center; two full-height slat room dividers from the source scene are removed at load.
 - Added stylized appliance fronts (dark glass oven panel + handle bar) generated into device cabinet niches under a dedicated appliance scene role.
 - Added the itemized price presentation: an expandable "Aufstellung" in the configurator panel and full line-item breakdown in the fake checkout, both driven by the v2 sum-of-parts quote (module counts, island units, per-meter worktop, finish deltas, tax).
+- Made the scene bar the editing interface during an Edit Session: the module strip and the edit controls now live in the same bar that carries the scene, so entering an Edit Session restyles the existing surface instead of opening a second competing panel.
+- Added drag-and-drop module reordering with `motion/react` `Reorder`, and restyled the edit bar around it. The reorder path replaced the earlier arrow-button-only rearrangement (net −231 lines in `module-editor.tsx`).
+- Added the AI photo **prototype** (development scaffolding, not a production candidate): live WebGL frame capture via `preserveDrawingBuffer` (`use-scene-capture.ts`), server-side prompt assembly from configured finishes plus a scene preset, a synchronous `qwen/qwen-image-2-pro` call in `POST /api/photo`, and a result popover with presets, progress, download and regenerate. ADR 0008 replaces this route with an application-owned Photo Job Module; see PLAN.md. **The route is not yet contained — see Release Blockers.**
 - Added color configuration for:
   - cabinet/korpus finish
   - front finish
@@ -86,6 +95,13 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Appliance fronts render in device cabinet niches with the dedicated appliance role.
 - `pnpm test` 39/39, `pnpm test:db` 8/8 against the Neon test database, `pnpm lint` and production build green throughout; each slice committed separately.
 
+**Not covered by that verification:** the two most recent commits — the scene bar as the
+Edit Session interface (`913b27d`) and drag-and-drop module reordering (`bf727e3`) —
+carry no recorded browser verification. They pass lint, types, unit tests, and the
+production build, but the reorder interaction itself has not been exercised in a live
+pane and the earlier arrow-button rearrangement it replaced is gone. Verify before
+merging to `redesign/devstart`.
+
 ## Previous Slice Verified
 
 - The Shared Revision Link migration was applied to the Neon QA database.
@@ -95,8 +111,43 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - The Impeccable finish reviewer returned `PASS` for the public share surface.
 - The current Three.js deprecation and PostgreSQL SSL forward-compatibility warnings remain known non-blockers.
 
+## Build & Verification Gates
+
+How to reproduce the reconciliation results:
+
+```
+pnpm lint                                  # clean
+pnpm test                                  # 39/39
+pnpm test:db                               # 8/8 (needs TEST_DATABASE_URL or Docker)
+TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green
+```
+
+The build override is required, not optional. `.env.local` sets
+`TRANSACTIONAL_EMAIL_PROVIDER=development-capture`, and the development capture adapter
+refuses to initialize under `NODE_ENV=production` ("Development email capture cannot run
+in production"), which fails page-data collection. Unsetting the variable selects the
+fail-closed `unavailableDelivery`, which builds. A plain `pnpm build` therefore fails —
+by design, per ADR 0010, but it surprises anyone who has not read this note.
+
+## Open Working Tree
+
+Uncommitted at reconciliation:
+
+- `lib/server/auth/auth.ts` + `lib/server/auth/create-auth.ts` — a development-only
+  `trustedOrigins` resolver that echoes back any loopback origin. Next falls back to port
+  3001+ when 3000 is taken, which drifts the browser origin away from `BETTER_AUTH_URL`
+  and trips better-auth's origin check with a 403. The guard returns `[]` under
+  `NODE_ENV=production`. Real fix, but uncommitted and without a test.
+
 ## Release Blockers
 
+- **`POST /api/photo` is unauthenticated and unflagged.** PLAN.md Phase 0 (Containment)
+  has not been executed: the route has no Customer Session check and no
+  `PHOTO_PROTOTYPE_ENABLED` kill switch, and it appears in the production route table as a
+  live `ƒ /api/photo`. Anyone who reaches a deployment can spend Replicate credits. ADR
+  0008 classes this as blocking (gaps G1/G11); PLAN.md estimates ~½ day. The correct
+  pattern already exists in `app/api/dev/authentication-email/route.ts`, which gates on
+  `NODE_ENV` and the provider flag and 404s otherwise. **Highest-priority open item.**
 - The Appartement2 environment is a development placeholder: the source scene is BlendSwap asset #86344 ("Living-room."), CC0 but marked Fan Art with commercial use prohibited. The bake pipeline (`scripts/bake-appartement2.py`) is asset-agnostic — swap in an owned or licensed .blend and re-bake before any production release. Recorded here so the Production Release Gate cannot miss it.
 
 ## Known Warnings
@@ -106,6 +157,10 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   - `PCFSoftShadowMap` is deprecated and falls back to `PCFShadowMap`.
 - These warnings do not currently block rendering or production build, but they should be revisited before production hardening.
 - `npm install` reported two moderate vulnerabilities. No audit fix was applied yet.
+- `next-env.d.ts` churns between `./.next/types/routes.d.ts` and
+  `./.next/dev/types/routes.d.ts` depending on whether `next build` or `next dev` ran
+  last. It is a generated file marked "should not be edited"; commit `12215a5` committed
+  one side of that coin-flip. Treat a diff on this file as noise, not work.
 
 ## Missing
 
@@ -123,13 +178,15 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - No Studio page-builder block exists yet for dropping the configurator into a page.
 - No real product catalog, SKU model, pricing engine, cart, checkout, order, CRM, or payment integration exists yet.
 - The checkout page is a visual fake checkout only and performs no submission.
-- The configurator loads `kitchen-modules.glb`: the kitchen segmented into 18 named module prefabs (wall cabinets, island units, ends) plus 6 continuous elements, with semantic roles baked into mesh names. Layout composition is still fixed to the as-authored default; module add/remove/rearrange arrives with the module configurability slices.
-- The 6 continuous elements (countertop, plinths, back panels) are placed as-is and must become procedurally generated once layouts can change width.
+- The configurator assets are still prototype-grade under ADR 0009. `kitchen-modules.glb` carries semantic roles as baked mesh-name conventions, not as an immutable, content-hashed Asset Manifest with explicit role-to-node mappings, checksums, budgets, approved cameras, and declared fallbacks. Missing required roles are not yet a release-blocking validation. This is the gap between the working prototype and the production 3D baseline.
+- The AI photo feature is a synchronous prototype with no persistence, no job model, no EU object storage, no owner scoping, and no governance. PLAN.md Phases 0–6 define the replacement; Phase 0 is unstarted (see Release Blockers).
 - No analytics/event tracking exists for configurator interactions.
 - The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
 - Project Archive/Trash/lifecycle restoration is not implemented yet. The sharing persistence boundary already treats archived links as available and trashed links as unavailable.
 - No accessibility audit has been formalized.
 - No performance budgets exist for 3D, images, or page-builder pages.
+- No automated browser/E2E coverage exists at all: the configurator, the Edit Session, the Project workflows, and the share surface are verified by hand each slice.
+- No CI pipeline runs the gates. Lint, types, unit, DB, and build are run locally and by convention.
 
 ## Architecture Direction
 
@@ -148,26 +205,57 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 
 ## Recommended Next Implementation Steps
 
-1. Implement the remaining Project lifecycle workflows: Archive, Trash, restoring archived/trashed Projects, and the relevant UI.
-2. Add locale route structure for `/`, `/en`, and `/es`.
-3. Define the Sanity schema set:
-   - site settings
-   - page
-   - localized slug
-   - page-builder blocks
-   - product definition
-   - configurator block
-4. Add a Sanity client layer and typed query boundary.
+### Immediate (do these before starting any new track)
+
+1. **PLAN.md Phase 0 — contain `POST /api/photo`.** Authenticated Customer Session plus a
+   `PHOTO_PROTOTYPE_ENABLED` flag defaulting off; 404 when off. ~½ day, closes a stated
+   release blocker, and stops unauthenticated spend on a live route.
+2. **Commit the working-tree auth fix** (dev loopback `trustedOrigins`), with a test.
+3. **Browser-verify the Edit Session tail** — scene bar interface and drag reorder — then
+   merge `cc/devstart-001` into `redesign/devstart`. Eleven commits is already a large
+   unmerged batch and the gap is not shrinking on its own.
+
+### Then choose one track
+
+The repo currently carries two roadmaps that do not reference each other: the platform/
+content track below and PLAN.md's AI-photo Phases 1–6. They compete for the same time.
+**Recommended: finish the configurator/3D arc first** — momentum is there, the Edit
+Session just landed, and ADR 0009 already specifies what production assets must satisfy.
+Sanity is a large new surface (schema, client layer, localization routing, page-builder
+blocks) that will stall the configurator once opened. Note that AI-photo Phase 6 is
+calendar-driven (DPA and transfer-mechanism review), so the legal thread is worth
+starting in parallel with whichever engineering track wins — it costs no engineering time.
+
+**Track A — configurator to the ADR 0009 production baseline**
+
+1. Replace mesh-name role conventions with a real Asset Manifest: explicit role-to-node
+   and material-slot mappings, content hashes, transfer/GPU/triangle/draw-call budgets,
+   approved cameras, declared fallbacks. Missing required roles must block release rather
+   than fall back heuristically.
+2. Add the Deterministic Visual Fallback path for unsupported or unstable sessions.
+3. Replace the Appartement2 placeholder asset (see Release Blockers) and re-bake.
+4. Add a Zod schema for product definitions and URL configuration state.
+5. Add performance budgets and capability-based Quality Profiles.
+
+**Track B — platform and content**
+
+1. Remaining Project lifecycle: Archive, Trash, restore, and the relevant UI.
+2. Locale route structure for `/`, `/en`, `/es`.
+3. Sanity schema set: site settings, page, localized slug, page-builder blocks, product
+   definition, configurator block.
+4. Sanity client layer and typed query boundary.
 5. Replace `lib/content.ts` homepage content with Sanity-ready data shapes.
 6. Add the configurator smart component as a page-builder block renderer.
-7. Add a JSON schema or Zod schema for product definitions and URL configuration state.
-8. Add basic Playwright flows:
-   - homepage to configurator
-   - color change updates URL
-   - share URL restores state
-   - checkout summary matches state
-   - owner-only saved Project open, re-auth return, autosave/conflict recovery, local recovery-draft decisions, explicit version save/deduplication, paginated history, and safe version restore
-9. Replace the box prototype with the first production-ready 3D asset pipeline.
+
+### Cross-cutting, currently unowned
+
+- Playwright coverage: homepage to configurator, color change updates URL, share URL
+  restores state, checkout summary matches state, owner-only Project open, re-auth
+  return, autosave/conflict recovery, recovery-draft decisions, version save and
+  deduplication, paginated history, safe restore.
+- CI that runs lint, types, unit, DB, and build on every push.
+- Accessibility audit and performance budgets (both listed under Missing, neither
+  scheduled).
 
 ## Docs Still Needed
 

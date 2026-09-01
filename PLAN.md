@@ -3,9 +3,10 @@
 | | |
 | --- | --- |
 | Status | Active plan — supersedes PLAN.md v1 (2026-07-02) |
-| Revised | 2026-08-27 |
-| Working branch | `redesign/devstart` |
-| Governing decisions | [ADR 0008](DOCS/adr/0008-keep-photo-jobs-application-owned-with-replicate-exception.md), [ADR 0003](DOCS/adr/0003-separate-working-configuration-from-revisions.md), [ADR 0004](DOCS/adr/0004-use-portable-sql-on-neon-frankfurt.md), [CONTEXT.md](CONTEXT.md) domain language |
+| Revised | 2026-09-01 |
+| Working branch | `cc/devstart-001` (11 commits ahead of `redesign/devstart`, unmerged) |
+| Progress | **Phase 0 not started.** Phases 1–6 not started. See §1.4. |
+| Governing decisions | [ADR 0008](docs/adr/0008-keep-photo-jobs-application-owned-with-replicate-exception.md), [ADR 0003](docs/adr/0003-separate-working-configuration-from-revisions.md), [ADR 0004](docs/adr/0004-use-portable-sql-on-neon-frankfurt.md), [CONTEXT.md](CONTEXT.md) domain language |
 | Scope | Take the working AI-photo prototype to the Photo Job Module required for the First Production Release |
 
 ## 1. Where we stand
@@ -51,6 +52,15 @@ the cost of every next step:
   Shared Revision View).
 - **Test discipline** — unit + DB integration suites, lint/build gates,
   reconciled STATUS.md.
+- **Product Definition v2 and module configurability** (built after this plan
+  was written, 2026-08-27 → 09-01) — a Wall Module catalog with sum-of-parts
+  pricing, state-driven scene composition from named prefabs, and the
+  transactional Edit Session with drag reorder. This matters to Phase 4: the
+  prompt must be assembled from the **pinned revision's product-definition
+  snapshot**, and that snapshot is now a v2 discriminated union
+  (`wallModules`, `islandSize`), not the v1 shape the prototype prompt was
+  written against. `photo-presets.ts` will need rework when it becomes Prompt
+  Template Release v1.
 
 ### 1.3 What does not exist yet
 
@@ -61,6 +71,34 @@ the cost of every next step:
 - No quotas, budgets, or cost evidence.
 - No approved Replicate DPA/transfer-mechanism evidence (the ADR 0008
   exception is **not yet activated**).
+
+### 1.4 Position as of 2026-09-01 (verified)
+
+Nothing in this plan has been implemented. Verified directly against the
+working tree rather than inferred:
+
+| Phase | State | Evidence |
+| --- | --- | --- |
+| Phase 0 — Containment | **Not started** | No `PHOTO_PROTOTYPE_ENABLED` and no session import in `app/api/photo/route.ts`; the route builds into the production route table as a live `ƒ /api/photo` |
+| Phase 1 — Job foundation | Not started | No `photo_job` / `generated_photo` / `source_capture` migrations; no `lib/server/photo-jobs/` |
+| Phase 2 — Source Capture | Not started | No EU object storage selected, no ADR written |
+| Phase 3 — Adapter + reconciliation | Not started | Route still calls Replicate synchronously; no webhook route, inbox, or outbox |
+| Phase 4 — Governance | Not started | No template/model release records; no quota or budget enforcement |
+| Phase 5 — Customer experience | Not started | `photo-popover.tsx` still holds the result in browser memory |
+| Phase 6 — Activation gate | Not started | ADR 0008 exception remains unactivated |
+
+**Phase 0 is now overdue rather than pending.** It was written as "immediate,
+~½ day" on 2026-08-27. Since then, five commits of configurator work landed
+and the containment did not. The route is unauthenticated, has no kill
+switch, and ships in every build. The gating pattern it needs already exists
+in `app/api/dev/authentication-email/route.ts`, which checks `NODE_ENV` and
+the provider flag and 404s otherwise — Phase 0 is largely a matter of copying
+that shape and adding the session check.
+
+Why it slipped is worth naming: this plan and STATUS.md's roadmap are
+separate documents that do not reference each other, and the configurator
+track has had continuous momentum while the photo track has had none. The
+containment item is cheap, but it belongs to the neglected document.
 
 ## 2. Critical assessment — prototype vs. ADR 0008
 
@@ -179,9 +217,10 @@ flowchart TD
     P6 --> R(("First Production<br/>Release scope met"))
 ```
 
-### Phase 0 — Containment (immediate, ~½ day)
+### Phase 0 — Containment (~½ day) — **OVERDUE, NOT STARTED**
 
-The only phase that touches the prototype route.
+The only phase that touches the prototype route. Written 2026-08-27 as
+"immediate"; still unexecuted at 2026-09-01 while the route ships live.
 
 - [ ] Require an authenticated Customer Session on `POST /api/photo`
       (reuse `lib/server/auth/customer-session.ts`).
@@ -289,7 +328,7 @@ holds evidence; a Release Owner signs the gate:
 
 | Risk | Likelihood | Impact | Mitigation |
 | --- | --- | --- | --- |
-| Prototype route reached in production before containment | Medium | Uncontrolled spend, compliance exposure | Phase 0 this week; flag defaults off |
+| Prototype route reached in production before containment | **High — containment slipped once already (§1.4)** | Uncontrolled spend, compliance exposure | Phase 0 before any deployment of this branch; flag defaults off |
 | Replicate DPA/transfer evidence not obtainable | Medium | Feature cannot activate | Adapter seam preserves exit path; evaluate EU-hostable alternative behind same Interface |
 | Webhook delivery gaps | High (expected) | Stuck jobs | Inbox idempotency + scheduled reconciliation are first-class in Phase 3, not an afterthought |
 | Cost overrun via retries/abuse | Medium | Budget damage | Quotas + budget breaker (Phase 4) before any public exposure |
@@ -309,9 +348,9 @@ holds evidence; a Release Owner signs the gate:
 
 | Prototype artifact | Disposition |
 | --- | --- |
-| `app/api/photo/route.ts` | Phase 0: gated. Retired when Phase 5 lands; capture-size validation logic migrates into Source Capture validation |
+| `app/api/photo/route.ts` | Phase 0: to be gated — **still ungated as of 2026-09-01**. Retired when Phase 5 lands; capture-size validation logic migrates into Source Capture validation |
 | `use-scene-capture.ts` | Kept — becomes the Source Capture producer feeding upload URLs |
-| `photo-presets.ts` | Content promoted into approved Scene Presets + Prompt Template Release v1 (Phase 4) |
+| `photo-presets.ts` | Content promoted into approved Scene Presets + Prompt Template Release v1 (Phase 4). Note: prompt assembly must be reworked for the Product Definition v2 shape (§1.2) |
 | `photo-popover.tsx` | Reworked onto the job API in Phase 5; visual design retained |
 | v1 PLAN.md hardening checklist | Superseded — every item maps into Phases 0–6 above |
 
@@ -320,3 +359,8 @@ holds evidence; a Release Owner signs the gate:
 *Estimates are engineering-effort only and exclude Phase 6 lead times
 (legal/DPA review is calendar time). STATUS.md should be reconciled when
 each phase lands.*
+
+*This plan covers the AI-photo track only. The platform/content and
+configurator tracks live in STATUS.md's "Recommended Next Implementation
+Steps". The two documents compete for the same engineering time and neither
+one alone shows the whole picture — read both before planning a week.*
