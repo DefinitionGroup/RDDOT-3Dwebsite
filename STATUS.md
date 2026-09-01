@@ -57,6 +57,9 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added Source Capture validation: the capture is uploaded through a single-use presigned grant bound to an exact content type and byte length, then confirmed server-side by fetching the stored object and decoding its header. Dimensions and format are read from the bytes, never taken from the client, and a capture that is missing, oversized, not an image, or out of dimension range fails the job with a recorded reason (gap G4).
 - Added the provider adapter seam and its Replicate implementation. SDK types, prediction identifiers, and delivery URLs stop at the adapter. Prompts are built from the pinned revision's configuration and an approved Scene Preset, never from client input (gap G6). A module-level kill switch (`PHOTO_GENERATION_ENABLED`, default off) disables generation while request, status, list and cancel keep working (gap G11).
 - Photo rows are now written by the application: a run validates the provider's output by decoding it, persists the bytes to EU object storage, and only then inserts the Generated Photo and marks the job succeeded (gap G3). Jobs claim themselves before running, so two concurrent runs produce one photo. Verified end to end against the live RustFS deployment and the real database: request, presigned upload, server-side confirmation, run, and the resulting photo appearing in the gallery at its true decoded dimensions.
+- Wired the configurator's photo UI onto the Photo Job API and **retired the prototype route**. `app/api/photo/route.ts` is deleted rather than gated, which closes PLAN.md Phase 0 by removal: there is no longer an unauthenticated route that can spend provider credits. The capture now travels as bytes through a single-use presigned grant instead of a data URI in a JSON body, so the old ~256KB provider limit no longer shapes capture quality.
+- The photo popover enforces the ADR 0008 ownership rule in the interface: a guest configuration is offered "Als Projekt speichern" instead of a generate button, and a Project whose current version cannot be read is told to wait for the autosave rather than pinning the wrong configuration. Progress is reported per step (übertragen/geprüft, then erzeugt), and the result carries the illustrative-image disclosure and a per-request download grant.
+- Added `GET /api/projects/[projectId]/configuration` returning the current Working Configuration version, so a caller that must pin an exact configuration reads it rather than guessing; a change that lands in between makes the photo request 409.
 - Added the AI photo **prototype** (development scaffolding, not a production candidate): live WebGL frame capture via `preserveDrawingBuffer` (`use-scene-capture.ts`), server-side prompt assembly from configured finishes plus a scene preset, a synchronous `qwen/qwen-image-2-pro` call in `POST /api/photo`, and a result popover with presets, progress, download and regenerate. ADR 0008 replaces this route with an application-owned Photo Job Module; see PLAN.md. **The route is not yet contained — see Release Blockers.**
 - Added color configuration for:
   - cabinet/korpus finish
@@ -182,13 +185,6 @@ Revisit when Project Archive/Trash/restore lands.
   `rdtdot-photos` bucket instead (anonymous GET returns 403, verified). The `public`
   bucket itself is left as found — review what it currently serves and whether that
   exposure is intended.
-- **`POST /api/photo` is unauthenticated and unflagged.** PLAN.md Phase 0 (Containment)
-  has not been executed: the route has no Customer Session check and no
-  `PHOTO_PROTOTYPE_ENABLED` kill switch, and it appears in the production route table as a
-  live `ƒ /api/photo`. Anyone who reaches a deployment can spend Replicate credits. ADR
-  0008 classes this as blocking (gaps G1/G11); PLAN.md estimates ~½ day. The correct
-  pattern already exists in `app/api/dev/authentication-email/route.ts`, which gates on
-  `NODE_ENV` and the provider flag and 404s otherwise. **Highest-priority open item.**
 - The Appartement2 environment is a development placeholder: the source scene is BlendSwap asset #86344 ("Living-room."), CC0 but marked Fan Art with commercial use prohibited. The bake pipeline (`scripts/bake-appartement2.py`) is asset-agnostic — swap in an owned or licensed .blend and re-bake before any production release. Recorded here so the Production Release Gate cannot miss it.
 
 ## Known Warnings
@@ -272,9 +268,9 @@ the galleries can ship:
    residency evidence — ADR 0011's residency claim is asserted, not yet evidenced.
 5. Object deletion stays manual **by decision, not oversight** (2026-09-01). See
    Deferred Decisions.
-6. Wire the configurator's capture UI to the Photo Job endpoints. The API is complete
-   and verified, but `photo-popover.tsx` still calls the ungated prototype route, so
-   nothing in the browser creates a job yet.
+6. Turn on generation. `PHOTO_GENERATION_ENABLED` is off, so every run currently
+   fails as `provider-disabled` by design. Enabling it spends Replicate credits and is
+   a deliberate decision, not a default.
 7. PLAN.md Phase 3: replace the synchronous provider call with predictions plus
    webhook, an idempotent inbox, and reconciliation. Until then a job does not survive
    browser closure (gap G2), and `POST /api/photo-jobs/[jobId]/run` holds the request

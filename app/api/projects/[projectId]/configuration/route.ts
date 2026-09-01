@@ -12,6 +12,45 @@ const saveConfigurationSchema = z.object({
   expectedVersion: z.number().int().positive()
 });
 
+/**
+ * The current Working Configuration version. Callers that need to pin an exact
+ * configuration — the Photo Job request, for one — read it here rather than
+ * guessing, and let the write itself resolve any race with a 409.
+ */
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ projectId: string }> }
+) {
+  const session = await customerSessions.resolve(request.headers);
+  if (!session) {
+    return NextResponse.json(
+      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { status: 401 }
+    );
+  }
+
+  const { projectId } = await context.params;
+  if (!z.uuid().safeParse(projectId).success) {
+    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+  }
+
+  const workspace = await projects.getWorkspace({
+    ownerId: session.customerAccountId,
+    projectId
+  });
+  if (!workspace || workspace.lifecycle === "trashed") {
+    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+  }
+
+  return NextResponse.json(
+    {
+      version: workspace.workingConfiguration.version,
+      updatedAt: workspace.workingConfiguration.updatedAt.toISOString()
+    },
+    { headers: { "cache-control": "private, no-store" } }
+  );
+}
+
 export async function PUT(
   request: Request,
   context: { params: Promise<{ projectId: string }> }

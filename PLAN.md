@@ -5,7 +5,7 @@
 | Status | Active plan — supersedes PLAN.md v1 (2026-07-02) |
 | Revised | 2026-09-01 |
 | Working branch | `cc/devstart-001` (11 commits ahead of `redesign/devstart`, unmerged) |
-| Progress | **Phase 0 not started.** Phases 1–6 not started. See §1.4. |
+| Progress | **Phase 0 closed by deleting the route.** Phase 1 and the Phase 2 validation path are done; Phase 3–6 remain. See §1.4. |
 | Governing decisions | [ADR 0008](docs/adr/0008-keep-photo-jobs-application-owned-with-replicate-exception.md), [ADR 0003](docs/adr/0003-separate-working-configuration-from-revisions.md), [ADR 0004](docs/adr/0004-use-portable-sql-on-neon-frankfurt.md), [CONTEXT.md](CONTEXT.md) domain language |
 | Scope | Take the working AI-photo prototype to the Photo Job Module required for the First Production Release |
 
@@ -217,10 +217,11 @@ flowchart TD
     P6 --> R(("First Production<br/>Release scope met"))
 ```
 
-### Phase 0 — Containment (~½ day) — **OVERDUE, NOT STARTED**
+### Phase 0 — Containment — **CLOSED 2026-09-01, by deletion**
 
-The only phase that touches the prototype route. Written 2026-08-27 as
-"immediate"; still unexecuted at 2026-09-01 while the route ships live.
+Superseded rather than implemented. The prototype route was deleted once the
+Photo Job Module replaced it, so there is nothing left to authenticate or gate.
+The interim kill switch became the module-level `PHOTO_GENERATION_ENABLED`.
 
 - [ ] Require an authenticated Customer Session on `POST /api/photo`
       (reuse `lib/server/auth/customer-session.ts`).
@@ -348,7 +349,7 @@ holds evidence; a Release Owner signs the gate:
 
 | Prototype artifact | Disposition |
 | --- | --- |
-| `app/api/photo/route.ts` | Phase 0: to be gated — **still ungated as of 2026-09-01**. Retired when Phase 5 lands; capture-size validation logic migrates into Source Capture validation |
+| `app/api/photo/route.ts` | **Deleted 2026-09-01.** Replaced by the Photo Job Module; capture-size validation moved into Source Capture validation |
 | `use-scene-capture.ts` | Kept — becomes the Source Capture producer feeding upload URLs |
 | `photo-presets.ts` | Content promoted into approved Scene Presets + Prompt Template Release v1 (Phase 4). Note: prompt assembly must be reworked for the Product Definition v2 shape (§1.2) |
 | `photo-popover.tsx` | Reworked onto the job API in Phase 5; visual design retained |

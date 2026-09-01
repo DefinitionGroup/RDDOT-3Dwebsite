@@ -6,14 +6,27 @@ export type SceneCaptureRef = React.MutableRefObject<(() => HTMLCanvasElement) |
 
 const TARGET_WIDTH = 1280;
 const TARGET_HEIGHT = 720;
-// Replicate accepts data URIs only up to ~256KB; base64 inflates by 4/3.
-const MAX_DATA_URL_CHARS = 340_000;
-const QUALITY_STEPS = [0.85, 0.75, 0.65, 0.5, 0.35];
+/**
+ * The Source Capture now travels as bytes to object storage rather than as a
+ * data URI in a JSON body, so the old ~256KB provider limit no longer applies.
+ * This ceiling exists to keep uploads quick and to stay well inside the
+ * module's own capture limit.
+ */
+const MAX_CAPTURE_BYTES = 1_500_000;
+const QUALITY_STEPS = [0.9, 0.8, 0.7, 0.6, 0.45];
+
+export type SceneCapture = {
+  blob: Blob;
+  /** Object URL for the in-flight preview; the caller revokes it when done. */
+  previewUrl: string;
+  contentType: "image/jpeg";
+  byteSize: number;
+};
 
 export function useSceneCapture() {
   const captureRef: SceneCaptureRef = useRef(null);
 
-  function capturePhoto(): string | null {
+  async function capturePhoto(): Promise<SceneCapture | null> {
     const sourceCanvas = captureRef.current?.();
     if (!sourceCanvas || sourceCanvas.width === 0 || sourceCanvas.height === 0) {
       return null;
@@ -23,9 +36,7 @@ export function useSceneCapture() {
     target.width = TARGET_WIDTH;
     target.height = TARGET_HEIGHT;
     const context = target.getContext("2d");
-    if (!context) {
-      return null;
-    }
+    if (!context) return null;
 
     // Cover-crop the (possibly portrait) canvas to 16:9 around the center.
     const targetAspect = TARGET_WIDTH / TARGET_HEIGHT;
@@ -37,13 +48,11 @@ export function useSceneCapture() {
     } else {
       cropHeight = sourceCanvas.width / targetAspect;
     }
-    const cropX = (sourceCanvas.width - cropWidth) / 2;
-    const cropY = (sourceCanvas.height - cropHeight) / 2;
 
     context.drawImage(
       sourceCanvas,
-      cropX,
-      cropY,
+      (sourceCanvas.width - cropWidth) / 2,
+      (sourceCanvas.height - cropHeight) / 2,
       cropWidth,
       cropHeight,
       0,
@@ -53,9 +62,17 @@ export function useSceneCapture() {
     );
 
     for (const quality of QUALITY_STEPS) {
-      const dataUrl = target.toDataURL("image/jpeg", quality);
-      if (dataUrl.length <= MAX_DATA_URL_CHARS) {
-        return dataUrl;
+      const blob = await new Promise<Blob | null>((resolve) => {
+        target.toBlob(resolve, "image/jpeg", quality);
+      });
+      if (!blob) continue;
+      if (blob.size <= MAX_CAPTURE_BYTES) {
+        return {
+          blob,
+          previewUrl: URL.createObjectURL(blob),
+          contentType: "image/jpeg",
+          byteSize: blob.size
+        };
       }
     }
 

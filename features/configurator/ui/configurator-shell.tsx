@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { preloadApartmentModel } from "@/features/configurator/engine/apartment-model";
@@ -86,6 +87,7 @@ export function ConfiguratorShell({
   const [isConfigPanelOpen, setConfigPanelOpen] = useState(true);
   const [visualization, setVisualization] = useState<VisualizationMode>("studio");
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const [isPhotoOpen, setPhotoOpen] = useState(false);
   const [pathTracing, setPathTracing] = useState(false);
   const [renderRequested, setRenderRequested] = useState(false);
@@ -241,44 +243,126 @@ export function ConfiguratorShell({
     setRenderRequested(true);
   }
 
+  /**
+   * Drives the Photo Job lifecycle: request (which pins a Configuration
+   * Revision), upload the capture straight to storage through the single-use
+   * grant, confirm it server-side, then run. Phase 3 will replace the final
+   * step with a submit plus polling, leaving the earlier steps unchanged.
+   */
   async function generatePhoto() {
-    const preview = capturePhoto();
-    if (!preview) {
+    if (!project) {
+      setPhotoStatus({ phase: "blocked", reason: "guest" });
+      return;
+    }
+    // The autosaved version is owned by the save controls, so it is read from
+    // the server here. A change that lands in between makes the request 409,
+    // which is the correct outcome: the photo must pin what the customer saw.
+    const current = await fetch(`/api/projects/${project.id}/configuration`, {
+      cache: "no-store"
+    });
+    const currentPayload = (await current.json().catch(() => null)) as {
+      version?: number;
+    } | null;
+    if (!current.ok || !currentPayload?.version) {
+      setPhotoStatus({ phase: "blocked", reason: "not-yet-saved" });
+      return;
+    }
+    const savedVersion = currentPayload.version;
+
+    const captured = await capturePhoto();
+    if (!captured) {
       setPhotoStatus({
         phase: "error",
-        message: "Die Szene konnte nicht aufgenommen werden. Bitte versuche es erneut."
+        message: "Die Szene konnte nicht aufgenommen werden. Bitte versuchen Sie es erneut."
       });
       return;
     }
 
-    setPhotoStatus({ phase: "generating", preview });
+    setPhotoStatus({ phase: "working", step: "uploading", preview: captured.previewUrl });
+
+    async function fail(message: string) {
+      URL.revokeObjectURL(captured!.previewUrl);
+      setPhotoStatus({ phase: "error", message });
+    }
 
     try {
-      const response = await fetch("/api/photo", {
+      const requested = await fetch(`/api/projects/${project.id}/photo-jobs`, {
         body: JSON.stringify({
-          cabinetColorKey: config.cabinetColorKey,
-          frontColorKey: config.frontColorKey,
-          image: preview,
-          presetKey: photoPresetKey
+          expectedVersion: savedVersion,
+          idempotencyKey: crypto.randomUUID(),
+          scenePresetKey: photoPresetKey,
+          capture: {
+            contentType: captured.contentType,
+            byteSize: captured.byteSize
+          }
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST"
       });
+      const requestPayload = (await requested.json().catch(() => null)) as {
+        job?: { id: string };
+        upload?: { url: string; headers: Record<string, string> };
+        error?: string;
+      } | null;
 
-      const payload = (await response.json()) as { image?: string; error?: string };
-      if (!response.ok || !payload.image) {
-        throw new Error(payload.error ?? "Generation failed.");
+      if (!requested.ok || !requestPayload?.job || !requestPayload.upload) {
+        return await fail(
+          requestPayload?.error ??
+            "Die Visualisierung konnte nicht angefordert werden."
+        );
+      }
+      const jobId = requestPayload.job.id;
+
+      const uploaded = await fetch(requestPayload.upload.url, {
+        body: captured.blob,
+        headers: requestPayload.upload.headers,
+        method: "PUT"
+      });
+      if (!uploaded.ok) return await fail("Die Aufnahme konnte nicht übertragen werden.");
+
+      const confirmed = await fetch(`/api/photo-jobs/${jobId}/capture`, {
+        method: "POST"
+      });
+      if (!confirmed.ok) {
+        return await fail("Die Aufnahme wurde abgelehnt. Bitte versuchen Sie es erneut.");
       }
 
-      setPhotoStatus({ phase: "done", image: payload.image, preview });
-    } catch (error) {
-      setPhotoStatus({
-        phase: "error",
-        message:
-          error instanceof Error && error.message
-            ? error.message
-            : "Das Foto konnte nicht erstellt werden. Bitte versuche es erneut."
+      setPhotoStatus({ phase: "working", step: "generating", preview: captured.previewUrl });
+
+      const ran = await fetch(`/api/photo-jobs/${jobId}/run`, { method: "POST" });
+      const runPayload = (await ran.json().catch(() => null)) as {
+        generatedPhotoId?: string;
+        error?: string;
+      } | null;
+      if (!ran.ok || !runPayload?.generatedPhotoId) {
+        return await fail(
+          runPayload?.error ?? "Das Foto konnte nicht erstellt werden."
+        );
+      }
+
+      // Resolve a display URL through the gallery the panel already renders,
+      // rather than minting a second kind of URL for this one surface.
+      const gallery = await fetch(`/api/projects/${project.id}/photos`, {
+        cache: "no-store"
       });
+      const galleryPayload = (await gallery.json().catch(() => null)) as {
+        photos?: Array<{ id: string; displayUrl: string }>;
+      } | null;
+      const created = galleryPayload?.photos?.find(
+        (photo) => photo.id === runPayload.generatedPhotoId
+      );
+      if (!created) return await fail("Das Foto wurde erstellt, ist aber gerade nicht abrufbar.");
+
+      URL.revokeObjectURL(captured.previewUrl);
+      setPhotoStatus({
+        phase: "done",
+        imageUrl: created.displayUrl,
+        photoId: created.id
+      });
+      // Re-seeds the panel gallery from the server so the new photo appears there too.
+      startTransition(() => router.refresh());
+    } catch {
+      await fail("Die Verbindung wurde unterbrochen. Bitte versuchen Sie es erneut.");
     }
   }
 
@@ -359,7 +443,8 @@ export function ConfiguratorShell({
         <PhotoPopover
           locale={locale}
           onClose={() => setPhotoOpen(false)}
-          onGenerate={generatePhoto}
+          onGenerate={() => void generatePhoto()}
+          onSaveAsProject={() => saveConfigurationAsProject(encodedConfig)}
           onSelectPreset={setPhotoPresetKey}
           open={isPhotoOpen}
           selectedPresetKey={photoPresetKey}
