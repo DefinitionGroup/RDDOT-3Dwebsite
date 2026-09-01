@@ -4,7 +4,7 @@ Last reconciled: 2026-09-01
 Working branch: `cc/devstart-001` (11 commits ahead of `redesign/devstart`, pushed to
 origin, **not yet merged**). Integration back into `redesign/devstart` is outstanding.
 
-Gates at reconciliation: `pnpm test` 39/39, `pnpm test:db` 26/26 (Neon), `pnpm lint`
+Gates at reconciliation: `pnpm test` 47/47, `pnpm test:db` 40/40 (Neon), `pnpm lint`
 clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
 **unset** — with the local `development-capture` value it fails closed by design
 (ADR 0010). See Build & Verification Gates below.
@@ -53,6 +53,10 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added the photo gallery read path: an owner-scoped module (`features/photo-gallery/photo-gallery-module.ts`) that lists a Project's Generated Photos and the account-wide profile gallery through a single authorization predicate, resolves each row's storage key into a short-lived presigned display URL, grants owner-only downloads with an attachment filename, and deletes a photo by removing the row so the storage trigger records the object's deletion. Cursor-paginated newest-first, matching the version-history style. Exposed as `GET /api/photos`, `GET /api/projects/[projectId]/photos`, and `GET`/`DELETE /api/photos/[photoId]`, all `private, no-store`.
 - Verified the storage path against the live RustFS deployment: presigned upload, stat, presigned download, exact-length rejection, and idempotent delete all pass (`tests/integration/object-storage-live.test.ts`, skipped when storage is unconfigured). An end-to-end run also confirmed a `generated_photo` row resolving to a display URL that returns the exact bytes, anonymous access to the same object being refused, and the object disappearing from the bucket after the deletion sweep.
 - Added the photo gallery UI on both surfaces: the account-wide gallery in `/konto` and the per-Project gallery in the configurator panel, sharing one component. Tiles hold their intrinsic aspect ratio from the stored dimensions so nothing shifts as images arrive, a lightbox carries download and delete, and every surface carries the ADR 0008 illustrative-image disclosure. Presigned display URLs are re-minted on a timer shortly before they lapse and on image error, so a gallery left open does not decay into broken images. The first page is server-rendered — both pages are `force-dynamic`, so short-lived URLs are never cached — and later pages arrive by cursor. A `density` prop drops the configurator panel to two columns, since its width is far narrower than any viewport breakpoint can detect.
+- Added the Photo Job Module (PLAN.md Phase 1 and the Phase 2 validation path): requesting a photo atomically checkpoints the Working Configuration into a `trigger = 'photo'` Configuration Revision and creates the job against it under expected-version concurrency, so a photo is always attributable to an exact immutable configuration rather than to whatever the canvas showed (gap G5). Requests are idempotent, owner-scoped, and bounded by a per-account daily ceiling.
+- Added Source Capture validation: the capture is uploaded through a single-use presigned grant bound to an exact content type and byte length, then confirmed server-side by fetching the stored object and decoding its header. Dimensions and format are read from the bytes, never taken from the client, and a capture that is missing, oversized, not an image, or out of dimension range fails the job with a recorded reason (gap G4).
+- Added the provider adapter seam and its Replicate implementation. SDK types, prediction identifiers, and delivery URLs stop at the adapter. Prompts are built from the pinned revision's configuration and an approved Scene Preset, never from client input (gap G6). A module-level kill switch (`PHOTO_GENERATION_ENABLED`, default off) disables generation while request, status, list and cancel keep working (gap G11).
+- Photo rows are now written by the application: a run validates the provider's output by decoding it, persists the bytes to EU object storage, and only then inserts the Generated Photo and marks the job succeeded (gap G3). Jobs claim themselves before running, so two concurrent runs produce one photo. Verified end to end against the live RustFS deployment and the real database: request, presigned upload, server-side confirmation, run, and the resulting photo appearing in the gallery at its true decoded dimensions.
 - Added the AI photo **prototype** (development scaffolding, not a production candidate): live WebGL frame capture via `preserveDrawingBuffer` (`use-scene-capture.ts`), server-side prompt assembly from configured finishes plus a scene preset, a synchronous `qwen/qwen-image-2-pro` call in `POST /api/photo`, and a result popover with presets, progress, download and regenerate. ADR 0008 replaces this route with an application-owned Photo Job Module; see PLAN.md. **The route is not yet contained — see Release Blockers.**
 - Added color configuration for:
   - cabinet/korpus finish
@@ -123,8 +127,8 @@ How to reproduce the reconciliation results:
 
 ```
 pnpm lint                                  # clean
-pnpm test                                  # 39/39
-pnpm test:db                               # 26/26 (needs TEST_DATABASE_URL or Docker)
+pnpm test                                  # 47/47
+pnpm test:db                               # 40/40 (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green
 ```
 
@@ -268,8 +272,13 @@ the galleries can ship:
    residency evidence — ADR 0011's residency claim is asserted, not yet evidenced.
 5. Object deletion stays manual **by decision, not oversight** (2026-09-01). See
    Deferred Decisions.
-6. Nothing writes photo rows yet: the galleries render, but only seeded data reaches
-   them until the Photo Job request path exists.
+6. Wire the configurator's capture UI to the Photo Job endpoints. The API is complete
+   and verified, but `photo-popover.tsx` still calls the ungated prototype route, so
+   nothing in the browser creates a job yet.
+7. PLAN.md Phase 3: replace the synchronous provider call with predictions plus
+   webhook, an idempotent inbox, and reconciliation. Until then a job does not survive
+   browser closure (gap G2), and `POST /api/photo-jobs/[jobId]/run` holds the request
+   open for the duration of generation.
 
 ### Then choose one track
 
