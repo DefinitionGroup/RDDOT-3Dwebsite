@@ -24,6 +24,8 @@ export function readGalleryCursor(url: URL) {
  * a client that keeps a page open past `displayUrlExpiresAt` must refetch
  * rather than assume the URL still works (ADR 0011).
  */
+export type SerializedGalleryPage = ReturnType<typeof serializeGalleryPage>;
+
 export function serializeGalleryPage(page: GalleryPage) {
   return {
     photos: page.items.map((photo) => ({

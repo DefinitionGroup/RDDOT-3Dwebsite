@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ConfiguratorShell } from "@/features/configurator/ui/configurator-shell";
 import { CONFIG_QUERY_PARAM, getInitialConfiguratorState } from "@/features/configurator/state-codec";
 import { customerSessions } from "@/lib/server/auth/customer-session";
+import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
 import { projects } from "@/lib/server/projects/projects";
 import { normalizeConfiguratorState } from "@/features/configurator/product-definition";
 import { parseRevisionDisplaySnapshot } from "@/features/projects/revision-display";
@@ -36,7 +37,7 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
       redirect(`/konto?next=${encodeURIComponent(`/configure?project=${projectId}`)}`);
     }
 
-    const [workspace, revisionPage, shareLinks] = await Promise.all([
+    const [workspace, revisionPage, shareLinks, gallery] = await Promise.all([
       projects.getWorkspace({
         ownerId: session.customerAccountId,
         projectId
@@ -49,7 +50,8 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
       sharing.listLinks({
         ownerId: session.customerAccountId,
         projectId
-      })
+      }),
+      loadInitialGallery({ ownerId: session.customerAccountId, projectId })
     ]);
     if (!workspace) notFound();
 
@@ -83,7 +85,8 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
             createdAt: link.createdAt.toISOString(),
             expiresAt: link.expiresAt.toISOString(),
             revokedAt: link.revokedAt?.toISOString() ?? null
-          }))
+          })),
+          gallery
         }}
       />
     );

@@ -52,6 +52,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Made object deletion unorphanable: a database trigger records a deletion intent in the existing outbox whenever a row owning a stored object disappears — including via `ON DELETE CASCADE` from Project trash or Customer Account deletion, where no application statement observes the row. A sweep worker drains those intents with claim-and-backoff semantics and surfaces unreconciled objects. Verified against the real database, including the cascade path.
 - Added the photo gallery read path: an owner-scoped module (`features/photo-gallery/photo-gallery-module.ts`) that lists a Project's Generated Photos and the account-wide profile gallery through a single authorization predicate, resolves each row's storage key into a short-lived presigned display URL, grants owner-only downloads with an attachment filename, and deletes a photo by removing the row so the storage trigger records the object's deletion. Cursor-paginated newest-first, matching the version-history style. Exposed as `GET /api/photos`, `GET /api/projects/[projectId]/photos`, and `GET`/`DELETE /api/photos/[photoId]`, all `private, no-store`.
 - Verified the storage path against the live RustFS deployment: presigned upload, stat, presigned download, exact-length rejection, and idempotent delete all pass (`tests/integration/object-storage-live.test.ts`, skipped when storage is unconfigured). An end-to-end run also confirmed a `generated_photo` row resolving to a display URL that returns the exact bytes, anonymous access to the same object being refused, and the object disappearing from the bucket after the deletion sweep.
+- Added the photo gallery UI on both surfaces: the account-wide gallery in `/konto` and the per-Project gallery in the configurator panel, sharing one component. Tiles hold their intrinsic aspect ratio from the stored dimensions so nothing shifts as images arrive, a lightbox carries download and delete, and every surface carries the ADR 0008 illustrative-image disclosure. Presigned display URLs are re-minted on a timer shortly before they lapse and on image error, so a gallery left open does not decay into broken images. The first page is server-rendered — both pages are `force-dynamic`, so short-lived URLs are never cached — and later pages arrive by cursor. A `density` prop drops the configurator panel to two columns, since its width is far narrower than any viewport breakpoint can detect.
 - Added the AI photo **prototype** (development scaffolding, not a production candidate): live WebGL frame capture via `preserveDrawingBuffer` (`use-scene-capture.ts`), server-side prompt assembly from configured finishes plus a scene preset, a synchronous `qwen/qwen-image-2-pro` call in `POST /api/photo`, and a result popover with presets, progress, download and regenerate. ADR 0008 replaces this route with an application-owned Photo Job Module; see PLAN.md. **The route is not yet contained — see Release Blockers.**
 - Added color configuration for:
   - cabinet/korpus finish
@@ -242,13 +243,11 @@ the galleries can ship:
    job has reached a terminal state.
 4. Confirm the physical location of `ecomstorage.rotpunkt.ai` and record it as
    residency evidence — ADR 0011's residency claim is asserted, not yet evidenced.
-5. Phase 5 UI: the gallery API exists and is verified, but no React surface consumes
-   it yet — the per-Project gallery and the profile gallery still need to be built into
-   the account workspace, along with the illustrative-image disclosure copy ADR 0008
-   requires on every Generated Photo surface.
-6. Schedule the deletion sweep. `sweepStorageDeletions` is implemented and tested but
+5. Schedule the deletion sweep. `sweepStorageDeletions` is implemented and tested but
    nothing calls it periodically yet, so deletion intents currently accumulate until a
    sweep is run by hand.
+6. Nothing writes photo rows yet: the galleries render, but only seeded data reaches
+   them until the Photo Job request path exists.
 
 ### Then choose one track
 

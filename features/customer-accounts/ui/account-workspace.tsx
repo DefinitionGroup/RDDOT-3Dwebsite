@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
+import type { SerializedGalleryPage } from "@/features/photo-gallery/serialize-gallery";
+import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import { authClient } from "@/lib/auth-client";
 
 type AccountProject = {
@@ -15,10 +17,12 @@ type AccountProject = {
 
 export function AccountWorkspace({
   expiresAt,
+  gallery,
   pendingImport,
   projects
 }: {
   expiresAt: string;
+  gallery: SerializedGalleryPage;
   pendingImport: {
     configurationCode: string;
     idempotencyKey: string;
@@ -185,6 +189,17 @@ export function AccountWorkspace({
           </ul>
         )}
       </section>
+
+      <div className="mt-12">
+        <PhotoGallery
+          emptyMessage="Noch keine Visualisierung. Ansichten, die Sie im Konfigurator erzeugen, sammeln sich hier über alle Projekte hinweg."
+          initialNextCursor={gallery.nextCursor}
+          initialPhotos={gallery.photos}
+          initialTotalCount={gallery.totalCount}
+          key="account"
+          scope={{ kind: "account" }}
+        />
+      </div>
 
       <p className="mt-8 text-xs leading-5 text-graphite">
         Sitzung geschützt bis {new Intl.DateTimeFormat("de-DE", {

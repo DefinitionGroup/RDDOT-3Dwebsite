@@ -1,3 +1,4 @@
+import type { SerializedGalleryPage } from "@/features/photo-gallery/serialize-gallery";
 import type { RevisionDisplaySnapshot } from "@/features/projects/revision-display";
 
 export type EditableProjectRevision = {
@@ -25,4 +26,5 @@ export type EditableProject = {
   revisionTotalCount: number;
   revisionNextCursor: { createdAt: string; id: string } | null;
   shareLinks: EditableSharedRevisionLink[];
+  gallery: SerializedGalleryPage;
 };

@@ -4,11 +4,25 @@
     {
       "name": "next-start",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["start"],
+      "runtimeArgs": [
+        "start"
+      ],
       "port": 3000,
       "autoPort": true,
       "env": {
         "TRANSACTIONAL_EMAIL_PROVIDER": ""
+      }
+    },
+    {
+      "name": "next-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true,
+      "env": {
+        "TRANSACTIONAL_EMAIL_PROVIDER": "development-capture"
       }
     }
   ]

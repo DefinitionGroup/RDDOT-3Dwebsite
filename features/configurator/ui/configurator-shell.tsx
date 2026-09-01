@@ -53,6 +53,7 @@ import type {
 } from "@/features/configurator/engine/kitchen-model";
 import { useProjectAutosave } from "@/features/projects/ui/use-project-autosave";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
+import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
 import type { RevisionDisplaySnapshot } from "@/features/projects/revision-display";
 import { ProjectShareLinks } from "@/features/sharing/ui/project-share-links";
@@ -779,6 +780,15 @@ function ProjectSaveControls({
         initialLinks={project.shareLinks}
         projectId={project.id}
         savedVersion={status.phase === "saved" ? status.savedVersion : null}
+      />
+      <PhotoGallery
+        density="compact"
+        emptyMessage="Noch keine Visualisierung für dieses Projekt."
+        initialNextCursor={project.gallery.nextCursor}
+        initialPhotos={project.gallery.photos}
+        initialTotalCount={project.gallery.totalCount}
+        key={project.id}
+        scope={{ kind: "project", projectId: project.id }}
       />
     </div>
   );

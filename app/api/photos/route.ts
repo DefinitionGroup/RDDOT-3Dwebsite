@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { readGalleryCursor, serializeGalleryPage } from "@/app/api/photos/serialize";
+import { readGalleryCursor, serializeGalleryPage } from "@/features/photo-gallery/serialize-gallery";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { getPhotoGallery } from "@/lib/server/photo-gallery/photo-gallery";
 
