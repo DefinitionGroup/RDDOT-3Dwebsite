@@ -145,6 +145,29 @@ Uncommitted at reconciliation:
   and trips better-auth's origin check with a 403. The guard returns `[]` under
   `NODE_ENV=production`. Real fix, but uncommitted and without a test.
 
+## Deferred Decisions
+
+**Automatic object deletion is deliberately not scheduled** (decided 2026-09-01).
+`sweepStorageDeletions` is implemented and tested, but nothing calls it periodically,
+so deletion intents accumulate in the outbox until a sweep is run by hand.
+
+The reason is recovery, not caution about the sweep's behaviour: the sweep only ever
+deletes objects whose database row is already gone, so it cannot remove a photo a
+customer still has. What it does remove is the undo. While a row is deleted but its
+object is not, a wrongly deleted photo is recoverable by restoring the row. Project
+Archive/Trash/restore is still unimplemented, so making byte-level deletion automatic
+before that lifecycle is settled would turn a recoverable mistake into a permanent one.
+
+**The consequence being accepted:** Customer Account deletion does not currently reach
+object storage. The cascade clears the database and stops at the queue, so Generated
+Photos and Source Captures outlive the account that owned them. ADR 0011 requires that
+cascade, and the EU-residency posture makes it a data-protection obligation rather than
+housekeeping. This is a Production Release Gate item and must be closed before any
+production release — by scheduling the sweep, or by an explicit retention policy that
+the Release Owner signs.
+
+Revisit when Project Archive/Trash/restore lands.
+
 ## Release Blockers
 
 - **The `public` bucket on `ecomstorage.rotpunkt.ai` is world-readable.** It carries a
@@ -243,9 +266,8 @@ the galleries can ship:
    job has reached a terminal state.
 4. Confirm the physical location of `ecomstorage.rotpunkt.ai` and record it as
    residency evidence — ADR 0011's residency claim is asserted, not yet evidenced.
-5. Schedule the deletion sweep. `sweepStorageDeletions` is implemented and tested but
-   nothing calls it periodically yet, so deletion intents currently accumulate until a
-   sweep is run by hand.
+5. Object deletion stays manual **by decision, not oversight** (2026-09-01). See
+   Deferred Decisions.
 6. Nothing writes photo rows yet: the galleries render, but only seeded data reaches
    them until the Photo Job request path exists.
 
