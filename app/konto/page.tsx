@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { headers } from "next/headers";
+import { AppHeader } from "@/components/design-system/app-header";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
 import { AccountWorkspace } from "@/features/customer-accounts/ui/account-workspace";
@@ -59,7 +60,13 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         </div>
       </section>
 
-      <section className="flex min-h-[69svh] items-center px-6 py-14 sm:px-10 lg:min-h-svh lg:px-[clamp(3rem,7vw,7rem)] lg:py-20">
+      <section className="flex min-h-[69svh] flex-col px-6 py-8 sm:px-10 lg:min-h-svh lg:px-[clamp(3rem,7vw,7rem)] lg:py-10">
+        <AppHeader
+          action={{ href: "/configure", label: "Zum Konfigurator" }}
+          showAccount={false}
+        />
+
+        <div className="flex flex-1 items-center py-10">
         {session ? (
           <AccountWorkspace
             expiresAt={session.expiresAt.toISOString()}
@@ -89,6 +96,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             }
           />
         )}
+        </div>
       </section>
     </main>
   );

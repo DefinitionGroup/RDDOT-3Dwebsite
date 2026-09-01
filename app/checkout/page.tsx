@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { BrandLogo } from "@/components/design-system/brand-logo";
+import { AppHeader } from "@/components/design-system/app-header";
 import {
   findFinish,
   formatCurrency,
@@ -30,15 +29,13 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
 
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#f6f2ec_0%,#ede6dd_46%,#fff_100%)] px-4 py-5 text-ink md:px-8 md:py-8">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-        <BrandLogo compact href="/" tone="dark" />
-        <Link
-          className="max-w-40 shrink-0 bg-ink px-3 py-3 text-center text-[0.68rem] font-semibold uppercase leading-tight tracking-[0.08em] text-paper transition-colors hover:bg-graphite sm:max-w-none sm:px-4 sm:text-xs"
-          href={`/configure?${CONFIG_QUERY_PARAM}=${params[CONFIG_QUERY_PARAM] ?? ""}`}
-        >
-          Konfiguration ändern
-        </Link>
-      </div>
+      <AppHeader
+        action={{
+          href: `/configure?${CONFIG_QUERY_PARAM}=${params[CONFIG_QUERY_PARAM] ?? ""}`,
+          label: "Konfiguration ändern"
+        }}
+        className="mx-auto max-w-6xl"
+      />
 
       <section className="mx-auto mt-16 grid max-w-6xl gap-10 lg:grid-cols-[1fr_26rem] lg:items-start">
         <div>

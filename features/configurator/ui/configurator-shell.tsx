@@ -12,10 +12,9 @@ import {
   SlidersHorizontal
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { BrandLogo } from "@/components/design-system/brand-logo";
+import { AppHeader } from "@/components/design-system/app-header";
 import { preloadApartmentModel } from "@/features/configurator/engine/apartment-model";
 import { preloadAppartement2Model } from "@/features/configurator/engine/appartement2-model";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
@@ -478,28 +477,16 @@ export function ConfiguratorShell({
         initial={{ opacity: 0, y: 14 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="pointer-events-auto flex h-fit items-center justify-between gap-6 p-5 md:p-6 lg:p-8">
-          <BrandLogo compact href="/" tone="dark" />
-          <Link
-            className="group inline-flex items-center gap-2 text-body leading-none text-graphite transition-colors hover:text-ink"
-            href={project ? "/konto" : "/"}
-          >
-            <svg
-              aria-hidden="true"
-              className="size-3 transition-transform duration-300 ease-signature group-hover:-translate-x-0.5"
-              fill="none"
-              viewBox="0 0 12 12"
-            >
-              <path
-                d="M10 6H2m0 0 4-4M2 6l4 4"
-                stroke="currentColor"
-                strokeLinecap="square"
-                strokeWidth="1.2"
-              />
-            </svg>
-            {project ? "Meine Projekte" : "Zurück"}
-          </Link>
-        </div>
+        <AppHeader
+          action={
+            project
+              ? { href: "/konto", label: "Meine Projekte" }
+              : undefined
+          }
+          className="pointer-events-auto h-fit p-5 md:p-6 lg:p-8"
+          showAccount={!sharedView}
+          tone="dark"
+        />
 
         <AnimatePresence initial={false}>
           {isConfigPanelOpen && (
