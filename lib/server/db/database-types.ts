@@ -87,6 +87,62 @@ export type SharedRevisionLinkTable = {
   createdAt: Timestamp;
 };
 
+export type SourceCaptureTable = {
+  id: string;
+  projectId: string;
+  configurationRevisionId: string;
+  storageKey: string;
+  contentType: "image/jpeg" | "image/png";
+  maxByteSize: number;
+  byteSize: number | null;
+  width: number | null;
+  height: number | null;
+  status: "reserved" | "stored" | "rejected";
+  rejectionReason: string | null;
+  createdAt: Timestamp;
+  storedAt: Timestamp | null;
+};
+
+export type PhotoJobTable = {
+  id: string;
+  projectId: string;
+  configurationRevisionId: string;
+  sourceCaptureId: string | null;
+  scenePresetKey: string;
+  state:
+    | "requested"
+    | "capture-ready"
+    | "submitted"
+    | "running"
+    | "validating"
+    | "uncertain"
+    | "canceling"
+    | "succeeded"
+    | "failed"
+    | "canceled";
+  creationIdempotencyKey: string;
+  requestHash: string;
+  providerReference: string | null;
+  failureReason: string | null;
+  attempts: Generated<number>;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  terminalAt: Timestamp | null;
+};
+
+export type GeneratedPhotoTable = {
+  id: string;
+  photoJobId: string;
+  projectId: string;
+  configurationRevisionId: string;
+  storageKey: string;
+  contentType: "image/jpeg" | "image/png" | "image/webp";
+  byteSize: number;
+  width: number;
+  height: number;
+  createdAt: Timestamp;
+};
+
 export type Database = {
   customerAccount: CustomerAccountTable;
   authIdentity: AuthIdentityTable;
@@ -95,4 +151,7 @@ export type Database = {
   configurationRevision: ConfigurationRevisionTable;
   sharedRevisionLink: SharedRevisionLinkTable;
   outboxMessage: OutboxMessageTable;
+  sourceCapture: SourceCaptureTable;
+  photoJob: PhotoJobTable;
+  generatedPhoto: GeneratedPhotoTable;
 };

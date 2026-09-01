@@ -4,7 +4,7 @@ Last reconciled: 2026-09-01
 Working branch: `cc/devstart-001` (11 commits ahead of `redesign/devstart`, pushed to
 origin, **not yet merged**). Integration back into `redesign/devstart` is outstanding.
 
-Gates at reconciliation: `pnpm test` 39/39, `pnpm test:db` 8/8 (Neon), `pnpm lint`
+Gates at reconciliation: `pnpm test` 39/39, `pnpm test:db` 15/15 (Neon), `pnpm lint`
 clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
 **unset** — with the local `development-capture` value it fails closed by design
 (ADR 0010). See Build & Verification Gates below.
@@ -47,6 +47,9 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added the itemized price presentation: an expandable "Aufstellung" in the configurator panel and full line-item breakdown in the fake checkout, both driven by the v2 sum-of-parts quote (module counts, island units, per-meter worktop, finish deltas, tax).
 - Made the scene bar the editing interface during an Edit Session: the module strip and the edit controls now live in the same bar that carries the scene, so entering an Edit Session restyles the existing surface instead of opening a second competing panel.
 - Added drag-and-drop module reordering with `motion/react` `Reorder`, and restyled the edit bar around it. The reorder path replaced the earlier arrow-button-only rearrangement (net −231 lines in `module-editor.tsx`).
+- Added the photo artifact storage foundation (ADR 0011, PLAN.md Phases 1–2 partial): `photo_job`, `source_capture`, and `generated_photo` tables with composite foreign keys that keep every artifact inside its own Project, state constraints that forbid provider work on a job with no validated capture, and indexes for the per-Project gallery, the account-wide profile gallery, and reconciliation sweeps.
+- Added the object storage boundary: a self-hosted S3-compatible RustFS deployment behind a purpose-built Interface (`features/object-storage/object-storage-module.ts`), with a server-only adapter that presigns single-use uploads bound to an exact content type and byte length, presigns short-lived reads, confirms what actually landed, and deletes idempotently. No S3 client type, bucket name, or endpoint crosses the seam. The bucket is private; no object is served from a public URL.
+- Made object deletion unorphanable: a database trigger records a deletion intent in the existing outbox whenever a row owning a stored object disappears — including via `ON DELETE CASCADE` from Project trash or Customer Account deletion, where no application statement observes the row. A sweep worker drains those intents with claim-and-backoff semantics and surfaces unreconciled objects. Verified against the real database, including the cascade path.
 - Added the AI photo **prototype** (development scaffolding, not a production candidate): live WebGL frame capture via `preserveDrawingBuffer` (`use-scene-capture.ts`), server-side prompt assembly from configured finishes plus a scene preset, a synchronous `qwen/qwen-image-2-pro` call in `POST /api/photo`, and a result popover with presets, progress, download and regenerate. ADR 0008 replaces this route with an application-owned Photo Job Module; see PLAN.md. **The route is not yet contained — see Release Blockers.**
 - Added color configuration for:
   - cabinet/korpus finish
@@ -118,7 +121,7 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # clean
 pnpm test                                  # 39/39
-pnpm test:db                               # 8/8 (needs TEST_DATABASE_URL or Docker)
+pnpm test:db                               # 15/15 (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green
 ```
 
@@ -214,6 +217,24 @@ Uncommitted at reconciliation:
 3. **Browser-verify the Edit Session tail** — scene bar interface and drag reorder — then
    merge `cc/devstart-001` into `redesign/devstart`. Eleven commits is already a large
    unmerged batch and the gap is not shrinking on its own.
+
+### Photo storage track (in progress)
+
+ADR 0011 is accepted and the storage foundation is in place. What remains before
+the galleries can ship:
+
+1. Photo Job module seam (`lib/server/photo-jobs/`) and its Interface — request,
+   status, list-for-project, cancel — plus the atomic revision checkpoint on request
+   (PLAN.md Phase 1 remainder, gap G5).
+2. Source Capture upload flow: reserve, presign, upload, server-side validation of
+   decoded dimensions and byte size, promote to `stored` (Phase 2 remainder, G4).
+3. Retention sweep for reserved-but-never-uploaded captures and for captures whose
+   job has reached a terminal state.
+4. Confirm the physical location of `ecomstorage.rotpunkt.ai` and record it as
+   residency evidence — ADR 0011's residency claim is asserted, not yet evidenced.
+5. Verify the presigned upload and download round-trip against the real RustFS
+   deployment. The adapter is unit-correct but has not yet spoken to the server.
+6. Then Phase 5: per-Project gallery, profile gallery, owner-scoped download.
 
 ### Then choose one track
 
