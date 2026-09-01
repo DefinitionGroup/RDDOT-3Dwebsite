@@ -295,12 +295,18 @@ export function PhotoGallery({
                       short-lived, so routing them through the image optimizer
                       would both leak the signed URL and cache a value that
                       expires. The intrinsic size prevents layout shift. */}
+                  {/* Loaded eagerly on purpose. Display URLs are presigned and
+                      expire in minutes, so deferring a load risks requesting one
+                      that has already lapsed — lazy loading and short-lived URLs
+                      pull against each other. A page is capped at 30 small tiles,
+                      and `loading="lazy"` was also observed never firing inside
+                      the configurator panel, which has no scroll container. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     alt={`Visualisierung ${photo.projectName}`}
                     className="size-full object-cover transition-opacity duration-300 group-hover:opacity-90"
+                    decoding="async"
                     height={photo.height}
-                    loading="lazy"
                     onError={() => void loadFirstPage()}
                     src={photo.displayUrl}
                     width={photo.width}

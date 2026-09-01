@@ -4,7 +4,10 @@ import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
-import type { SerializedGalleryPage } from "@/features/photo-gallery/serialize-gallery";
+import {
+  galleryPageKey,
+  type SerializedGalleryPage
+} from "@/features/photo-gallery/serialize-gallery";
 import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import { authClient } from "@/lib/auth-client";
 
@@ -196,7 +199,7 @@ export function AccountWorkspace({
           initialNextCursor={gallery.nextCursor}
           initialPhotos={gallery.photos}
           initialTotalCount={gallery.totalCount}
-          key="account"
+          key={galleryPageKey("account", gallery)}
           scope={{ kind: "account" }}
         />
       </div>

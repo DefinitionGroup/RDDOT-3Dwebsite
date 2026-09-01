@@ -42,3 +42,15 @@ export function serializeGalleryPage(page: GalleryPage) {
       : null
   };
 }
+
+/**
+ * Identity of a rendered gallery page, for use as a React `key`.
+ *
+ * `PhotoGallery` seeds its state from these props, and `useState` reads its
+ * initial value only on mount. Without a key that moves when the server data
+ * moves, a gallery already on screen would keep showing a stale page after a
+ * new photo is created elsewhere on the same route.
+ */
+export function galleryPageKey(scope: string, page: SerializedGalleryPage) {
+  return `${scope}:${page.totalCount}:${page.photos[0]?.id ?? "empty"}`;
+}

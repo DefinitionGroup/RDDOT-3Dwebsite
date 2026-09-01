@@ -54,6 +54,7 @@ import type {
 } from "@/features/configurator/engine/kitchen-model";
 import { useProjectAutosave } from "@/features/projects/ui/use-project-autosave";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
+import { galleryPageKey } from "@/features/photo-gallery/serialize-gallery";
 import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
 import type { RevisionDisplaySnapshot } from "@/features/projects/revision-display";
@@ -872,7 +873,7 @@ function ProjectSaveControls({
         initialNextCursor={project.gallery.nextCursor}
         initialPhotos={project.gallery.photos}
         initialTotalCount={project.gallery.totalCount}
-        key={project.id}
+        key={galleryPageKey(project.id, project.gallery)}
         scope={{ kind: "project", projectId: project.id }}
       />
     </div>
