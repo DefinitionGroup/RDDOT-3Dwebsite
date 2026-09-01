@@ -26,10 +26,31 @@ function getAuthPool() {
   return globalThis.__rddotAuthPool;
 }
 
+// Next.js falls back to 3001+ when the configured port is taken, which makes
+// the browser origin drift away from BETTER_AUTH_URL and trips better-auth's
+// origin check with a 403. In development, echo back any loopback origin so a
+// shifted port still signs in. Never active in production.
+function developmentLoopbackOrigins(request?: Request) {
+  if (process.env.NODE_ENV === "production") return [];
+
+  const origin = request?.headers.get("origin");
+  if (!origin) return [];
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+    const isLoopback =
+      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+    return isLoopback && protocol === "http:" ? [origin] : [];
+  } catch {
+    return [];
+  }
+}
+
 export const auth = createAuth({
   database: getAuthPool(),
   secret: requiredEnvironment("BETTER_AUTH_SECRET"),
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  trustedOrigins: developmentLoopbackOrigins,
   sendAuthenticationOtp: createAuthenticationOtpSender(
     createTransactionalEmailDeliveryFromEnvironment()
   )

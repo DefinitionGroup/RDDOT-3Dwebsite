@@ -18,11 +18,13 @@ export function createAuth(input: {
   baseURL: string;
   sendAuthenticationOtp: SendAuthenticationOtp;
   rateLimitEnabled?: boolean;
+  trustedOrigins?: (request?: Request) => string[] | Promise<string[]>;
 }) {
   return betterAuth({
     appName: "rotpunkt Signature",
     baseURL: input.baseURL,
     secret: input.secret,
+    trustedOrigins: input.trustedOrigins,
     database: input.database,
     session: {
       cookieCache: {
