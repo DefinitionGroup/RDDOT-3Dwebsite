@@ -4,7 +4,7 @@ Last reconciled: 2026-09-01
 Working branch: `cc/devstart-001` (11 commits ahead of `redesign/devstart`, pushed to
 origin, **not yet merged**). Integration back into `redesign/devstart` is outstanding.
 
-Gates at reconciliation: `pnpm test` 39/39, `pnpm test:db` 15/15 (Neon), `pnpm lint`
+Gates at reconciliation: `pnpm test` 39/39, `pnpm test:db` 26/26 (Neon), `pnpm lint`
 clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
 **unset** — with the local `development-capture` value it fails closed by design
 (ADR 0010). See Build & Verification Gates below.
@@ -50,6 +50,8 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added the photo artifact storage foundation (ADR 0011, PLAN.md Phases 1–2 partial): `photo_job`, `source_capture`, and `generated_photo` tables with composite foreign keys that keep every artifact inside its own Project, state constraints that forbid provider work on a job with no validated capture, and indexes for the per-Project gallery, the account-wide profile gallery, and reconciliation sweeps.
 - Added the object storage boundary: a self-hosted S3-compatible RustFS deployment behind a purpose-built Interface (`features/object-storage/object-storage-module.ts`), with a server-only adapter that presigns single-use uploads bound to an exact content type and byte length, presigns short-lived reads, confirms what actually landed, and deletes idempotently. No S3 client type, bucket name, or endpoint crosses the seam. The bucket is private; no object is served from a public URL.
 - Made object deletion unorphanable: a database trigger records a deletion intent in the existing outbox whenever a row owning a stored object disappears — including via `ON DELETE CASCADE` from Project trash or Customer Account deletion, where no application statement observes the row. A sweep worker drains those intents with claim-and-backoff semantics and surfaces unreconciled objects. Verified against the real database, including the cascade path.
+- Added the photo gallery read path: an owner-scoped module (`features/photo-gallery/photo-gallery-module.ts`) that lists a Project's Generated Photos and the account-wide profile gallery through a single authorization predicate, resolves each row's storage key into a short-lived presigned display URL, grants owner-only downloads with an attachment filename, and deletes a photo by removing the row so the storage trigger records the object's deletion. Cursor-paginated newest-first, matching the version-history style. Exposed as `GET /api/photos`, `GET /api/projects/[projectId]/photos`, and `GET`/`DELETE /api/photos/[photoId]`, all `private, no-store`.
+- Verified the storage path against the live RustFS deployment: presigned upload, stat, presigned download, exact-length rejection, and idempotent delete all pass (`tests/integration/object-storage-live.test.ts`, skipped when storage is unconfigured). An end-to-end run also confirmed a `generated_photo` row resolving to a display URL that returns the exact bytes, anonymous access to the same object being refused, and the object disappearing from the bucket after the deletion sweep.
 - Added the AI photo **prototype** (development scaffolding, not a production candidate): live WebGL frame capture via `preserveDrawingBuffer` (`use-scene-capture.ts`), server-side prompt assembly from configured finishes plus a scene preset, a synchronous `qwen/qwen-image-2-pro` call in `POST /api/photo`, and a result popover with presets, progress, download and regenerate. ADR 0008 replaces this route with an application-owned Photo Job Module; see PLAN.md. **The route is not yet contained — see Release Blockers.**
 - Added color configuration for:
   - cabinet/korpus finish
@@ -121,7 +123,7 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # clean
 pnpm test                                  # 39/39
-pnpm test:db                               # 15/15 (needs TEST_DATABASE_URL or Docker)
+pnpm test:db                               # 26/26 (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green
 ```
 
@@ -144,6 +146,14 @@ Uncommitted at reconciliation:
 
 ## Release Blockers
 
+- **The `public` bucket on `ecomstorage.rotpunkt.ai` is world-readable.** It carries a
+  `PublicReadGetObject` policy granting `s3:GetObject` to `*`, verified by fetching an
+  uploaded object anonymously (HTTP 200). No customer photo may be stored there: a public
+  object URL is permanent, unrevocable, and unscoped, which would undo the guarantees
+  Shared Revision Links exist to provide. Photo artifacts now use the private
+  `rdtdot-photos` bucket instead (anonymous GET returns 403, verified). The `public`
+  bucket itself is left as found — review what it currently serves and whether that
+  exposure is intended.
 - **`POST /api/photo` is unauthenticated and unflagged.** PLAN.md Phase 0 (Containment)
   has not been executed: the route has no Customer Session check and no
   `PHOTO_PROTOTYPE_ENABLED` kill switch, and it appears in the production route table as a
@@ -232,9 +242,13 @@ the galleries can ship:
    job has reached a terminal state.
 4. Confirm the physical location of `ecomstorage.rotpunkt.ai` and record it as
    residency evidence — ADR 0011's residency claim is asserted, not yet evidenced.
-5. Verify the presigned upload and download round-trip against the real RustFS
-   deployment. The adapter is unit-correct but has not yet spoken to the server.
-6. Then Phase 5: per-Project gallery, profile gallery, owner-scoped download.
+5. Phase 5 UI: the gallery API exists and is verified, but no React surface consumes
+   it yet — the per-Project gallery and the profile gallery still need to be built into
+   the account workspace, along with the illustrative-image disclosure copy ADR 0008
+   requires on every Generated Photo surface.
+6. Schedule the deletion sweep. `sweepStorageDeletions` is implemented and tested but
+   nothing calls it periodically yet, so deletion intents currently accumulate until a
+   sweep is run by hand.
 
 ### Then choose one track
 
