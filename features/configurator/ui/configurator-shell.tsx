@@ -492,11 +492,14 @@ export function ConfiguratorShell({
           {isConfigPanelOpen && (
             <motion.section
               animate={{ opacity: 1, x: 0 }}
-              className="pointer-events-auto mt-[56vh] w-full border-t border-hairline bg-canvas p-6 md:p-8 lg:mt-0 lg:min-h-screen lg:w-[27rem] lg:self-stretch lg:overflow-y-auto lg:border-l lg:border-t-0"
+              className="pointer-events-auto mt-[56vh] w-full border-t border-hairline bg-canvas lg:sticky lg:top-0 lg:mt-0 lg:flex lg:h-screen lg:w-[27rem] lg:flex-col lg:self-start lg:border-l lg:border-t-0"
               exit={{ opacity: 0, x: 32 }}
               initial={{ opacity: 0, x: 28 }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             >
+              {/* The scrolling middle. `min-h-0` is required for a flex child
+                  to shrink below its content and actually scroll. */}
+              <div className="p-6 md:p-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
               <motion.div
                 animate="show"
                 initial="hidden"
@@ -598,53 +601,34 @@ export function ConfiguratorShell({
                     show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
                   }}
                 >
-                  <div className="flex items-baseline justify-between gap-4">
-                    <p className="text-body text-graphite">Richtpreis</p>
-                    <p className="text-lead text-ink">
-                      {displayedTotalCents === null
-                        ? "Preis nicht verfügbar"
-                        : new Intl.NumberFormat("de-DE", {
-                            currency: displayedCurrency,
-                            maximumFractionDigits: 0,
-                            style: "currency"
-                          }).format(displayedTotalCents / 100)}
-                    </p>
-                  </div>
-
                   {!sharedView && <PriceBreakdown locale={locale} quote={quote} />}
 
-                  {sharedView ? null : project ? (
+                  {!sharedView && project && (
                     <ProjectSaveControls
                       configurationCode={encodedConfig}
                       onSaveAsNew={saveConfigurationAsProject}
                       onRestore={restoreProjectDraft}
                       project={project}
                     />
-                  ) : (
-                    <button
-                      className="inline-flex min-h-12 w-full items-center justify-center bg-signature px-5 text-body leading-none text-paper transition-colors hover:bg-ink"
-                      onClick={() => saveConfigurationAsProject(encodedConfig)}
-                      type="button"
-                    >
-                      Als Projekt speichern
-                    </button>
                   )}
 
                   <div
                     className={`grid gap-2 ${
                       sharedView
-                        ? "grid-cols-1"
+                        ? "hidden"
                         : project
-                          ? "grid-cols-[1fr_auto]"
+                          ? "grid-cols-1"
                           : "grid-cols-[1fr_auto_auto]"
                     }`}
                   >
-                    <a
-                      className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
-                      href={sharedView ? "/configure" : checkoutHref}
-                    >
-                      {sharedView ? "Eigene Küche konfigurieren" : "Konfiguration anfragen"}
-                    </a>
+                    {!project && !sharedView && (
+                      <a
+                        className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
+                        href={checkoutHref}
+                      >
+                        Konfiguration anfragen
+                      </a>
+                    )}
                     {!project && !sharedView && (
                       <button
                         aria-label="Share URL kopieren"
@@ -686,6 +670,52 @@ export function ConfiguratorShell({
                   </p>
                 </motion.div>
               </motion.div>
+              </div>
+
+              {/* Pinned foot. The price is the most-read number on the page and
+                  sat at y=1070 — below the fold on a 900px laptop — while the
+                  primary action sat lower still. Both stay in view now, so a
+                  finish can be compared against its price without scrolling. */}
+              <div className="shrink-0 border-t border-hairline bg-canvas px-6 pb-6 pt-5 md:px-8 md:pb-8">
+                <div className="flex items-baseline justify-between gap-4">
+                  <p className="text-body text-graphite">Richtpreis</p>
+                  <p className="text-lead text-ink">
+                    {displayedTotalCents === null
+                      ? "Preis nicht verfügbar"
+                      : new Intl.NumberFormat("de-DE", {
+                          currency: displayedCurrency,
+                          maximumFractionDigits: 0,
+                          style: "currency"
+                        }).format(displayedTotalCents / 100)}
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  {sharedView ? (
+                    <a
+                      className="inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
+                      href="/configure"
+                    >
+                      Eigene Küche konfigurieren
+                    </a>
+                  ) : project ? (
+                    <a
+                      className="inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
+                      href={checkoutHref}
+                    >
+                      Konfiguration anfragen
+                    </a>
+                  ) : (
+                    <button
+                      className="inline-flex min-h-12 w-full items-center justify-center bg-signature px-5 text-body leading-none text-paper transition-colors hover:bg-ink"
+                      onClick={() => saveConfigurationAsProject(encodedConfig)}
+                      type="button"
+                    >
+                      Als Projekt speichern
+                    </button>
+                  )}
+                </div>
+              </div>
             </motion.section>
           )}
         </AnimatePresence>
