@@ -9,6 +9,8 @@ import {
   type SerializedGalleryPage
 } from "@/features/photo-gallery/serialize-gallery";
 import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
+import type { SerializedQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
+import { QuoteRequestList } from "@/features/quote-requests/ui/quote-request-list";
 import { authClient } from "@/lib/auth-client";
 
 type AccountProject = {
@@ -22,7 +24,8 @@ export function AccountWorkspace({
   expiresAt,
   gallery,
   pendingImport,
-  projects
+  projects,
+  quoteRequests
 }: {
   expiresAt: string;
   gallery: SerializedGalleryPage;
@@ -31,6 +34,7 @@ export function AccountWorkspace({
     idempotencyKey: string;
   } | null;
   projects: AccountProject[];
+  quoteRequests: SerializedQuoteRequestPage;
 }) {
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
@@ -192,6 +196,10 @@ export function AccountWorkspace({
           </ul>
         )}
       </section>
+
+      <div className="mt-12">
+        <QuoteRequestList page={quoteRequests} />
+      </div>
 
       <div className="mt-12">
         <PhotoGallery

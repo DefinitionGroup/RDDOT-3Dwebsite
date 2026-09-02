@@ -102,7 +102,7 @@ export function ConfiguratorShell({
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, config.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, config.frontColorKey);
   // While an Edit Session is open, the scene and price preview the staged
-  // draft; the committed configuration (URL, autosave, checkout) is
+  // draft; the committed configuration (URL, autosave, Quote Request) is
   // untouched until the session is applied.
   const effectiveConfig = editSession
     ? normalizeConfiguratorState({ ...config, ...editSession.draft })
@@ -117,7 +117,11 @@ export function ConfiguratorShell({
     ? sharedView.displaySnapshot?.currency ?? "EUR"
     : quote.currency;
   const encodedConfig = encodeConfiguration(config);
-  const checkoutHref = `/checkout?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
+  // The commercial handoff pins an immutable revision of a Project, so a
+  // saved Project goes straight to the request; a guest is asked to save first.
+  const quoteRequestHref = project
+    ? `/anfrage?project=${project.id}`
+    : `/anfrage?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
   const renderActive = pathTracing || renderRequested;
 
   useEffect(() => {
@@ -624,7 +628,7 @@ export function ConfiguratorShell({
                     {!project && !sharedView && (
                       <a
                         className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
-                        href={checkoutHref}
+                        href={quoteRequestHref}
                       >
                         Konfiguration anfragen
                       </a>
@@ -701,7 +705,7 @@ export function ConfiguratorShell({
                   ) : project ? (
                     <a
                       className="inline-flex min-h-12 w-full items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
-                      href={checkoutHref}
+                      href={quoteRequestHref}
                     >
                       Konfiguration anfragen
                     </a>

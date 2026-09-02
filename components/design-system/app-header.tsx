@@ -15,7 +15,7 @@ type AppHeaderProps = {
 };
 
 /**
- * The header for the application surfaces — configurator, account, checkout.
+ * The header for the application surfaces — configurator, account, request.
  * `SiteHeader` stays the marketing header for the homepage.
  *
  * Each of these routes previously built its own top-left corner, which is how

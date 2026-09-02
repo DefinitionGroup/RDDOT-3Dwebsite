@@ -6,8 +6,10 @@ import { BrandLogo } from "@/components/design-system/brand-logo";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
 import { AccountWorkspace } from "@/features/customer-accounts/ui/account-workspace";
 import { customerSessions } from "@/lib/server/auth/customer-session";
+import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
 import { projects } from "@/lib/server/projects/projects";
+import { quoteRequests } from "@/lib/server/quote-requests/quote-requests";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +30,17 @@ type AccountPageProps = {
 export default async function AccountPage({ searchParams }: AccountPageProps) {
   const params = await searchParams;
   const session = await customerSessions.resolve(await headers());
-  const [accountProjects, gallery] = session
+  const [accountProjects, gallery, requests] = session
     ? await Promise.all([
         projects.listProjects({ ownerId: session.customerAccountId }),
-        loadInitialGallery({ ownerId: session.customerAccountId })
+        loadInitialGallery({ ownerId: session.customerAccountId }),
+        quoteRequests.listForAccount({ ownerId: session.customerAccountId, limit: 10 })
       ])
-    : [[], { photos: [], totalCount: 0, nextCursor: null }];
+    : [
+        [],
+        { photos: [], totalCount: 0, nextCursor: null },
+        { items: [], totalCount: 0, nextCursor: null }
+      ];
 
   return (
     <main className="grid min-h-svh bg-canvas lg:grid-cols-[minmax(0,1.08fr)_minmax(28rem,0.92fr)]">
@@ -85,12 +92,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               ...project,
               updatedAt: project.updatedAt.toISOString()
             }))}
+            quoteRequests={serializeQuoteRequestPage(requests)}
           />
         ) : (
           <AccountAccess
             returnTo={
               typeof params.next === "string" &&
-              params.next.startsWith("/configure?project=")
+              (params.next.startsWith("/configure?project=") ||
+                params.next.startsWith("/anfrage?project="))
                 ? params.next
                 : "/konto"
             }
