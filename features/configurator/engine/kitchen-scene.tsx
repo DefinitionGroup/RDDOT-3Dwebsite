@@ -127,7 +127,7 @@ export function KitchenScene({
         position={[4.2, 2.4, 5.6]}
       />
       {!pathTracing && !isApartment && (
-        <fog args={["#aeb7b3", 9.5, 21]} attach="fog" />
+        <fog args={["#000000", 6.5, 16]} attach="fog" />
       )}
       {isApartment ? (
         <Appartement2LightRig pathTracing={pathTracing} />
@@ -169,9 +169,9 @@ export function KitchenScene({
       {!pathTracing && !isApartment && (
         <ContactShadows
           blur={3.2}
-          color="#514b45"
+          color="#000000"
           far={4.2}
-          opacity={0.15}
+          opacity={0.55}
           position={[0, STUDIO_FLOOR_Y + 0.002, 0]}
           scale={9}
         />
@@ -209,7 +209,7 @@ function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
 
   return (
     <>
-      <hemisphereLight args={["#e8f0ef", "#625d56", 0.22]} />
+      <hemisphereLight args={["#fff4e6", "#000000", 0.14]} />
       <ambientLight intensity={0.025} />
       <directionalLight
         castShadow
@@ -251,7 +251,7 @@ function StudioEnvironment({
 }) {
   return (
     <>
-      <color args={["#aeb7b3"]} attach="background" />
+      <color args={["#000000"]} attach="background" />
       <Environment
         environmentIntensity={pathTracing ? 1.15 : 0.82}
         resolution={compact ? 256 : 512}
@@ -281,9 +281,9 @@ function StudioEnvironment({
           scale={[2.4, 5, 1]}
         />
         <Lightformer
-          color="#71817f"
+          color="#3a3a3a"
           form="ring"
-          intensity={1.2}
+          intensity={0.8}
           position={[0, 1, -5]}
           scale={8}
         />
@@ -377,7 +377,7 @@ function CinematicEffects({ apartment, compact }: { apartment: boolean; compact:
     <EffectComposer multisampling={compact ? 0 : 4}>
       <N8AO
         aoRadius={apartment ? 0.4 : 0.28}
-        color={apartment ? "#4d4945" : "#5a5853"}
+        color={apartment ? "#4d4945" : "#000000"}
         distanceFalloff={0.82}
         intensity={apartment ? 1.18 : 0.92}
         quality={compact ? "medium" : "high"}
@@ -407,20 +407,21 @@ function AtmosphericStage({ floorTexture }: AtmosphericStageProps) {
         receiveShadow
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <planeGeometry args={[16, 12]} />
+        <planeGeometry args={[40, 40]} />
         <meshPhysicalMaterial
           bumpMap={floorTexture}
           bumpScale={0.004}
-          clearcoat={0.05}
-          color="#aaa79f"
+          clearcoat={0.18}
+          clearcoatRoughness={0.35}
+          color="#121212"
           map={floorTexture}
           metalness={0}
-          roughness={0.68}
+          roughness={0.5}
         />
       </mesh>
       <mesh position={[0, 3.46, -3.35]} receiveShadow>
-        <planeGeometry args={[16, 7]} />
-        <meshStandardMaterial color="#a6afab" metalness={0} roughness={0.9} />
+        <planeGeometry args={[40, 7]} />
+        <meshStandardMaterial color="#070707" metalness={0} roughness={0.95} />
       </mesh>
     </>
   );

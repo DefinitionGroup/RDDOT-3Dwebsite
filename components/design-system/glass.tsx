@@ -25,7 +25,7 @@ export function GlassBadge({ children, className = "" }: GlassProps) {
   );
 }
 
-export type Segment = { id: string; label: string };
+export type Segment = { id: string; label: string; icon?: ReactNode };
 
 type GlassSegmentsProps = {
   segments: Segment[];
@@ -34,8 +34,15 @@ type GlassSegmentsProps = {
   /** Shares the sliding highlight between instances. */
   layoutGroup: string;
   className?: string;
-  size?: "md" | "sm";
+  /** hud: 44 px chips over the scene; card: 36 px inside cards; compact: 44 px, tight, on phones. */
+  size?: "hud" | "card" | "compact";
   ariaLabel: string;
+};
+
+const segmentSize = {
+  hud: "h-11 px-[18px] text-[0.875rem]",
+  card: "h-9 px-4 text-caption",
+  compact: "h-11 px-3 text-[0.75rem]"
 };
 
 /**
@@ -50,9 +57,9 @@ export function GlassSegments({
   layoutGroup,
   onChange,
   segments,
-  size = "md"
+  size = "card"
 }: GlassSegmentsProps) {
-  const height = size === "md" ? "h-9 px-4 text-caption" : "h-[30px] px-3 text-[12px]";
+  const height = segmentSize[size];
   return (
     <Glass className={`inline-flex items-center gap-0.5 p-1 ${className}`}>
       <div aria-label={ariaLabel} className="contents" role="tablist">
@@ -80,6 +87,7 @@ export function GlassSegments({
               {active && (
                 <span aria-hidden="true" className="relative size-1.5 rounded-pill bg-signature" />
               )}
+              {segment.icon && <span className="relative inline-flex">{segment.icon}</span>}
               <span className="relative">{segment.label}</span>
             </button>
           );

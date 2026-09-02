@@ -2,10 +2,13 @@
 
 import { Camera, Download, RotateCcw, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { Label } from "@/components/design-system/label";
+import { Pill, RoundButton } from "@/components/design-system/pill";
 import { PHOTO_PRESETS } from "@/features/configurator/photo/photo-presets";
 import { getLocalizedLabel } from "@/features/configurator/product-definition";
 import type { LocaleCode } from "@/features/configurator/types";
 import { PHOTO_DISCLOSURE } from "@/features/photo-gallery/ui/gallery-types";
+import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
 
 export type PhotoStatus =
   | { phase: "idle" }
@@ -40,6 +43,7 @@ const STEP_COPY: Record<"uploading" | "generating", string> = {
   generating: "Ihr Foto entsteht … das dauert etwa 10–30 Sekunden."
 };
 
+/** The photo card over the dimmed scene. Stays open while a job is running. */
 export function PhotoPopover({
   locale,
   onClose,
@@ -57,84 +61,71 @@ export function PhotoPopover({
       {open && (
         <motion.div
           animate={{ opacity: 1 }}
-          className="fixed inset-0 z-40 grid place-items-center bg-ink/30 p-4"
+          className="fixed inset-0 z-40 grid place-items-center bg-canvas/45 p-4 backdrop-blur-sm"
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           onClick={isBusy ? undefined : onClose}
+          transition={{ duration: DURATION.overlay, ease: SIGNATURE_EASE }}
         >
           <motion.section
             animate={{ opacity: 1, y: 0 }}
             aria-label="KI-Foto"
-            className="w-full max-w-2xl border border-hairline bg-canvas p-6 md:p-8"
-            exit={{ opacity: 0, y: 14 }}
-            initial={{ opacity: 0, y: 14 }}
+            className="w-full max-w-xl rounded-card border border-hairline bg-charcoal/[.96] p-6 backdrop-blur-[24px] md:p-8"
+            exit={{ opacity: 0, y: OVERLAY_SLIDE }}
+            initial={{ opacity: 0, y: OVERLAY_SLIDE }}
             onClick={(event) => event.stopPropagation()}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: DURATION.overlay, ease: SIGNATURE_EASE }}
           >
             <div className="mb-6 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-body uppercase tracking-[0.22em] text-graphite">
-                  KI-Foto
-                </p>
-                <h2 className="mt-3 text-lead text-ink">
-                  Ihre Küche als Foto<span className="text-signature">.</span>
+              <div className="flex flex-col gap-3">
+                <Label>KI-Foto</Label>
+                <h2 className="m-0 text-panel">
+                  Ihre Küche als <em>Foto</em>.
                 </h2>
               </div>
-              <button
-                aria-label="Schließen"
-                className="grid size-9 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
-                disabled={isBusy}
-                onClick={onClose}
-                type="button"
-              >
-                <X aria-hidden="true" size={15} strokeWidth={1.5} />
-              </button>
+              <RoundButton aria-label="Schließen" disabled={isBusy} onClick={onClose} tone="quiet">
+                <X aria-hidden="true" size={14} strokeWidth={1.5} />
+              </RoundButton>
             </div>
 
             {status.phase === "blocked" && (
               <div>
-                <p className="text-pretty text-body text-graphite">
+                <p className="m-0 text-pretty text-body text-graphite">
                   {status.reason === "guest"
                     ? "Visualisierungen gehören zu einem gespeicherten Projekt. Sichern Sie Ihre Konfiguration, dann bleibt jedes Foto dauerhaft bei ihr."
                     : "Ihr aktueller Stand wird gerade gespeichert. Sobald das erledigt ist, kann das Foto zu genau diesem Stand erzeugt werden."}
                 </p>
                 {status.reason === "guest" && (
-                  <button
-                    className="mt-6 inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
-                    onClick={onSaveAsProject}
-                    type="button"
-                  >
+                  <Pill className="mt-6" onClick={onSaveAsProject}>
                     Als Projekt speichern
-                  </button>
+                  </Pill>
                 )}
               </div>
             )}
 
             {(status.phase === "idle" || status.phase === "error") && (
               <>
-                <p className="text-pretty text-body text-graphite">
-                  Wählen Sie eine Szene. Die aktuelle Konfiguration wird fotografiert
-                  und von der KI in ein realistisches Foto verwandelt (ca. 10–30
-                  Sekunden).
+                <p className="m-0 text-pretty text-body text-graphite">
+                  Wählen Sie eine Szene. Die aktuelle Konfiguration wird fotografiert und von der
+                  KI in ein realistisches Foto verwandelt.
                 </p>
-                <div className="mt-5 grid grid-cols-2 divide-x divide-y divide-hairline border border-hairline">
+                <div aria-label="Szene" className="mt-5 flex flex-wrap gap-2" role="group">
                   {PHOTO_PRESETS.map((preset) => {
                     const isActive = preset.key === selectedPresetKey;
                     return (
                       <button
                         aria-pressed={isActive}
-                        className={`inline-flex min-h-12 items-center gap-2 px-4 py-2 text-left text-body transition-colors ${
-                          isActive ? "text-ink" : "text-graphite hover:text-ink"
+                        className={`inline-flex h-11 items-center gap-2 rounded-pill border px-4 text-nav leading-none transition-colors duration-state ease-signature ${
+                          isActive
+                            ? "border-ink text-ink"
+                            : "border-hairline text-graphite hover:border-ink hover:text-ink"
                         }`}
                         key={preset.key}
                         onClick={() => onSelectPreset(preset.key)}
                         type="button"
                       >
                         {isActive && (
-                          <span
-                            aria-hidden="true"
-                            className="size-1.5 shrink-0 rounded-full bg-signature"
-                          />
+                          <span aria-hidden="true" className="size-1.5 shrink-0 rounded-pill bg-signature" />
                         )}
                         {getLocalizedLabel(preset.label, locale)}
                       </button>
@@ -143,25 +134,24 @@ export function PhotoPopover({
                 </div>
 
                 {status.phase === "error" && (
-                  <p className="mt-4 border border-signature/40 px-4 py-3 text-body text-signature">
+                  <p className="m-0 mt-4 rounded-card border border-hairline px-4 py-3 text-caption text-ink">
                     {status.message}
                   </p>
                 )}
 
-                <button
-                  className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2.5 border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
+                <Pill
+                  className="mt-6 w-full"
+                  leading={<Camera aria-hidden="true" size={15} strokeWidth={1.5} />}
                   onClick={onGenerate}
-                  type="button"
                 >
-                  <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
                   Foto aufnehmen
-                </button>
+                </Pill>
               </>
             )}
 
             {status.phase === "working" && (
               <div>
-                <div className="relative aspect-video w-full overflow-hidden border border-hairline bg-mist">
+                <div className="relative aspect-video w-full overflow-hidden rounded-card bg-canvas">
                   {status.preview && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
@@ -172,11 +162,11 @@ export function PhotoPopover({
                   )}
                   <motion.div
                     animate={{ x: ["-100%", "100%"] }}
-                    className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/45 to-transparent"
+                    className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent"
                     transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity }}
                   />
                 </div>
-                <p aria-live="polite" className="mt-5 text-center text-body text-graphite">
+                <p aria-live="polite" className="m-0 mt-5 text-center text-body text-graphite">
                   {STEP_COPY[status.step]}
                 </p>
               </div>
@@ -184,7 +174,7 @@ export function PhotoPopover({
 
             {status.phase === "done" && (
               <div>
-                <div className="aspect-video w-full overflow-hidden border border-hairline">
+                <div className="aspect-video w-full overflow-hidden rounded-card bg-canvas">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     alt="KI-generiertes Küchenfoto"
@@ -192,13 +182,14 @@ export function PhotoPopover({
                     src={status.imageUrl}
                   />
                 </div>
-                <p className="mt-3 text-xs leading-5 text-graphite">
+                <p className="m-0 mt-3 text-caption text-graphite">
                   {PHOTO_DISCLOSURE} Sie liegt jetzt bei Ihrem Projekt.
                 </p>
-                <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-                  <a
-                    className="inline-flex min-h-11 items-center justify-center gap-2.5 border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
+                <div className="mt-5 flex items-center gap-2">
+                  <Pill
+                    className="flex-1"
                     href={`/api/photos/${status.photoId}`}
+                    leading={<Download aria-hidden="true" size={15} strokeWidth={1.5} />}
                     onClick={(event) => {
                       // The download URL is minted per request, so it is fetched
                       // at click time rather than held in the page.
@@ -206,18 +197,16 @@ export function PhotoPopover({
                       void downloadPhoto(status.photoId);
                     }}
                   >
-                    <Download aria-hidden="true" size={15} strokeWidth={1.5} />
                     Herunterladen
-                  </a>
-                  <button
+                  </Pill>
+                  <RoundButton
                     aria-label="Neues Foto aufnehmen"
-                    className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
                     onClick={onGenerate}
                     title="Nochmal"
-                    type="button"
+                    tone="quiet"
                   >
                     <RotateCcw aria-hidden="true" size={16} strokeWidth={1.5} />
-                  </button>
+                  </RoundButton>
                 </div>
               </div>
             )}

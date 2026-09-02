@@ -191,9 +191,9 @@ export function ProjectVersions({
   return (
     <section className="border-t border-hairline pt-5">
       <div className="flex items-center justify-between gap-4">
-        <p className="text-body text-ink">Versionen</p>
+        <p className="m-0 text-nav">Versionen</p>
         <button
-          className="min-h-11 border border-ink px-4 text-body text-ink transition-colors hover:bg-ink hover:text-paper disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
+          className="inline-flex h-11 items-center justify-center rounded-pill border border-ink px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-ink/10 disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
           disabled={!savedVersion || isBusy}
           onClick={() => void saveVersion()}
           type="button"
@@ -203,20 +203,20 @@ export function ProjectVersions({
       </div>
 
       {!savedVersion && (
-        <p className="mt-3 text-sm leading-6 text-graphite">
+        <p className="m-0 mt-3 text-caption text-graphite">
           Warten Sie, bis der aktuelle Arbeitsstand automatisch gespeichert ist.
         </p>
       )}
 
       <details className="mt-4 border-y border-hairline" open={totalCount > 0}>
-        <summary className="cursor-pointer py-4 text-body text-graphite transition-colors hover:text-ink">
+        <summary className="cursor-pointer py-4 text-caption text-graphite transition-colors duration-state ease-signature hover:text-ink">
           {totalCount === 1
             ? "1 gespeicherte Version"
             : `${totalCount} gespeicherte Versionen`}
         </summary>
 
         {revisions.length === 0 ? (
-          <p className="border-t border-hairline py-5 text-sm leading-6 text-graphite">
+          <p className="m-0 border-t border-hairline py-5 text-caption text-graphite">
             Noch keine feste Version. Autosaves bleiben davon getrennt.
           </p>
         ) : (
@@ -225,10 +225,10 @@ export function ProjectVersions({
               <li className="py-5" key={revision.id}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-body text-ink">
+                    <p className="m-0 text-caption text-ink">
                       {revision.label ?? "Gespeicherte Version"}
                     </p>
-                    <p className="mt-1 text-sm text-graphite">
+                    <p className="m-0 mt-1 text-caption text-graphite">
                       {new Intl.DateTimeFormat("de-DE", {
                         dateStyle: "medium",
                         timeStyle: "short"
@@ -236,7 +236,7 @@ export function ProjectVersions({
                     </p>
                   </div>
                   <button
-                    className="shrink-0 text-sm text-graphite underline decoration-hairline underline-offset-4 transition-colors hover:text-ink disabled:cursor-wait disabled:text-ash"
+                    className="shrink-0 inline-flex min-h-11 items-center text-caption text-graphite underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain disabled:cursor-wait disabled:text-ash"
                     disabled={!savedVersion || isBusy}
                     onClick={() => setRestoreCandidateId(revision.id)}
                     type="button"
@@ -246,12 +246,12 @@ export function ProjectVersions({
                 </div>
 
                 {revision.displaySnapshot ? (
-                  <div className="mt-3 text-sm leading-6 text-graphite">
-                    <p>
+                  <div className="mt-3 text-caption text-graphite">
+                    <p className="m-0">
                       {revision.displaySnapshot.cabinetFinish} ·{" "}
                       {revision.displaySnapshot.frontFinish}
                     </p>
-                    <p>
+                    <p className="m-0">
                       {new Intl.NumberFormat("de-DE", {
                         currency: revision.displaySnapshot.currency,
                         maximumFractionDigits: 0,
@@ -260,20 +260,20 @@ export function ProjectVersions({
                     </p>
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm leading-6 text-graphite">
+                  <p className="m-0 mt-3 text-caption text-graphite">
                     Historischer Stand ohne aktuelle Anzeigeinformationen.
                   </p>
                 )}
 
                 {restoreCandidateId === revision.id && (
                   <div className="mt-4 border-t border-hairline pt-4">
-                    <p className="text-sm leading-6 text-graphite">
+                    <p className="m-0 text-caption text-graphite">
                       Der aktuelle Arbeitsstand wird vorher automatisch als
                       Sicherheitsversion festgehalten.
                     </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       <button
-                        className="min-h-11 bg-ink px-4 text-body text-paper transition-colors hover:bg-signature disabled:cursor-wait disabled:bg-graphite"
+                        className="inline-flex h-11 items-center justify-center rounded-pill bg-signature px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-signature-hover disabled:cursor-wait disabled:opacity-40"
                         disabled={isBusy}
                         onClick={() => void restoreVersion(revision.id)}
                         type="button"
@@ -284,7 +284,7 @@ export function ProjectVersions({
                           : "Jetzt wiederherstellen"}
                       </button>
                       <button
-                        className="min-h-11 border border-ink px-4 text-body text-ink transition-colors hover:bg-ink hover:text-paper"
+                        className="inline-flex h-11 items-center justify-center rounded-pill border border-ink px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-ink/10 disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
                         onClick={() => setRestoreCandidateId(null)}
                         type="button"
                       >
@@ -301,7 +301,7 @@ export function ProjectVersions({
         {nextCursor && (
           <div className="border-t border-hairline py-4">
             <button
-              className="min-h-11 text-sm text-graphite underline decoration-hairline underline-offset-4 transition-colors hover:text-ink disabled:cursor-wait disabled:text-ash"
+              className="inline-flex min-h-11 items-center text-caption text-graphite underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain disabled:cursor-wait disabled:text-ash"
               disabled={isLoadingMore}
               onClick={() => void loadMore()}
               type="button"
@@ -309,7 +309,7 @@ export function ProjectVersions({
               {isLoadingMore ? "Lädt …" : "Weitere Versionen laden"}
             </button>
             {paginationError && (
-              <p className="mt-2 text-sm leading-6 text-signature">
+              <p className="m-0 mt-2 text-caption text-ink">
                 {paginationError}
               </p>
             )}
@@ -317,15 +317,15 @@ export function ProjectVersions({
         )}
       </details>
 
-      <div aria-live="polite" className="mt-3 min-h-6 text-sm leading-6">
+      <div aria-live="polite" className="mt-3 min-h-6 text-caption">
         {status.phase === "success" && (
-          <p className="text-graphite">{status.message}</p>
+          <p className="m-0 text-graphite">{status.message}</p>
         )}
         {status.phase === "error" && (
-          <div className="text-signature">
-            <p>{status.message}</p>
+          <div className="text-ink">
+            <p className="m-0">{status.message}</p>
             <button
-              className="mt-2 text-sm underline underline-offset-4"
+              className="mt-2 inline-flex min-h-11 items-center text-caption underline underline-offset-4"
               onClick={() => {
                 if (status.requiresReload) {
                   window.location.reload();

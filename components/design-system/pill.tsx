@@ -1,5 +1,10 @@
 import Link from "next/link";
-import type { ButtonHTMLAttributes, ComponentPropsWithRef, ReactNode } from "react";
+import type {
+  ButtonHTMLAttributes,
+  ComponentPropsWithRef,
+  MouseEventHandler,
+  ReactNode
+} from "react";
 
 export type PillVariant = "primary" | "secondary" | "ghost";
 
@@ -14,7 +19,7 @@ type CommonProps = {
 type LinkPillProps = CommonProps & {
   href: string;
   external?: boolean;
-  onClick?: undefined;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
   type?: undefined;
   disabled?: undefined;
   "aria-label"?: string;
@@ -54,16 +59,23 @@ export function Pill(props: PillProps) {
   );
 
   if (props.href !== undefined) {
-    const { href, external, "aria-label": ariaLabel } = props;
+    const { href, external, onClick, "aria-label": ariaLabel } = props;
     if (external) {
       return (
-        <a aria-label={ariaLabel} className={classes} href={href} rel="noreferrer" target="_blank">
+        <a
+          aria-label={ariaLabel}
+          className={classes}
+          href={href}
+          onClick={onClick}
+          rel="noreferrer"
+          target="_blank"
+        >
           {content}
         </a>
       );
     }
     return (
-      <Link aria-label={ariaLabel} className={classes} href={href}>
+      <Link aria-label={ariaLabel} className={classes} href={href} onClick={onClick}>
         {content}
       </Link>
     );
@@ -86,10 +98,12 @@ export function Pill(props: PillProps) {
 export function RoundButton({
   children,
   className = "",
+  size = "md",
   tone = "outline",
   ...rest
 }: Omit<ComponentPropsWithRef<"button">, "className"> & {
   className?: string;
+  size?: "md" | "sm";
   tone?: "outline" | "quiet" | "glass";
 }) {
   const tones = {
@@ -99,7 +113,7 @@ export function RoundButton({
   };
   return (
     <button
-      className={`inline-flex size-11 shrink-0 items-center justify-center rounded-pill transition-[background-color,border-color,transform] duration-state ease-signature active:scale-[0.96] ${tones[tone]} ${className}`}
+      className={`inline-flex ${size === "md" ? "size-11" : "size-9"} shrink-0 items-center justify-center rounded-pill transition-[background-color,border-color,transform] duration-state ease-signature active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35 ${tones[tone]} ${className}`}
       type="button"
       {...rest}
     >

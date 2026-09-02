@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowRight, Check, Trash2, X } from "lucide-react";
 import { Reorder } from "motion/react";
 import { useState } from "react";
+import { Pill, RoundButton } from "@/components/design-system/pill";
 import {
   reconcileSlots,
   slotsMatch,
@@ -40,7 +41,7 @@ const ISLAND_OPTIONS: Array<{ size: IslandSize; label: string }> = [
   { size: 6, label: "Groß" }
 ];
 
-function lineWidthM(modules: WallModuleKey[]) {
+export function lineWidthM(modules: WallModuleKey[]) {
   return modules.reduce(
     (sum, key) => sum + findWallCatalogEntry(RDTD_KITCHEN_PRODUCT_V2, key).widthM,
     0
@@ -176,12 +177,17 @@ export function SceneEditBar({
     applySlots(next, selectedIndex);
   }
 
+  const chip = (active: boolean) =>
+    `inline-flex h-9 items-center justify-center rounded-pill border px-3 text-caption font-label leading-none transition-colors duration-state ease-signature disabled:cursor-not-allowed disabled:opacity-35 ${
+      active ? "border-ink text-ink" : "border-hairline text-graphite hover:border-ink hover:text-ink"
+    }`;
+
   return (
-    <div className="border border-hairline bg-canvas">
-      <div className="flex items-center gap-2 border-b border-hairline px-2 py-2">
+    <div className="glass rounded-card p-2 text-ink">
+      <div className="flex items-center gap-2 px-1 pt-1">
         <button
           aria-label="Modul links hinzufügen"
-          className="grid h-11 w-7 flex-none place-items-center border border-dashed border-signature/50 text-signature transition-colors hover:border-signature disabled:cursor-not-allowed disabled:border-hairline disabled:text-graphite/40"
+          className="grid h-11 w-8 flex-none place-items-center rounded-lg border border-dashed border-graphite text-ink transition-colors duration-state ease-signature hover:border-ink disabled:cursor-not-allowed disabled:border-hairline disabled:text-ash"
           disabled={!addAllowed}
           onClick={() => addModule("start")}
           type="button"
@@ -201,10 +207,10 @@ export function SceneEditBar({
             return (
               <Reorder.Item
                 as="div"
-                className={`grid cursor-grab select-none place-items-center border text-body transition-colors active:cursor-grabbing ${
+                className={`grid cursor-grab select-none place-items-center rounded-lg border text-caption font-label transition-colors duration-state ease-signature active:cursor-grabbing ${
                   isActive
-                    ? "border-signature bg-signature/10 text-ink"
-                    : "border-hairline bg-canvas text-graphite hover:border-ink hover:text-ink"
+                    ? "border-ink bg-ink/[.14] text-ink"
+                    : "border-hairline bg-canvas/40 text-graphite hover:border-ink hover:text-ink"
                 }`}
                 key={slot.id}
                 onClick={() => onSelect(isActive ? null : index)}
@@ -214,8 +220,12 @@ export function SceneEditBar({
               >
                 <span
                   aria-label={`${getLocalizedLabel(entry.label, locale)}, Position ${index + 1}`}
+                  className="inline-flex items-center gap-1.5"
                   role="button"
                 >
+                  {isActive && (
+                    <span aria-hidden="true" className="size-1.5 rounded-pill bg-signature" />
+                  )}
                   {MODULE_SHORT_LABEL[slot.key]}
                 </span>
               </Reorder.Item>
@@ -224,7 +234,7 @@ export function SceneEditBar({
         </Reorder.Group>
         <button
           aria-label="Modul rechts hinzufügen"
-          className="grid h-11 w-7 flex-none place-items-center border border-dashed border-signature/50 text-signature transition-colors hover:border-signature disabled:cursor-not-allowed disabled:border-hairline disabled:text-graphite/40"
+          className="grid h-11 w-8 flex-none place-items-center rounded-lg border border-dashed border-graphite text-ink transition-colors duration-state ease-signature hover:border-ink disabled:cursor-not-allowed disabled:border-hairline disabled:text-ash"
           disabled={!addAllowed}
           onClick={() => addModule("end")}
           type="button"
@@ -234,16 +244,12 @@ export function SceneEditBar({
       </div>
 
       {selectedKey !== null && selectedIndex !== null ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-hairline px-2 py-2">
-          <div className="flex flex-1 gap-1">
+        <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-ink/10 px-1 pt-2">
+          <div className="flex flex-1 flex-wrap gap-1.5">
             {RDTD_KITCHEN_PRODUCT_V2.wallCatalog.map((entry) => (
               <button
                 aria-pressed={entry.key === selectedKey}
-                className={`min-h-9 flex-1 border px-2 text-body transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${
-                  entry.key === selectedKey
-                    ? "border-ink text-ink"
-                    : "border-hairline text-graphite hover:border-ink hover:text-ink"
-                }`}
+                className={chip(entry.key === selectedKey)}
                 disabled={typeSwapDisabledFor(
                   draft.wallModules,
                   selectedIndex,
@@ -258,55 +264,50 @@ export function SceneEditBar({
               </button>
             ))}
           </div>
-          <div className="flex gap-1">
-            <button
+          <div className="flex gap-1.5">
+            <RoundButton
               aria-label="Nach links schieben"
-              className="grid size-9 place-items-center border border-hairline text-graphite hover:border-ink hover:text-ink disabled:opacity-35"
               disabled={selectedIndex === 0}
               onClick={() => moveSelected(-1)}
-              type="button"
+              size="sm"
+              tone="quiet"
             >
               <ArrowLeft size={13} strokeWidth={1.5} />
-            </button>
-            <button
+            </RoundButton>
+            <RoundButton
               aria-label="Nach rechts schieben"
-              className="grid size-9 place-items-center border border-hairline text-graphite hover:border-ink hover:text-ink disabled:opacity-35"
               disabled={selectedIndex === draft.wallModules.length - 1}
               onClick={() => moveSelected(1)}
-              type="button"
+              size="sm"
+              tone="quiet"
             >
               <ArrowRight size={13} strokeWidth={1.5} />
-            </button>
-            <button
+            </RoundButton>
+            <RoundButton
               aria-label="Modul entfernen"
-              className="grid size-9 place-items-center border border-hairline text-graphite hover:border-signature hover:text-signature disabled:opacity-35"
               disabled={draft.wallModules.length <= constraints.minModules}
               onClick={removeSelected}
-              type="button"
+              size="sm"
+              tone="quiet"
             >
               <Trash2 size={13} strokeWidth={1.5} />
-            </button>
+            </RoundButton>
           </div>
         </div>
       ) : (
-        <p className="border-b border-hairline px-3 py-2 text-body text-graphite">
-          Module ziehen zum Umsortieren · antippen für Typ, Position oder
-          Entfernen.
+        <p className="mt-2 border-t border-ink/10 px-1 pt-2.5 text-caption text-graphite">
+          Module ziehen zum Umsortieren · antippen für Typ, Position oder Entfernen.
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 border-b border-hairline px-2 py-2">
+      <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-ink/10 px-1 pt-2">
         <div className="flex flex-1 items-center gap-2">
-          <span className="text-body text-graphite">Insel</span>
-          <div className="flex flex-1 gap-1">
+          <span className="font-label text-label uppercase tracking-label text-graphite">Insel</span>
+          <div className="flex flex-1 flex-wrap gap-1.5">
             {ISLAND_OPTIONS.map((option) => (
               <button
                 aria-pressed={draft.islandSize === option.size}
-                className={`min-h-9 flex-1 border px-2 text-body transition-colors ${
-                  draft.islandSize === option.size
-                    ? "border-ink text-ink"
-                    : "border-hairline text-graphite hover:border-ink hover:text-ink"
-                }`}
+                className={chip(draft.islandSize === option.size)}
                 key={option.size}
                 onClick={() => {
                   onChange({ ...draft, islandSize: option.size });
@@ -319,28 +320,26 @@ export function SceneEditBar({
             ))}
           </div>
         </div>
-        <span className="text-lead font-semibold tabular-nums text-ink">
+        <span className="tnum text-lead font-display leading-none text-ink">
           {formatCurrency(quote.totalCents, locale)}
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 px-2 py-2">
-        <button
-          className="inline-flex min-h-11 items-center justify-center gap-2 border border-signature px-4 text-body text-signature transition-colors hover:bg-signature/10"
+      <div className="mt-2 grid grid-cols-2 gap-2 border-t border-ink/10 px-1 pb-1 pt-2">
+        <Pill
+          leading={<X size={15} strokeWidth={1.5} />}
           onClick={onDiscard}
-          type="button"
+          variant="secondary"
         >
-          <X size={15} strokeWidth={1.5} />
           Verwerfen
-        </button>
-        <button
-          className="inline-flex min-h-11 items-center justify-center gap-2 border border-signature bg-signature px-4 text-body leading-none text-paper transition-colors hover:bg-ink hover:border-ink"
+        </Pill>
+        <Pill
+          className="h-11"
+          leading={<Check size={15} strokeWidth={1.5} />}
           onClick={onCommit}
-          type="button"
         >
-          <Check size={15} strokeWidth={1.5} />
           Fertig
-        </button>
+        </Pill>
       </div>
     </div>
   );

@@ -68,7 +68,7 @@ export function ConfiguratorTeaser({ alt, image, price }: ConfiguratorTeaserProp
                   setStageId(id as Stage["id"]);
                 }}
                 segments={stages.map(({ id, label }) => ({ id, label }))}
-                size="md"
+                size="card"
               />
             </div>
             <div className="absolute inset-x-4 bottom-4 flex items-end justify-between gap-4 md:inset-x-6 md:bottom-6">
