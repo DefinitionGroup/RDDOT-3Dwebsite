@@ -4,12 +4,13 @@ import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/design-system/card";
+import { TemperatureCounter } from "@/components/design-system/counter";
 import { Glass, GlassSegments } from "@/components/design-system/glass";
 import { Label, SectionIntro } from "@/components/design-system/label";
 import { Overlay } from "@/components/design-system/overlay";
 import { Pill } from "@/components/design-system/pill";
 import { Reveal } from "@/components/design-system/reveal";
-import { configureHref, stages } from "@/lib/content";
+import { configureHref, stages, steps } from "@/lib/content";
 import type { Stage } from "@/lib/content";
 import { DURATION, SIGNATURE_EASE } from "@/lib/motion";
 
@@ -108,7 +109,13 @@ export function ConfiguratorTeaser({ alt, image, price }: ConfiguratorTeaserProp
               />
               <p className="m-0 max-w-[40ch] text-body text-graphite">
                 Material, Aufbau, Prüfung — drei Entscheidungen, live in der Szene. Der Richtpreis
-                folgt jeder Änderung; ein Projekt hält jeden Stand fest.
+                folgt jeder Änderung; ein Projekt hält jeden Stand fest. Und wenn Sie mögen, macht
+                die KI daraus ein Foto in Ihrem Raum.
+              </p>
+              <p className="m-0 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-hairline pt-5 text-body text-graphite">
+                <span>Von 0 auf</span>
+                <TemperatureCounter className="text-heading-lg font-display leading-none text-ink" />
+                <span>in vier Klicks.</span>
               </p>
             </div>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3">
@@ -139,15 +146,19 @@ export function ConfiguratorTeaser({ alt, image, price }: ConfiguratorTeaserProp
         open={explainerOpen}
         title={
           <>
-            Drei <em>Entscheidungen</em>.
+            Vier <em>Klicks</em>.
           </>
         }
       >
+        <p className="m-0 mt-4 max-w-[44ch] text-body text-graphite">
+          Von der leeren Szene bis zur Anfrage an einen Planer — ohne Konto, ohne Formular, in
+          Ihrem Tempo.
+        </p>
         <ol className="m-0 mt-8 flex list-none flex-col p-0">
-          {stages.map((entry, index) => (
+          {steps.map((entry, index) => (
             <li
               className="grid grid-cols-[2.5rem_1fr] gap-4 border-t border-hairline py-6 last:border-b"
-              key={entry.id}
+              key={entry.label}
             >
               <span className="tnum text-title text-graphite">{index + 1}</span>
               <div className="flex flex-col gap-2">

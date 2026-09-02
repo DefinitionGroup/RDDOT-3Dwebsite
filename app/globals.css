@@ -150,6 +150,17 @@ a {
     background: linear-gradient(180deg, rgb(0 0 0 / 0) 35%, rgb(0 0 0 / 0.7) 100%);
   }
 
+  /* For a flat colour card: shades both ends so chips read on cream. */
+  .media-shade-frame {
+    background: linear-gradient(
+      180deg,
+      rgb(0 0 0 / 0.38) 0%,
+      rgb(0 0 0 / 0) 32%,
+      rgb(0 0 0 / 0) 48%,
+      rgb(0 0 0 / 0.62) 100%
+    );
+  }
+
   .hero-shade {
     background: linear-gradient(
       180deg,

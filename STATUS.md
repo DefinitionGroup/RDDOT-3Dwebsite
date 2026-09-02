@@ -46,11 +46,18 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Account, sign-in, Anfrage, shared-link states restyled with `components/design-system/field.tsx`
   (the one underline input) and the pill/card primitives.
 - Homepage sections (`components/sections`): `SignatureHero` (the rotpunkt film, muted loop,
-  fade from black, still for reduced motion, "Den Film ansehen" goes fullscreen),
-  `SignaturePromises`, `MaterialCards` (horizontal band on phones), `ConfiguratorTeaser`
-  (living HUD cycling the three decisions, the real default-configuration price, explainer
-  overlay), `CollectionLines`, `ClosingStatement`. No Impressum/Datenschutz pages exist yet,
-  so the footer carries no legal column.
+  fade from black, still for reduced motion, "Den Film ansehen" goes fullscreen; headline
+  "Küchen, auf den Punkt." rescued from the first site), `Ticker` band, `Manifest` ("Eine
+  Küche ist kein Möbel…" rescued; the one scroll-linked sequence: words light up on scroll),
+  `SignaturePromises` (each promise opens a detail card that morphs out of its "+" trigger
+  via a shared layoutId), `MaterialCards` (four fronts incl. Porzellan as a colour card;
+  tilt toward the pointer; detail cards with facts, the real surcharge from the product
+  definition and a deep link that opens the configurator with that front chosen; band on
+  phones), `ConfiguratorTeaser` (living HUD, real default price, "Von 0 auf 100 °C in vier
+  Klicks" spring counter, four-step explainer overlay), `RoomStory` ("Ihr Raum. Ihre Küche."
+  rescued: Studio, Appartement, KI-Foto, Versionen & Links), `CollectionLines` (captions
+  rescued as badges), `ClosingStatement`. Copy lives in `lib/content.ts`. No
+  Impressum/Datenschutz pages exist yet, so the footer carries no legal column.
 - Moved navigation outside the hero and converted it to a fixed floating navbar with motion-based hide/show behavior.
 - Improved hero typography animation with staggered motion.
 - Added `/configure` as the first 3D configurator route.

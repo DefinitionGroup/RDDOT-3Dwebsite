@@ -28,6 +28,7 @@ export function CollectionLines() {
                 </Pill>
               }
               alt={collection.alt}
+              badge={collection.caption}
               body={collection.body}
               image={collection.image}
               label={collection.subtitle}

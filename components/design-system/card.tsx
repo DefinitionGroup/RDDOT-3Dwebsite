@@ -14,7 +14,9 @@ export function Card({ as: Tag = "div", children, className = "" }: CardProps) {
 }
 
 type MediaCardProps = {
-  image: string;
+  image?: string;
+  /** A flat colour instead of a photo: the lacquer. */
+  color?: string;
   alt: string;
   ratio: string;
   sizes: string;
@@ -24,7 +26,7 @@ type MediaCardProps = {
   body?: string;
   action?: ReactNode;
   titleSize?: "card" | "title";
-  shade?: "media" | "deep";
+  shade?: "media" | "deep" | "frame";
   className?: string;
   priority?: boolean;
   position?: string;
@@ -40,6 +42,7 @@ export function MediaCard({
   badge,
   body,
   className = "",
+  color,
   image,
   label,
   position,
@@ -52,18 +55,24 @@ export function MediaCard({
 }: MediaCardProps) {
   return (
     <article className={`relative overflow-hidden rounded-card bg-charcoal ${ratio} ${className}`}>
-      <Image
-        alt={alt}
-        className="object-cover"
-        fill
-        priority={priority}
-        sizes={sizes}
-        src={image}
-        style={position ? { objectPosition: position } : undefined}
-      />
+      {image ? (
+        <Image
+          alt={alt}
+          className="object-cover"
+          fill
+          priority={priority}
+          sizes={sizes}
+          src={image}
+          style={position ? { objectPosition: position } : undefined}
+        />
+      ) : (
+        <div aria-label={alt} className="absolute inset-0" role="img" style={{ backgroundColor: color }} />
+      )}
       <div
         aria-hidden="true"
-        className={`absolute inset-0 ${shade === "deep" ? "media-shade-deep" : "media-shade"}`}
+        className={`absolute inset-0 ${
+          shade === "deep" ? "media-shade-deep" : shade === "frame" ? "media-shade-frame" : "media-shade"
+        }`}
       />
       {badge && <GlassBadge className="absolute right-4 top-4">{badge}</GlassBadge>}
       <div className="absolute inset-x-5 bottom-5 flex items-end justify-between gap-6 md:inset-x-6 md:bottom-6">

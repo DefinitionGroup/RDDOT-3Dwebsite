@@ -10,9 +10,10 @@ export function ClosingStatement() {
         <h2 className="m-0 max-w-[14ch] text-balance text-heading-lg">
           Ihre Küche. In <em>Ihrem</em> Bereich.
         </h2>
-        <p className="m-0 max-w-[44ch] text-body text-graphite">
-          Konfigurieren Sie als Gast, speichern Sie mit einer E-Mail-Adresse. Versionen, Fotos und
-          Anfragen bleiben privat bei Ihrem Projekt.
+        <p className="m-0 max-w-[46ch] text-body text-graphite">
+          Konfigurieren Sie als Gast, speichern Sie mit einer E-Mail-Adresse — ohne Passwort,
+          ohne Formular. Versionen, Fotos und Anfragen bleiben privat bei Ihrem Projekt, und ein
+          Planer ist nur einen Klick entfernt.
         </p>
         <Pill href={configureHref}>Küche konfigurieren</Pill>
       </Reveal>
