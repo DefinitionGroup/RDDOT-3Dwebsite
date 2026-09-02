@@ -129,9 +129,43 @@ export type PhotoJobTable = {
   submittedAt: Timestamp | null;
   completedAt: Timestamp | null;
   providerCheckedAt: Timestamp | null;
+  promptTemplateReleaseId: string | null;
+  modelReleaseId: string | null;
+  promptText: string | null;
+  estimatedCostCents: number | null;
+  providerDurationMs: number | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   terminalAt: Timestamp | null;
+};
+
+export type PromptTemplateReleaseTable = {
+  id: string;
+  key: string;
+  version: number;
+  template: string;
+  scenePresets: JsonValue;
+  active: Generated<boolean>;
+  approvedBy: string;
+  approvedAt: Timestamp;
+  createdAt: Timestamp;
+};
+
+export type ModelReleaseTable = {
+  id: string;
+  provider: string;
+  modelIdentifier: string;
+  versionLabel: string;
+  license: string;
+  expectations: JsonValue;
+  safetyNotes: string;
+  pricingBasis: string;
+  estimatedCostCents: number;
+  evaluationEvidence: string;
+  active: Generated<boolean>;
+  approvedBy: string;
+  approvedAt: Timestamp;
+  createdAt: Timestamp;
 };
 
 export type PhotoJobProviderEventTable = {
@@ -188,5 +222,7 @@ export type Database = {
   photoJob: PhotoJobTable;
   generatedPhoto: GeneratedPhotoTable;
   photoJobProviderEvent: PhotoJobProviderEventTable;
+  promptTemplateRelease: PromptTemplateReleaseTable;
+  modelRelease: ModelReleaseTable;
   quoteRequest: QuoteRequestTable;
 };

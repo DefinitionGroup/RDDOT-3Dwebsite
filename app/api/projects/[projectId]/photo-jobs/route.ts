@@ -63,6 +63,11 @@ export async function POST(
         { error: "Das Tageslimit für Visualisierungen ist erreicht." },
         { status: 429, headers: { "retry-after": String(result.retryAfterSeconds) } }
       );
+    case "unknown-preset":
+      return NextResponse.json(
+        { error: "Diese Szene steht nicht zur Auswahl." },
+        { status: 400 }
+      );
     case "unavailable":
       return NextResponse.json(
         { error: "Das Projekt wurde nicht gefunden oder kann nicht bearbeitet werden." },

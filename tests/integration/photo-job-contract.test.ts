@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ObjectStorageModule } from "@/features/object-storage/object-storage-module";
 import type { PhotoGenerationAdapter } from "@/features/photo-jobs/photo-generation-adapter";
-import { createPostgresPhotoJobModule } from "@/lib/server/db/photo-jobs-postgres";
+import type { PhotoGovernance } from "@/features/photo-jobs/photo-governance";
+import {
+  createPostgresPhotoJobModule,
+  type PhotoLimits
+} from "@/lib/server/db/photo-jobs-postgres";
 import {
   startPostgresTestContext,
   type PostgresTestContext
@@ -107,14 +111,52 @@ describe("photo job contract", () => {
     });
   });
 
-  function moduleWith(adapter: PhotoGenerationAdapter, clock?: () => Date) {
+  /** The approved releases as the module sees them; the DB seed is tested separately. */
+  const governance: PhotoGovernance = {
+    async getActiveReleases() {
+      return {
+        promptTemplate: {
+          id: "5a6c1c8e-2c1f-4c33-9a0e-0d2f7f1e0001",
+          key: "signature-kitchen-photo",
+          version: 1,
+          template: "Fronts {{frontLabel}} ({{frontMaterial}}), body {{cabinetLabel}}. {{scene}}",
+          scenePresets: [
+            { key: "urban-loft", label: { de: "Loft", en: "Loft", es: "Loft" }, scene: "In a loft." }
+          ],
+          approvedBy: "test",
+          approvedAt: new Date("2026-08-27T00:00:00Z")
+        },
+        model: {
+          id: "7b2e9d54-4f7a-4e2a-8c3d-1e5b9a2c0001",
+          provider: "test",
+          modelIdentifier: "test/model",
+          versionLabel: "v1",
+          estimatedCostCents: 5,
+          approvedBy: "test",
+          approvedAt: new Date("2026-08-27T00:00:00Z")
+        }
+      };
+    }
+  };
+
+  function moduleWith(
+    adapter: PhotoGenerationAdapter,
+    clock?: () => Date,
+    limits?: Partial<PhotoLimits>
+  ) {
     return createPostgresPhotoJobModule(
       context.database,
       {
         storage,
         adapter,
-        buildPrompt: ({ scenePresetKey }) => `prompt for ${scenePresetKey}`,
-        webhookUrl: null
+        governance,
+        buildPromptFacts: () => ({
+          frontLabel: "Porcelain",
+          frontMaterial: "matte lacquer",
+          cabinetLabel: "Graphite"
+        }),
+        webhookUrl: null,
+        limits
       },
       clock
     );
@@ -142,7 +184,8 @@ describe("photo job contract", () => {
           bytes: jpegBytes(1920, 1080),
           declaredContentType: "image/jpeg",
           modelIdentifier: "test/model",
-          providerReference
+          providerReference,
+          durationMs: 17_000
         };
       },
       async cancel(providerReference) {
@@ -362,19 +405,33 @@ describe("photo job contract", () => {
     return { ownerId, jobId, photoJobs, adapter, reference };
   }
 
-  it("submits a capture-ready job and remembers the provider reference", async () => {
+  it("submits a capture-ready job, pins the approved releases and the rendered prompt", async () => {
     const { jobId, reference, adapter, photoJobs, ownerId } = await submittedJob();
 
     const row = await context.database
       .withSchema("app")
       .selectFrom("photoJob")
-      .select(["state", "providerReference", "modelIdentifier", "submittedAt"])
+      .select([
+        "state",
+        "providerReference",
+        "modelIdentifier",
+        "submittedAt",
+        "promptTemplateReleaseId",
+        "modelReleaseId",
+        "promptText",
+        "estimatedCostCents"
+      ])
       .where("id", "=", jobId)
       .executeTakeFirstOrThrow();
     expect(row.state).toBe("submitted");
     expect(row.providerReference).toBe(reference);
     expect(row.modelIdentifier).toBe("test/model");
     expect(row.submittedAt).not.toBeNull();
+    expect(row.promptTemplateReleaseId).toBe("5a6c1c8e-2c1f-4c33-9a0e-0d2f7f1e0001");
+    expect(row.modelReleaseId).toBe("7b2e9d54-4f7a-4e2a-8c3d-1e5b9a2c0001");
+    // Product facts and the approved scene only — nothing the client sent.
+    expect(row.promptText).toBe("Fronts Porcelain (matte lacquer), body Graphite. In a loft.");
+    expect(row.estimatedCostCents).toBe(5);
     expect(adapter.submitted).toHaveLength(1);
 
     const job = await photoJobs.getJob({ ownerId, jobId });
@@ -406,12 +463,77 @@ describe("photo job contract", () => {
     const row = await context.database
       .withSchema("app")
       .selectFrom("photoJob")
-      .select(["state", "completedAt", "terminalAt"])
+      .select(["state", "completedAt", "terminalAt", "providerDurationMs"])
       .where("id", "=", jobId)
       .executeTakeFirstOrThrow();
     expect(row.state).toBe("succeeded");
     expect(row.completedAt).not.toBeNull();
     expect(row.terminalAt).not.toBeNull();
+    expect(row.providerDurationMs).toBe(17_000);
+  });
+
+  it("refuses a Scene Preset the active release does not approve", async () => {
+    const photoJobs = moduleWith(generatingAdapter);
+    const { ownerId, projectId } = await seedProject();
+    const result = await photoJobs.requestJob({
+      ownerId,
+      projectId,
+      expectedVersion: 1,
+      idempotencyKey: crypto.randomUUID(),
+      scenePresetKey: "moon-base",
+      capture: { contentType: "image/jpeg", byteSize: CAPTURE_BYTE_SIZE }
+    });
+    expect(result).toEqual({ kind: "unknown-preset" });
+  });
+
+  it("enforces the per-account quota at request time", async () => {
+    const photoJobs = moduleWith(generatingAdapter, undefined, { customerDailyJobs: 1 });
+    const { ownerId, projectId } = await seedProject();
+    const request = () =>
+      photoJobs.requestJob({
+        ownerId,
+        projectId,
+        expectedVersion: 1,
+        idempotencyKey: crypto.randomUUID(),
+        scenePresetKey: "urban-loft",
+        capture: { contentType: "image/jpeg", byteSize: CAPTURE_BYTE_SIZE }
+      });
+    expect((await request()).kind).toBe("requested");
+    expect(await request()).toEqual({ kind: "quota-exceeded", retryAfterSeconds: 3600 });
+  });
+
+  it("stops submissions when the provider-wide budget is spent, leaving the job retryable", async () => {
+    // The budget spans every account in the database, including jobs other
+    // tests submitted in the last 24 h, so the ceiling is set relative to the
+    // spend that already exists: room for exactly one more.
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const spent = await context.database
+      .withSchema("app")
+      .selectFrom("photoJob")
+      .select((expression) =>
+        expression.fn
+          .coalesce(expression.fn.sum<number>("estimatedCostCents"), expression.val(0))
+          .as("cents")
+      )
+      .where("submittedAt", ">=", since)
+      .executeTakeFirstOrThrow();
+    const adapter = fakeAdapter();
+    const photoJobs = moduleWith(adapter, undefined, {
+      providerDailyCents: Number(spent.cents) + 5,
+      providerDailyJobs: 100_000
+    });
+    const first = await readyJob(photoJobs);
+    const second = await readyJob(photoJobs);
+
+    expect((await photoJobs.submitJob({ ownerId: first.ownerId, jobId: first.jobId })).kind).toBe(
+      "submitted"
+    );
+    const refused = await photoJobs.submitJob({ ownerId: second.ownerId, jobId: second.jobId });
+    expect(refused).toMatchObject({ kind: "budget-exceeded", retryAfterSeconds: 3600 });
+    expect(adapter.submitted).toHaveLength(1);
+    expect((await photoJobs.getJob({ ownerId: second.ownerId, jobId: second.jobId }))?.state).toBe(
+      "capture-ready"
+    );
   });
 
   it("ignores a redelivered event and acknowledges an unknown reference", async () => {
@@ -575,7 +697,8 @@ describe("photo job contract", () => {
           bytes: new TextEncoder().encode("provider returned prose"),
           declaredContentType: "image/jpeg",
           modelIdentifier: "test/model",
-          providerReference
+          providerReference,
+          durationMs: null
         };
       }
     });

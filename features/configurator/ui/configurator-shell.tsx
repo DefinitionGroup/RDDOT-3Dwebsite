@@ -197,6 +197,40 @@ export function ConfiguratorShell({
     };
   }, []);
 
+  // A Photo Job survives the browser (PLAN.md Phase 5): if this Project has one
+  // in flight when the page loads, pick it up again instead of leaving the
+  // customer to guess whether anything is still happening.
+  const projectId = project?.id ?? null;
+  useEffect(() => {
+    if (!projectId) return;
+    const abort = new AbortController();
+
+    async function resume() {
+      const response = await fetch(`/api/projects/${projectId}/photo-jobs`, {
+        cache: "no-store",
+        signal: abort.signal
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        jobs?: Array<{ id: string; state: string }>;
+      } | null;
+      const inFlight = payload?.jobs?.find((job) =>
+        ["submitted", "running", "validating", "uncertain"].includes(job.state)
+      );
+      if (!inFlight || abort.signal.aborted) return;
+      setPhotoStatus({ phase: "working", step: "generating", preview: null });
+      setPhotoOpen(true);
+      await watchPhotoJob(projectId!, inFlight.id, null);
+    }
+
+    void resume().catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+    });
+    return () => abort.abort();
+    // watchPhotoJob is stable for the life of the shell; re-running on every
+    // render would restart the watch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
   useEffect(() => {
     if (!renderRequested) {
       return;
@@ -402,38 +436,51 @@ export function ConfiguratorShell({
       // The job now lives on the server; the browser only watches. Every read
       // reconciles with the provider, so a lost webhook cannot strand it, and
       // closing the tab loses nothing — the photo lands in the gallery anyway.
-      const finished = await waitForPhotoJob(jobId);
-      if (finished.kind === "timeout") {
-        return await fail(
-          "Die Erzeugung dauert länger als erwartet. Das Foto erscheint in der Galerie des Projekts, sobald es fertig ist."
-        );
-      }
-      if (finished.kind === "failed") return await fail(describePhotoFailure(finished.reason));
-
-      // Resolve a display URL through the gallery the panel already renders,
-      // rather than minting a second kind of URL for this one surface.
-      const gallery = await fetch(`/api/projects/${project.id}/photos`, {
-        cache: "no-store"
-      });
-      const galleryPayload = (await gallery.json().catch(() => null)) as {
-        photos?: Array<{ id: string; displayUrl: string }>;
-      } | null;
-      const created = galleryPayload?.photos?.find(
-        (photo) => photo.id === finished.generatedPhotoId
-      );
-      if (!created) return await fail("Das Foto wurde erstellt, ist aber gerade nicht abrufbar.");
-
-      URL.revokeObjectURL(captured.previewUrl);
-      setPhotoStatus({
-        phase: "done",
-        imageUrl: created.displayUrl,
-        photoId: created.id
-      });
-      // Re-seeds the panel gallery from the server so the new photo appears there too.
-      startTransition(() => router.refresh());
+      await watchPhotoJob(project.id, jobId, captured.previewUrl);
     } catch {
       await fail("Die Verbindung wurde unterbrochen. Bitte versuchen Sie es erneut.");
     }
+  }
+
+  /**
+   * Follows a submitted job to its end and shows the result. Shared by a
+   * fresh request and by a job picked up again after the page was reloaded.
+   */
+  async function watchPhotoJob(projectId: string, jobId: string, previewUrl: string | null) {
+    function fail(message: string) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPhotoStatus({ phase: "error", message });
+    }
+
+    const finished = await waitForPhotoJob(jobId);
+    if (finished.kind === "timeout") {
+      return fail(
+        "Die Erzeugung dauert länger als erwartet. Das Foto erscheint in der Galerie des Projekts, sobald es fertig ist."
+      );
+    }
+    if (finished.kind === "failed") return fail(describePhotoFailure(finished.reason));
+
+    // Resolve a display URL through the gallery the panel already renders,
+    // rather than minting a second kind of URL for this one surface.
+    const gallery = await fetch(`/api/projects/${projectId}/photos`, {
+      cache: "no-store"
+    });
+    const galleryPayload = (await gallery.json().catch(() => null)) as {
+      photos?: Array<{ id: string; displayUrl: string }>;
+    } | null;
+    const created = galleryPayload?.photos?.find(
+      (photo) => photo.id === finished.generatedPhotoId
+    );
+    if (!created) return fail("Das Foto wurde erstellt, ist aber gerade nicht abrufbar.");
+
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPhotoStatus({
+      phase: "done",
+      imageUrl: created.displayUrl,
+      photoId: created.id
+    });
+    // Re-seeds the panel gallery from the server so the new photo appears there too.
+    startTransition(() => router.refresh());
   }
 
   function resetConfiguration() {

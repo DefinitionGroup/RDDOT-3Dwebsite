@@ -43,6 +43,14 @@ export async function POST(
         { job: serializeJob(result.job), error: "Die Erzeugung konnte nicht gestartet werden." },
         { status: 502 }
       );
+    case "budget-exceeded":
+      return NextResponse.json(
+        {
+          job: serializeJob(result.job),
+          error: "Das Kontingent für Visualisierungen ist heute ausgeschöpft. Bitte versuchen Sie es später erneut."
+        },
+        { status: 503, headers: { "retry-after": String(result.retryAfterSeconds) } }
+      );
     default:
       return NextResponse.json(
         { job: serializeJob(result.job) },

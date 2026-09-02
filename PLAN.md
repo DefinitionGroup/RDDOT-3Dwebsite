@@ -82,7 +82,9 @@ working tree rather than inferred:
 | Phase 0 — Containment | **Not started** | No `PHOTO_PROTOTYPE_ENABLED` and no session import in `app/api/photo/route.ts`; the route builds into the production route table as a live `ƒ /api/photo` |
 | Phase 1 — Job foundation | Not started | No `photo_job` / `generated_photo` / `source_capture` migrations; no `lib/server/photo-jobs/` |
 | Phase 2 — Source Capture | Not started | No EU object storage selected, no ADR written |
-| Phase 3 — Adapter + reconciliation | Done 2026-09-02 (except moderation gate and cost evidence) | Predictions + webhook, idempotent inbox, reconcile-on-read, sweep; see §5 |
+| Phase 3 — Adapter + reconciliation | Done 2026-09-02 (except moderation gate) | Predictions + webhook, idempotent inbox, reconcile-on-read, sweep; see §5 |
+| Phase 4 — Governance | Done 2026-09-02 (except moderation gate, billed cost) | Prompt Template Release v1, Model Release v1, quota + budget breaker |
+| Phase 5 — Customer experience | Done 2026-09-02 (except browser E2E) | Submit-and-poll flow, resume after reload |
 | Phase 4 — Governance | Not started | No template/model release records; no quota or budget enforcement |
 | Phase 5 — Customer experience | Not started | `photo-popover.tsx` still holds the result in browser memory |
 | Phase 6 — Activation gate | Not started | ADR 0008 exception remains unactivated |
@@ -292,32 +294,40 @@ the signature check with a real HMAC.
 
 ### Phase 4 — Governance: templates, models, quotas, budgets (~2–3 days)
 
-- [ ] `prompt_template_release` and `model_release` records (immutable rows,
-      approved-by/at); jobs pin both (G6). Current in-code template becomes
-      Release v1; current presets become approved Scene Presets.
-- [ ] Prompt assembly takes product facts from the pinned revision's
-      product-definition snapshot — never from client input.
-- [ ] Per-customer quota (e.g. N jobs per rolling 24 h) and provider-wide
-      budget breaker, independently enforced in the module (G7).
-- [ ] Kill switch: module-level flag that stops new submissions while
-      status/list/cancel keep working (G11).
+- [x] `prompt_template_release` and `model_release` records (immutable rows,
+      approved-by/at, one active per kind); jobs pin both plus the rendered
+      prompt and the cost estimate (G6, G8). The in-code template became
+      Release v1 and the presets its approved Scene Presets; a request for any
+      other preset is refused. *2026-09-02, migration 20260903100000.*
+- [x] Prompt assembly takes product facts from the pinned revision under the
+      Product Definition version it was saved with — never from client input,
+      never from today's definition. *2026-09-02.*
+- [x] Per-customer quota (rolling 24 h at request) and provider-wide budget
+      breaker (jobs and estimated cents, rolling 24 h at submission),
+      independently enforced and overridable per environment (G7). A refused
+      submission leaves the job capture-ready. *2026-09-02.*
+- [x] Kill switch: `PHOTO_GENERATION_ENABLED` stops new submissions while
+      status/list/cancel keep working (G11). *Already in place.*
+- [ ] Output safety/moderation gate (G10) and reconciled (billed) cost against
+      the estimate (G8) — carried into Phase 6's evidence list.
 
 *Exit:* every execution is attributable to an approved template + model, and
 spend is bounded even under abuse or provider misbehavior.
 
 ### Phase 5 — Customer experience (~3 days)
 
-- [ ] Rework the popover flow onto the job API: request → async progress
-      (poll or SSE) → result; closing the popover no longer abandons work.
-- [ ] Photos live with the Project: gallery of Generated Photos per
-      Configuration Revision in the account workspace, with download and
-      delete.
-- [ ] Photo actions appear only for the owner of an active saved Project —
-      guest configurations prompt "Als Projekt speichern" first (matches
-      ADR 0008 ownership rule; shared views stay photo-free per CONTEXT.md).
-- [ ] Illustrative-image disclosure copy on every Generated Photo surface
-      ("kann keine Produktwahrheit begründen").
-- [ ] E2E coverage of request→succeed and request→close-browser→revisit.
+- [x] Popover flow on the job API: request → submit → poll → result; closing
+      the popover or the tab no longer abandons work, and a Project with a
+      job in flight picks it up again on the next page load. *2026-09-02.*
+- [x] Photos live with the Project: per-Project and account galleries with
+      revision label, download and delete. *Already in place (storage track).*
+- [x] Photo actions only for the owner of an active saved Project; guests are
+      offered "Als Projekt speichern". *Already in place.*
+- [x] Illustrative-image disclosure on every Generated Photo surface.
+      *Already in place.*
+- [ ] Browser E2E coverage of request→succeed and request→close→revisit.
+      The module paths are covered by contract tests; there is no browser
+      test runner in the repo yet (STATUS.md, cross-cutting).
 
 *Exit:* the feature is a durable Project capability, not a popover trick.
 

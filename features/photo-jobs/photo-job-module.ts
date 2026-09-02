@@ -62,6 +62,8 @@ export type RequestPhotoJobResult =
   | { kind: "conflict"; currentVersion: number }
   | { kind: "idempotency-conflict" }
   | { kind: "quota-exceeded"; retryAfterSeconds: number }
+  /** The Scene Preset is not one the active Prompt Template Release approves. */
+  | { kind: "unknown-preset" }
   | { kind: "unavailable" };
 
 export type ConfirmCaptureResult =
@@ -73,6 +75,8 @@ export type SubmitPhotoJobResult =
   | { kind: "submitted"; job: PhotoJob }
   | { kind: "failed"; job: PhotoJob; reason: string }
   | { kind: "not-runnable"; job: PhotoJob }
+  /** The provider-wide daily budget is spent; the job stays capture-ready. */
+  | { kind: "budget-exceeded"; job: PhotoJob; retryAfterSeconds: number }
   | { kind: "unavailable" };
 
 export type ReconcilePhotoJobResult =
@@ -129,8 +133,12 @@ export type PhotoJobModule = {
 
   /**
    * Hands a capture-ready job to the provider and returns as soon as it is
-   * accepted. Completion arrives through `recordProviderEvent` or
-   * `reconcileJob`; the job survives the browser that submitted it (gap G2).
+   * accepted. The prompt is rendered from the active Prompt Template Release
+   * and the pinned revision's product facts, the model comes from the active
+   * Model Release, and both are pinned on the job (gap G6); the provider-wide
+   * budget is checked first (gap G7). Completion arrives through
+   * `recordProviderEvent` or `reconcileJob`; the job survives the browser
+   * that submitted it (gap G2).
    */
   submitJob(input: {
     ownerId: CustomerAccountId;

@@ -96,6 +96,7 @@ describe.skipIf(!armed)("Replicate adapter (live, spends one credit)", () => {
         captureUrl: download.url,
         prompt,
         aspectRatio: "16:9",
+        modelIdentifier: "qwen/qwen-image-2-pro",
         webhookUrl: null
       });
       if (submitted.kind === "failed") {

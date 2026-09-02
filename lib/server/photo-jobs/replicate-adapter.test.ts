@@ -6,14 +6,27 @@ import {
   type ReplicateAdapterDependencies
 } from "@/lib/server/photo-jobs/replicate-adapter";
 
-type Prediction = { id: string; status: string; output?: unknown; error?: unknown };
-type CreateOptions = { input: Record<string, unknown>; webhook?: string; webhook_events_filter?: string[] };
+type Prediction = {
+  id: string;
+  status: string;
+  model?: string;
+  output?: unknown;
+  error?: unknown;
+  metrics?: { predict_time?: number };
+};
+type CreateOptions = {
+  model?: string;
+  input: Record<string, unknown>;
+  webhook?: string;
+  webhook_events_filter?: string[];
+};
 
 const REQUEST = {
   captureContentType: "image/jpeg" as const,
   captureUrl: "https://storage.example/captures/abc.jpg?X-Amz-Signature=sig",
   prompt: "A kitchen",
   aspectRatio: "16:9" as const,
+  modelIdentifier: "qwen/qwen-image-2-pro",
   webhookUrl: "https://app.example/api/webhooks/replicate"
 };
 
@@ -98,6 +111,7 @@ describe("Replicate photo generation adapter", () => {
       providerReference: "pred_42",
       modelIdentifier: "qwen/qwen-image-2-pro"
     });
+    expect(received!.model).toBe("qwen/qwen-image-2-pro");
     expect(received!.input.image).toBe(REQUEST.captureUrl);
     expect(received!.webhook).toBe(REQUEST.webhookUrl);
     expect(received!.webhook_events_filter).toEqual(["start", "completed"]);
@@ -172,7 +186,13 @@ describe("Replicate photo generation adapter", () => {
       b: { id: "b", status: "processing" },
       c: { id: "c", status: "canceled" },
       d: { id: "d", status: "failed", error: "NSFW content detected" },
-      e: { id: "e", status: "succeeded", output: ["https://replicate.delivery/out.png"] },
+      e: {
+        id: "e",
+        status: "succeeded",
+        model: "qwen/qwen-image-2-pro",
+        output: ["https://replicate.delivery/out.png"],
+        metrics: { predict_time: 17.148 }
+      },
       f: { id: "f", status: "succeeded", output: null }
     };
     const adapter = createReplicatePhotoGenerationAdapter(
@@ -196,6 +216,8 @@ describe("Replicate photo generation adapter", () => {
     expect(Array.from(generated.bytes)).toEqual([9, 9, 9]);
     expect(generated.declaredContentType).toBe("image/png");
     expect(generated.providerReference).toBe("e");
+    expect(generated.modelIdentifier).toBe("qwen/qwen-image-2-pro");
+    expect(generated.durationMs).toBe(17_148);
   });
 
   it("reports a reference the provider no longer knows as unknown", async () => {

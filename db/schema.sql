@@ -136,6 +136,30 @@ CREATE TABLE app.generated_photo (
 
 
 --
+-- Name: model_release; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.model_release (
+    id uuid NOT NULL,
+    provider text NOT NULL,
+    model_identifier text NOT NULL,
+    version_label text NOT NULL,
+    license text NOT NULL,
+    expectations jsonb NOT NULL,
+    safety_notes text NOT NULL,
+    pricing_basis text NOT NULL,
+    estimated_cost_cents integer NOT NULL,
+    evaluation_evidence text NOT NULL,
+    active boolean DEFAULT false NOT NULL,
+    approved_by text NOT NULL,
+    approved_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT model_release_estimated_cost_cents_check CHECK ((estimated_cost_cents >= 0)),
+    CONSTRAINT model_release_expectations_check CHECK ((jsonb_typeof(expectations) = 'object'::text))
+);
+
+
+--
 -- Name: outbox_message; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -179,9 +203,16 @@ CREATE TABLE app.photo_job (
     submitted_at timestamp with time zone,
     completed_at timestamp with time zone,
     provider_checked_at timestamp with time zone,
+    prompt_template_release_id uuid,
+    model_release_id uuid,
+    prompt_text text,
+    estimated_cost_cents integer,
+    provider_duration_ms integer,
     CONSTRAINT photo_job_attempts_check CHECK ((attempts >= 0)),
     CONSTRAINT photo_job_check CHECK (((state = ANY (ARRAY['succeeded'::text, 'failed'::text, 'canceled'::text])) = (terminal_at IS NOT NULL))),
     CONSTRAINT photo_job_check1 CHECK (((state = ANY (ARRAY['requested'::text, 'canceled'::text, 'failed'::text])) OR (source_capture_id IS NOT NULL))),
+    CONSTRAINT photo_job_estimated_cost_cents_check CHECK ((estimated_cost_cents >= 0)),
+    CONSTRAINT photo_job_provider_duration_ms_check CHECK ((provider_duration_ms >= 0)),
     CONSTRAINT photo_job_state_check CHECK ((state = ANY (ARRAY['requested'::text, 'capture-ready'::text, 'submitted'::text, 'running'::text, 'validating'::text, 'uncertain'::text, 'canceling'::text, 'succeeded'::text, 'failed'::text, 'canceled'::text])))
 );
 
@@ -220,6 +251,26 @@ CREATE TABLE app.project (
     CONSTRAINT project_check CHECK ((((lifecycle = 'trashed'::text) AND (trashed_at IS NOT NULL) AND (deletion_due_at IS NOT NULL)) OR ((lifecycle <> 'trashed'::text) AND (trashed_at IS NULL) AND (deletion_due_at IS NULL)))),
     CONSTRAINT project_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['active'::text, 'archived'::text, 'trashed'::text]))),
     CONSTRAINT project_name_check CHECK (((char_length(name) >= 1) AND (char_length(name) <= 120)))
+);
+
+
+--
+-- Name: prompt_template_release; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.prompt_template_release (
+    id uuid NOT NULL,
+    key text NOT NULL,
+    version integer NOT NULL,
+    template text NOT NULL,
+    scene_presets jsonb NOT NULL,
+    active boolean DEFAULT false NOT NULL,
+    approved_by text NOT NULL,
+    approved_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT prompt_template_release_scene_presets_check CHECK ((jsonb_typeof(scene_presets) = 'array'::text)),
+    CONSTRAINT prompt_template_release_template_check CHECK (((char_length(template) >= 1) AND (char_length(template) <= 4000))),
+    CONSTRAINT prompt_template_release_version_check CHECK ((version > 0))
 );
 
 
@@ -521,6 +572,22 @@ ALTER TABLE ONLY app.generated_photo
 
 
 --
+-- Name: model_release model_release_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.model_release
+    ADD CONSTRAINT model_release_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: model_release model_release_provider_model_identifier_version_label_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.model_release
+    ADD CONSTRAINT model_release_provider_model_identifier_version_label_key UNIQUE (provider, model_identifier, version_label);
+
+
+--
 -- Name: outbox_message outbox_message_pkey; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -582,6 +649,22 @@ ALTER TABLE ONLY app.project
 
 ALTER TABLE ONLY app.project
     ADD CONSTRAINT project_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: prompt_template_release prompt_template_release_key_version_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.prompt_template_release
+    ADD CONSTRAINT prompt_template_release_key_version_key UNIQUE (key, version);
+
+
+--
+-- Name: prompt_template_release prompt_template_release_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.prompt_template_release
+    ADD CONSTRAINT prompt_template_release_pkey PRIMARY KEY (id);
 
 
 --
@@ -765,6 +848,13 @@ CREATE INDEX generated_photo_revision_idx ON app.generated_photo USING btree (co
 
 
 --
+-- Name: model_release_active_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE UNIQUE INDEX model_release_active_idx ON app.model_release USING btree (active) WHERE active;
+
+
+--
 -- Name: outbox_message_delivery_idx; Type: INDEX; Schema: app; Owner: -
 --
 
@@ -807,10 +897,24 @@ CREATE INDEX photo_job_revision_idx ON app.photo_job USING btree (configuration_
 
 
 --
+-- Name: photo_job_submitted_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX photo_job_submitted_idx ON app.photo_job USING btree (submitted_at DESC) WHERE (submitted_at IS NOT NULL);
+
+
+--
 -- Name: project_owner_lifecycle_idx; Type: INDEX; Schema: app; Owner: -
 --
 
 CREATE INDEX project_owner_lifecycle_idx ON app.project USING btree (owner_id, lifecycle, updated_at DESC);
+
+
+--
+-- Name: prompt_template_release_active_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE UNIQUE INDEX prompt_template_release_active_idx ON app.prompt_template_release USING btree (active) WHERE active;
 
 
 --
@@ -923,11 +1027,27 @@ ALTER TABLE ONLY app.generated_photo
 
 
 --
+-- Name: photo_job photo_job_model_release_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.photo_job
+    ADD CONSTRAINT photo_job_model_release_id_fkey FOREIGN KEY (model_release_id) REFERENCES app.model_release(id);
+
+
+--
 -- Name: photo_job photo_job_project_id_configuration_revision_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
 --
 
 ALTER TABLE ONLY app.photo_job
     ADD CONSTRAINT photo_job_project_id_configuration_revision_id_fkey FOREIGN KEY (project_id, configuration_revision_id) REFERENCES app.configuration_revision(project_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: photo_job photo_job_prompt_template_release_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.photo_job
+    ADD CONSTRAINT photo_job_prompt_template_release_id_fkey FOREIGN KEY (prompt_template_release_id) REFERENCES app.prompt_template_release(id);
 
 
 --
@@ -1020,4 +1140,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260814110000'),
     ('20260901120000'),
     ('20260902200000'),
-    ('20260902230000');
+    ('20260902230000'),
+    ('20260903100000');

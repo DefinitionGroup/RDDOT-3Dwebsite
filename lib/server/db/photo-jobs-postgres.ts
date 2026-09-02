@@ -5,6 +5,12 @@ import type { Kysely } from "kysely";
 import { z } from "zod";
 import type { ObjectStorageModule } from "@/features/object-storage/object-storage-module";
 import { probeImage } from "@/features/photo-jobs/image-probe";
+import {
+  findScenePreset,
+  type PhotoGovernance,
+  PromptTemplateError,
+  renderPromptTemplate
+} from "@/features/photo-jobs/photo-governance";
 import type {
   InspectPhotoGenerationOutcome,
   PhotoGenerationAdapter,
@@ -36,8 +42,17 @@ const MIN_CAPTURE_EDGE = 320;
 const MAX_CAPTURE_EDGE = 8192;
 const MAX_OUTPUT_BYTES = 24 * 1024 * 1024;
 
-/** Cheap abuse ceiling until the Phase 4 quota model lands (gap G7). */
-const MAX_JOBS_PER_DAY = 25;
+/** Defaults for the independently enforced ceilings of gap G7. */
+export const DEFAULT_PHOTO_LIMITS = {
+  /** Per Customer Account, rolling 24 h, counted at request. */
+  customerDailyJobs: 25,
+  /** Across all accounts, rolling 24 h, counted at submission. */
+  providerDailyJobs: 200,
+  /** Across all accounts, rolling 24 h, summed from the Model Release estimate. */
+  providerDailyCents: 2_000
+} as const;
+
+export type PhotoLimits = { [K in keyof typeof DEFAULT_PHOTO_LIMITS]: number };
 
 /**
  * The capture grant handed to the provider. A queued prediction may start
@@ -89,11 +104,15 @@ function mapJob(row: JobRow, generatedPhotoId: string | null = null): PhotoJob {
   };
 }
 
-export type PromptBuilder = (input: {
+/**
+ * Trusted facts for the template's placeholders, taken from the pinned
+ * revision under its own Product Definition version — never from client
+ * input (gap G6). Null when the version is not supported.
+ */
+export type PromptFactsBuilder = (input: {
   normalizedConfiguration: unknown;
   productDefinitionVersion: string;
-  scenePresetKey: string;
-}) => string;
+}) => Record<string, string> | null;
 
 type Applied = "unchanged" | "progressed" | "succeeded" | "failed" | "canceled";
 
@@ -102,17 +121,16 @@ export function createPostgresPhotoJobModule(
   dependencies: {
     storage: ObjectStorageModule;
     adapter: PhotoGenerationAdapter;
-    /**
-     * Builds the prompt from the pinned revision's configuration only. Client
-     * input never reaches it (gap G6).
-     */
-    buildPrompt: PromptBuilder;
+    governance: PhotoGovernance;
+    buildPromptFacts: PromptFactsBuilder;
     /** Public ingress for provider deliveries; null relies on reconciliation. */
     webhookUrl: string | null;
+    limits?: Partial<PhotoLimits>;
   },
   clock: () => Date = () => new Date()
 ): PhotoJobModule {
-  const { storage, adapter, buildPrompt, webhookUrl } = dependencies;
+  const { storage, adapter, governance, buildPromptFacts, webhookUrl } = dependencies;
+  const limits: PhotoLimits = { ...DEFAULT_PHOTO_LIMITS, ...dependencies.limits };
 
   /** Single owner predicate for every owner-facing read and write in this module. */
   function ownedJobs(ownerId: string) {
@@ -273,6 +291,12 @@ export function createPostgresPhotoJobModule(
         })
         .execute();
 
+      await database
+        .withSchema("app")
+        .updateTable("photoJob")
+        .set({ providerDurationMs: outcome.durationMs })
+        .where("id", "=", row.id)
+        .execute();
       await markState(row.id, "succeeded", {
         failureReason: null,
         modelIdentifier: outcome.modelIdentifier,
@@ -398,6 +422,13 @@ export function createPostgresPhotoJobModule(
         byteSize
       });
 
+      // Only an approved Scene Preset may be requested (gap G6). Checked
+      // before the transaction: it needs no lock and fails cheaply.
+      const releases = await governance.getActiveReleases();
+      if (!releases || !findScenePreset(releases.promptTemplate, scenePresetKey)) {
+        return { kind: "unknown-preset" };
+      }
+
       type Prepared =
         | { kind: "requested"; job: PhotoJob; captureKey: string }
         | { kind: "replayed"; job: PhotoJob; captureKey: string }
@@ -470,7 +501,7 @@ export function createPostgresPhotoJobModule(
             .where("project.ownerId", "=", ownerId)
             .where("photoJob.createdAt", ">=", since)
             .executeTakeFirstOrThrow();
-          if (Number(recent.count) >= MAX_JOBS_PER_DAY) {
+          if (Number(recent.count) >= limits.customerDailyJobs) {
             return { kind: "quota-exceeded", retryAfterSeconds: 3600 };
           }
 
@@ -562,6 +593,11 @@ export function createPostgresPhotoJobModule(
               submittedAt: null,
               completedAt: null,
               providerCheckedAt: null,
+              promptTemplateReleaseId: null,
+              modelReleaseId: null,
+              promptText: null,
+              estimatedCostCents: null,
+              providerDurationMs: null,
               terminalAt: null
             })
             .execute();
@@ -712,12 +748,84 @@ export function createPostgresPhotoJobModule(
       const job = mapJob(row as JobRow);
       if (job.state !== "capture-ready") return { kind: "not-runnable", job };
 
-      // Claim the job so a second call cannot submit the same work twice.
+      // Everything the execution is attributed to is resolved before the
+      // claim, so a refusal leaves the job capture-ready and retryable.
+      const releases = await governance.getActiveReleases();
+      if (!releases) {
+        await markState(jobId, "failed", {
+          failureReason: "governance-unavailable",
+          completedAt: clock()
+        });
+        return { kind: "failed", job: { ...job, state: "failed" }, reason: "governance-unavailable" };
+      }
+      const preset = findScenePreset(releases.promptTemplate, row.scenePresetKey);
+      const facts = buildPromptFacts({
+        normalizedConfiguration: row.pinnedConfiguration,
+        productDefinitionVersion: row.pinnedProductVersion
+      });
+      if (!preset || !facts) {
+        const reason = !preset ? "unknown-preset" : "unsupported-product-definition";
+        await markState(jobId, "failed", { failureReason: reason, completedAt: clock() });
+        return { kind: "failed", job: { ...job, state: "failed" }, reason };
+      }
+      let prompt: string;
+      try {
+        prompt = renderPromptTemplate(releases.promptTemplate.template, {
+          ...facts,
+          scene: preset.scene
+        });
+      } catch (error) {
+        if (!(error instanceof PromptTemplateError)) throw error;
+        console.error("Prompt Template Release cannot be rendered", {
+          releaseId: releases.promptTemplate.id,
+          detail: error.message
+        });
+        await markState(jobId, "failed", {
+          failureReason: "governance-unavailable",
+          completedAt: clock()
+        });
+        return { kind: "failed", job: { ...job, state: "failed" }, reason: "governance-unavailable" };
+      }
+
+      // The provider-wide budget breaker (gap G7): jobs and estimated spend
+      // across every account in the last 24 h, independent of the per-account
+      // quota enforced at request time.
       const now = clock();
+      const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const spend = await database
+        .withSchema("app")
+        .selectFrom("photoJob")
+        .select((expression) => [
+          expression.fn.countAll<number>().as("jobs"),
+          expression.fn.coalesce(expression.fn.sum<number>("estimatedCostCents"), expression.val(0)).as("cents")
+        ])
+        .where("submittedAt", ">=", since)
+        .executeTakeFirstOrThrow();
+      if (
+        Number(spend.jobs) >= limits.providerDailyJobs ||
+        Number(spend.cents) + releases.model.estimatedCostCents > limits.providerDailyCents
+      ) {
+        console.warn("Photo generation budget reached", {
+          jobs: Number(spend.jobs),
+          cents: Number(spend.cents),
+          limits
+        });
+        return { kind: "budget-exceeded", job, retryAfterSeconds: 3600 };
+      }
+
+      // Claim the job so a second call cannot submit the same work twice.
       const claimed = await database
         .withSchema("app")
         .updateTable("photoJob")
-        .set({ state: "submitted", submittedAt: now, updatedAt: now })
+        .set({
+          state: "submitted",
+          submittedAt: now,
+          updatedAt: now,
+          promptTemplateReleaseId: releases.promptTemplate.id,
+          modelReleaseId: releases.model.id,
+          promptText: prompt,
+          estimatedCostCents: releases.model.estimatedCostCents
+        })
         .where("id", "=", jobId)
         .where("state", "=", "capture-ready")
         .executeTakeFirst();
@@ -736,18 +844,12 @@ export function createPostgresPhotoJobModule(
           expiresInSeconds: CAPTURE_GRANT_SECONDS
         });
 
-        // Product facts come from the pinned revision, never from the client.
-        const prompt = buildPrompt({
-          normalizedConfiguration: row.pinnedConfiguration,
-          productDefinitionVersion: row.pinnedProductVersion,
-          scenePresetKey: row.scenePresetKey
-        });
-
         const outcome = await adapter.submit({
           captureContentType: row.captureContentType,
           captureUrl: captureUrl.url,
           prompt,
           aspectRatio: "16:9",
+          modelIdentifier: releases.model.modelIdentifier,
           webhookUrl
         });
         if (outcome.kind === "failed") return await fail(outcome.reason);

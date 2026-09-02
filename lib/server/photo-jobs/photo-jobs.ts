@@ -1,18 +1,17 @@
 import "server-only";
 
 import {
-  buildPhotoPrompt,
-  findPhotoPreset
-} from "@/features/configurator/photo/photo-presets";
-import {
-  findFinish,
-  RDTD_KITCHEN_PRODUCT_V2
+  findConfiguratorProductDefinition,
+  findFinish
 } from "@/features/configurator/product-definition";
 import { parseConfiguration } from "@/features/projects/configuration-contract";
 import { getDatabase } from "@/lib/server/db/database";
+import { createPostgresPhotoGovernance } from "@/lib/server/db/photo-governance-postgres";
 import {
   createPostgresPhotoJobModule,
-  type PromptBuilder
+  DEFAULT_PHOTO_LIMITS,
+  type PhotoLimits,
+  type PromptFactsBuilder
 } from "@/lib/server/db/photo-jobs-postgres";
 import { getObjectStorage } from "@/lib/server/object-storage/object-storage";
 import {
@@ -21,25 +20,32 @@ import {
 } from "@/lib/server/photo-jobs/replicate-adapter";
 
 /**
- * Product facts come from the pinned Configuration Revision, never from client
- * input (ADR 0008, gap G6). Only the Scene Preset is customer-selectable, and
- * only from the approved list.
+ * Product facts for the Prompt Template Release come from the pinned
+ * Configuration Revision under the Product Definition version it was saved
+ * with — never from client input, never from today's definition (ADR 0008,
+ * gap G6). An unsupported version yields no facts and the job fails closed.
  */
-const buildPrompt: PromptBuilder = ({
+const buildPromptFacts: PromptFactsBuilder = ({
   normalizedConfiguration,
-  scenePresetKey
+  productDefinitionVersion
 }) => {
-  const configuration = parseConfiguration(normalizedConfiguration);
-  const preset = findPhotoPreset(scenePresetKey);
-  const cabinetFinish = findFinish(
-    RDTD_KITCHEN_PRODUCT_V2.cabinetColors,
-    configuration.cabinetColorKey
-  );
-  const frontFinish = findFinish(
-    RDTD_KITCHEN_PRODUCT_V2.frontColors,
-    configuration.frontColorKey
-  );
-  return buildPhotoPrompt(preset, cabinetFinish, frontFinish);
+  const definition = findConfiguratorProductDefinition(productDefinitionVersion);
+  if (!definition) return null;
+  let configuration;
+  try {
+    configuration = parseConfiguration(normalizedConfiguration);
+  } catch {
+    return null;
+  }
+  if (configuration.schemaVersion !== definition.schemaVersion) return null;
+
+  const cabinetFinish = findFinish(definition.cabinetColors, configuration.cabinetColorKey);
+  const frontFinish = findFinish(definition.frontColors, configuration.frontColorKey);
+  return {
+    frontLabel: frontFinish.label.en,
+    frontMaterial: frontFinish.material,
+    cabinetLabel: cabinetFinish.label.en
+  };
 };
 
 export function getPhotoGenerationAdapter() {
@@ -67,11 +73,27 @@ function resolveWebhookUrl() {
   return url && url.startsWith("https://") ? url : null;
 }
 
+/** Ceilings of gap G7, overridable per environment; defaults are conservative. */
+function resolveLimits(): PhotoLimits {
+  function read(name: string, fallback: number) {
+    const value = Number(process.env[name]);
+    return Number.isInteger(value) && value >= 0 ? value : fallback;
+  }
+  return {
+    customerDailyJobs: read("PHOTO_CUSTOMER_DAILY_JOBS", DEFAULT_PHOTO_LIMITS.customerDailyJobs),
+    providerDailyJobs: read("PHOTO_DAILY_BUDGET_JOBS", DEFAULT_PHOTO_LIMITS.providerDailyJobs),
+    providerDailyCents: read("PHOTO_DAILY_BUDGET_CENTS", DEFAULT_PHOTO_LIMITS.providerDailyCents)
+  };
+}
+
 export function getPhotoJobs() {
-  return createPostgresPhotoJobModule(getDatabase(), {
+  const database = getDatabase();
+  return createPostgresPhotoJobModule(database, {
     storage: getObjectStorage(),
     adapter: getPhotoGenerationAdapter(),
-    buildPrompt,
-    webhookUrl: resolveWebhookUrl()
+    governance: createPostgresPhotoGovernance(database),
+    buildPromptFacts,
+    webhookUrl: resolveWebhookUrl(),
+    limits: resolveLimits()
   });
 }

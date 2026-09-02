@@ -23,7 +23,6 @@ import type {
  * succeeded; `parseWebhook` verifies a delivery with the account's signing
  * secret.
  */
-const MODEL = "qwen/qwen-image-2-pro";
 const DOWNLOAD_TIMEOUT_MS = 30_000;
 /** Provider error bodies can be long; the log line does not need all of it. */
 const DETAIL_MAX_CHARS = 600;
@@ -174,7 +173,6 @@ export function createReplicatePhotoGenerationAdapter(
     console.error("Photo generation failed", {
       reason,
       retryable,
-      model: MODEL,
       predictionId: providerReference,
       detail
     });
@@ -192,7 +190,7 @@ export function createReplicatePhotoGenerationAdapter(
 
       try {
         const prediction = await client.predictions.create({
-          model: MODEL,
+          model: request.modelIdentifier,
           input: {
             image,
             prompt: request.prompt,
@@ -214,7 +212,7 @@ export function createReplicatePhotoGenerationAdapter(
         return {
           kind: "submitted",
           providerReference: prediction.id,
-          modelIdentifier: MODEL
+          modelIdentifier: request.modelIdentifier
         };
       } catch (error) {
         const failure = classifyProviderError(error);
@@ -271,13 +269,18 @@ export function createReplicatePhotoGenerationAdapter(
           );
         }
 
+        const predictTime = prediction.metrics?.predict_time;
         return {
           kind: "generated",
           bytes: new Uint8Array(await response.arrayBuffer()),
           declaredContentType:
             response.headers.get("content-type") ?? "application/octet-stream",
-          modelIdentifier: MODEL,
-          providerReference
+          modelIdentifier: prediction.model,
+          providerReference,
+          durationMs:
+            typeof predictTime === "number" && Number.isFinite(predictTime)
+              ? Math.round(predictTime * 1000)
+              : null
         };
       } catch (error) {
         if (isApiError(error) && error.response.status === 404) {

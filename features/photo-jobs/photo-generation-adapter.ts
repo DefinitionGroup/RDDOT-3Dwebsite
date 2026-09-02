@@ -28,6 +28,8 @@ export type PhotoGenerationRequest = {
   captureUrl: string | null;
   prompt: string;
   aspectRatio: "16:9";
+  /** From the pinned Model Release; the adapter never chooses a model itself. */
+  modelIdentifier: string;
   /**
    * Where the provider should deliver events. Null submits without a
    * webhook; the job is then completed by reconciliation alone.
@@ -67,6 +69,8 @@ export type InspectPhotoGenerationOutcome =
       declaredContentType: string;
       modelIdentifier: string;
       providerReference: string;
+      /** Provider-reported compute time, as cost evidence; null when not reported. */
+      durationMs: number | null;
     }
   | { kind: "canceled" }
   /** The provider has no record of the reference. */

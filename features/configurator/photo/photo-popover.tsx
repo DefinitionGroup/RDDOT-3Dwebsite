@@ -18,7 +18,8 @@ export type PhotoStatus =
   | {
       phase: "working";
       step: "uploading" | "generating";
-      preview: string;
+      /** Null when a job in flight was picked up again after a page load. */
+      preview: string | null;
     }
   | { phase: "done"; imageUrl: string; photoId: string }
   | { phase: "error"; message: string };
@@ -160,13 +161,15 @@ export function PhotoPopover({
 
             {status.phase === "working" && (
               <div>
-                <div className="relative aspect-video w-full overflow-hidden border border-hairline">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    alt="Aufgenommene Szene"
-                    className="size-full object-cover opacity-60"
-                    src={status.preview}
-                  />
+                <div className="relative aspect-video w-full overflow-hidden border border-hairline bg-mist">
+                  {status.preview && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      alt="Aufgenommene Szene"
+                      className="size-full object-cover opacity-60"
+                      src={status.preview}
+                    />
+                  )}
                   <motion.div
                     animate={{ x: ["-100%", "100%"] }}
                     className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/45 to-transparent"
