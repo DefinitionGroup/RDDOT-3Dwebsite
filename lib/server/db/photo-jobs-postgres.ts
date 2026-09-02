@@ -483,8 +483,16 @@ export function createPostgresPhotoJobModule(
         return { kind: "not-runnable", job };
       }
 
-      async function fail(reason: string): Promise<RunPhotoJobResult> {
-        await markState(jobId, "failed", { failureReason: reason });
+      async function fail(
+        reason: string,
+        providerReference?: string | null
+      ): Promise<RunPhotoJobResult> {
+        // A provider reference issued before the failure is kept as evidence so
+        // the run can be traced at the provider; provider detail never lands here.
+        await markState(jobId, "failed", {
+          failureReason: reason,
+          ...(providerReference ? { providerReference } : {})
+        });
         return { kind: "failed", job: { ...job, state: "failed" }, reason };
       }
 
@@ -512,7 +520,9 @@ export function createPostgresPhotoJobModule(
           aspectRatio: "16:9"
         });
 
-        if (outcome.kind === "failed") return await fail(outcome.reason);
+        if (outcome.kind === "failed") {
+          return await fail(outcome.reason, outcome.providerReference);
+        }
 
         await markState(jobId, "validating", {
           providerReference: outcome.providerReference

@@ -1,11 +1,12 @@
 # rotpunkt Signature Status
 
-Last reconciled: 2026-09-01
-Working branch: `cc/devstart-001` (11 commits ahead of `redesign/devstart`, pushed to
-origin, **not yet merged**). Integration back into `redesign/devstart` is outstanding.
+Last reconciled: 2026-09-02
+Working branch: `cc/devstart-002` — the main development branch from 2026-09-02, cut from
+`cc/devstart-001` at `6640d45` (23 commits ahead of `redesign/devstart`). `cc/devstart-001`
+is frozen at that commit; it is not merged back and does not need to be.
 
-Gates at reconciliation: `pnpm test` 47/47, `pnpm test:db` 40/40 (Neon), `pnpm lint`
-clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
+Gates at reconciliation: `pnpm test` 54/54 (now covers `features` and `lib`), `pnpm test:db`
+40/40 (Neon), `pnpm lint` clean, `tsc --noEmit` clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
 **unset** — with the local `development-capture` value it fails closed by design
 (ADR 0010). See Build & Verification Gates below.
 
@@ -60,9 +61,10 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Wired the configurator's photo UI onto the Photo Job API and **retired the prototype route**. `app/api/photo/route.ts` is deleted rather than gated, which closes PLAN.md Phase 0 by removal: there is no longer an unauthenticated route that can spend provider credits. The capture now travels as bytes through a single-use presigned grant instead of a data URI in a JSON body, so the old ~256KB provider limit no longer shapes capture quality.
 - The photo popover enforces the ADR 0008 ownership rule in the interface: a guest configuration is offered "Als Projekt speichern" instead of a generate button, and a Project whose current version cannot be read is told to wait for the autosave rather than pinning the wrong configuration. Progress is reported per step (übertragen/geprüft, then erzeugt), and the result carries the illustrative-image disclosure and a per-request download grant.
 - Added `GET /api/projects/[projectId]/configuration` returning the current Working Configuration version, so a caller that must pin an exact configuration reads it rather than guessing; a change that lands in between makes the photo request 409.
+- Made the Replicate adapter diagnosable. The capture now reaches the provider as a typed Blob, which the SDK uploads through its Files API and passes to the model by URL, instead of a base64 data URI that inflated a 1.5 MB capture to ~2 MB inside the prediction body. Failures no longer collapse to a bare `provider-error`: HTTP rejections map to stable, customer-safe codes (`provider-unauthorized`, `provider-billing`, `provider-rejected-input`, `provider-rate-limited`, `provider-error`, `provider-prediction-failed`, `provider-timeout`), the provider status and message are logged as operator detail that is never persisted or shown, and the prediction id is recorded as `providerReference` on failed jobs too. The generation timeout is now an `AbortSignal`, so a prediction that overruns is canceled at the provider rather than left spending; a hard bound still abandons a run the provider refuses to cancel. Covered by unit tests with an injected client (`lib/server/photo-jobs/replicate-adapter.test.ts`).
+- Repaired `.env.example`: five variables lacked their `=` and the kill switch read `PHOTO_GENERATION_ENABLED=false=`; the key set now matches `.env.local` exactly.
 - Gave the application surfaces one shared header (`AppHeader`) covering the configurator, account and checkout routes: the wordmark always goes home, one contextual action is labelled with its destination, and the account entry appears wherever it is not the current page. The sign-in screen previously had a single link — the wordmark — so reaching the configurator meant going via the homepage.
 - Made the configurator panel a fixed-height scroll region with a pinned foot. The panel carried `min-h-screen`, which is a floor rather than a ceiling, so it grew past the viewport and its `overflow-y-auto` never had a constrained height to scroll within. Measured before: 1.358 px of panel in a 900 px viewport with no scroll container, the Richtpreis at y=1070 and the primary action at y=1183 — both below the fold, and reaching them scrolled the 3D scene out of view. After: the page no longer overflows, the panel scrolls inside itself, and the price and primary action stay in view while finishes are compared. Mobile keeps the stacked sheet unchanged.
-- Added the AI photo **prototype** (development scaffolding, not a production candidate): live WebGL frame capture via `preserveDrawingBuffer` (`use-scene-capture.ts`), server-side prompt assembly from configured finishes plus a scene preset, a synchronous `qwen/qwen-image-2-pro` call in `POST /api/photo`, and a result popover with presets, progress, download and regenerate. ADR 0008 replaces this route with an application-owned Photo Job Module; see PLAN.md. **The route is not yet contained — see Release Blockers.**
 - Added color configuration for:
   - cabinet/korpus finish
   - front finish
@@ -110,12 +112,12 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Appliance fronts render in device cabinet niches with the dedicated appliance role.
 - `pnpm test` 39/39, `pnpm test:db` 8/8 against the Neon test database, `pnpm lint` and production build green throughout; each slice committed separately.
 
-**Not covered by that verification:** the two most recent commits — the scene bar as the
-Edit Session interface (`913b27d`) and drag-and-drop module reordering (`bf727e3`) —
-carry no recorded browser verification. They pass lint, types, unit tests, and the
-production build, but the reorder interaction itself has not been exercised in a live
-pane and the earlier arrow-button rearrangement it replaced is gone. Verify before
-merging to `redesign/devstart`.
+**Partially covered:** the scene bar as the Edit Session interface (`913b27d`) and
+drag-and-drop module reordering (`bf727e3`) were exercised in the production build with
+scripted pointer events (a drag across three slots committed the layout
+`device,small,big,small,small,small,device,big` into the URL and the geometry followed),
+but not by a human hand in a live pane, and the earlier arrow-button rearrangement they
+replaced is gone. A hands-on pass is still owed before merging to `redesign/devstart`.
 
 ## Previous Slice Verified
 
@@ -146,13 +148,8 @@ by design, per ADR 0010, but it surprises anyone who has not read this note.
 
 ## Open Working Tree
 
-Uncommitted at reconciliation:
-
-- `lib/server/auth/auth.ts` + `lib/server/auth/create-auth.ts` — a development-only
-  `trustedOrigins` resolver that echoes back any loopback origin. Next falls back to port
-  3001+ when 3000 is taken, which drifts the browser origin away from `BETTER_AUTH_URL`
-  and trips better-auth's origin check with a 403. The guard returns `[]` under
-  `NODE_ENV=production`. Real fix, but uncommitted and without a test.
+None beyond this reconciliation itself. The development-only loopback `trustedOrigins`
+fix listed here previously landed as `56f2b37`.
 
 ## Deferred Decisions
 
@@ -218,7 +215,7 @@ Revisit when Project Archive/Trash/restore lands.
 - No real product catalog, SKU model, pricing engine, cart, checkout, order, CRM, or payment integration exists yet.
 - The checkout page is a visual fake checkout only and performs no submission.
 - The configurator assets are still prototype-grade under ADR 0009. `kitchen-modules.glb` carries semantic roles as baked mesh-name conventions, not as an immutable, content-hashed Asset Manifest with explicit role-to-node mappings, checksums, budgets, approved cameras, and declared fallbacks. Missing required roles are not yet a release-blocking validation. This is the gap between the working prototype and the production 3D baseline.
-- The AI photo feature is a synchronous prototype with no persistence, no job model, no EU object storage, no owner scoping, and no governance. PLAN.md Phases 0–6 define the replacement; Phase 0 is unstarted (see Release Blockers).
+- The AI photo feature is application-owned (Photo Job Module, EU object storage, owner scoping, kill switch) but still calls the provider synchronously from `POST /api/photo-jobs/[jobId]/run`, so a job does not survive browser closure and holds the request open for the duration of generation. PLAN.md Phase 3 (predictions + webhook + reconciliation) and Phases 4–6 remain. No generation has yet been observed end to end with the flag on; the data-URI transport that was the leading suspect for provider rejections is gone, but the fix is unconfirmed until one controlled paid run.
 - No analytics/event tracking exists for configurator interactions.
 - The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
 - Project Archive/Trash/lifecycle restoration is not implemented yet. The sharing persistence boundary already treats archived links as available and trashed links as unavailable.
@@ -246,24 +243,26 @@ Revisit when Project Archive/Trash/restore lands.
 
 ### Immediate (do these before starting any new track)
 
-1. **PLAN.md Phase 0 — contain `POST /api/photo`.** Authenticated Customer Session plus a
-   `PHOTO_PROTOTYPE_ENABLED` flag defaulting off; 404 when off. ~½ day, closes a stated
-   release blocker, and stops unauthenticated spend on a live route.
-2. **Commit the working-tree auth fix** (dev loopback `trustedOrigins`), with a test.
-3. **Browser-verify the Edit Session tail** — scene bar interface and drag reorder — then
-   merge `cc/devstart-001` into `redesign/devstart`. Eleven commits is already a large
-   unmerged batch and the gap is not shrinking on its own.
+1. **Hands-on verify the Edit Session tail** — scene bar interface and drag reorder — in a
+   live pane. Decided 2026-09-02: development continues on `cc/devstart-002` rather than
+   merging back into `redesign/devstart`.
+2. **One controlled paid generation** with `PHOTO_GENERATION_ENABLED=true` to confirm that
+   the Blob upload resolves the provider failures. Enabling the flag spends credits and is
+   an explicit decision; the adapter now records enough (reason code, prediction id, logged
+   provider detail) that a single run is diagnostic either way.
+3. **Act on the design critique** (`.impeccable/critique/2026-09-02T14-39-10Z__app-page-tsx.md`,
+   23/40): its P0 is the inert `/checkout` — a submit-looking endpoint with no submission,
+   reachable without a Project, labelled "Fake Checkout". Either gate it or build the quote
+   vertical slice (labelled fields, consent, validation, authenticated Project + immutable
+   revision, success and error states). Cheapest credibility win: drop the cart metaphor now.
 
 ### Photo storage track (in progress)
 
 ADR 0011 is accepted and the storage foundation is in place. What remains before
 the galleries can ship:
 
-1. Photo Job module seam (`lib/server/photo-jobs/`) and its Interface — request,
-   status, list-for-project, cancel — plus the atomic revision checkpoint on request
-   (PLAN.md Phase 1 remainder, gap G5).
-2. Source Capture upload flow: reserve, presign, upload, server-side validation of
-   decoded dimensions and byte size, promote to `stored` (Phase 2 remainder, G4).
+1. ~~Photo Job module seam~~ — done (Phase 1, gap G5).
+2. ~~Source Capture upload flow~~ — done (Phase 2 validation path, gap G4).
 3. Retention sweep for reserved-but-never-uploaded captures and for captures whose
    job has reached a terminal state.
 4. Confirm the physical location of `ecomstorage.rotpunkt.ai` and record it as
@@ -272,7 +271,7 @@ the galleries can ship:
    Deferred Decisions.
 6. Turn on generation. `PHOTO_GENERATION_ENABLED` is off, so every run currently
    fails as `provider-disabled` by design. Enabling it spends Replicate credits and is
-   a deliberate decision, not a default.
+   a deliberate decision, not a default. See Immediate step 2.
 7. PLAN.md Phase 3: replace the synchronous provider call with predictions plus
    webhook, an idempotent inbox, and reconciliation. Until then a job does not survive
    browser closure (gap G2), and `POST /api/photo-jobs/[jobId]/run` holds the request

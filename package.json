@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run features",
+    "test": "vitest run features lib",
     "test:db": "vitest run tests/integration",
     "db:migrate": "node scripts/dbmate.mjs up",
     "db:rollback": "node scripts/dbmate.mjs rollback",

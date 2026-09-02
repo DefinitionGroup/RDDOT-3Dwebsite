@@ -23,7 +23,19 @@ export type PhotoGenerationOutcome =
       modelIdentifier: string;
       providerReference: string | null;
     }
-  | { kind: "failed"; reason: string; retryable: boolean };
+  | {
+      kind: "failed";
+      /** A stable, customer-safe code such as `provider-timeout`. */
+      reason: string;
+      retryable: boolean;
+      /** The provider's opaque reference, if one was issued before the failure. */
+      providerReference?: string | null;
+      /**
+       * Operator diagnostics (status, provider message). Logged by the adapter,
+       * never persisted or shown to a customer.
+       */
+      detail?: string;
+    };
 
 export type PhotoGenerationAdapter = {
   generate(request: PhotoGenerationRequest): Promise<PhotoGenerationOutcome>;
