@@ -81,6 +81,50 @@ const planningStages: { key: PlanningStage; label: string }[] = [
   { key: "review", label: "Prüfen" }
 ];
 
+type PhotoJobWatchOutcome =
+  | { kind: "succeeded"; generatedPhotoId: string }
+  | { kind: "failed"; reason: string | null }
+  | { kind: "timeout" };
+
+/** Polls a submitted Photo Job until it is terminal; about three minutes at most. */
+async function waitForPhotoJob(
+  jobId: string,
+  { attempts = 72, intervalMs = 2500 } = {}
+): Promise<PhotoJobWatchOutcome> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+    const response = await fetch(`/api/photo-jobs/${jobId}`, { cache: "no-store" });
+    const payload = (await response.json().catch(() => null)) as {
+      job?: { state: string; failureReason: string | null; generatedPhotoId: string | null };
+    } | null;
+    const job = payload?.job;
+    if (!response.ok || !job) continue;
+    if (job.state === "succeeded" && job.generatedPhotoId) {
+      return { kind: "succeeded", generatedPhotoId: job.generatedPhotoId };
+    }
+    if (job.state === "failed" || job.state === "canceled") {
+      return { kind: "failed", reason: job.failureReason };
+    }
+  }
+  return { kind: "timeout" };
+}
+
+function describePhotoFailure(reason: string | null) {
+  switch (reason) {
+    case "provider-disabled":
+    case "provider-not-configured":
+      return "Die Fotoerzeugung ist derzeit nicht verfügbar.";
+    case "provider-timeout":
+      return "Die Erzeugung hat zu lange gedauert und wurde abgebrochen.";
+    case "provider-rate-limited":
+      return "Der Dienst ist gerade ausgelastet. Bitte versuchen Sie es in Kürze erneut.";
+    case "canceled-by-owner":
+      return "Die Erzeugung wurde abgebrochen.";
+    default:
+      return "Das Foto konnte nicht erstellt werden.";
+  }
+}
+
 const cameraViews: { key: CameraView; label: string }[] = [
   { key: "signature", label: "Raum" },
   { key: "front", label: "Front" },
@@ -262,8 +306,8 @@ export function ConfiguratorShell({
   /**
    * Drives the Photo Job lifecycle: request (which pins a Configuration
    * Revision), upload the capture straight to storage through the single-use
-   * grant, confirm it server-side, then run. Phase 3 will replace the final
-   * step with a submit plus polling, leaving the earlier steps unchanged.
+   * grant, confirm it server-side, submit it to the provider, then watch the
+   * job until it is terminal.
    */
   async function generatePhoto() {
     if (!project) {
@@ -345,16 +389,26 @@ export function ConfiguratorShell({
 
       setPhotoStatus({ phase: "working", step: "generating", preview: captured.previewUrl });
 
-      const ran = await fetch(`/api/photo-jobs/${jobId}/run`, { method: "POST" });
-      const runPayload = (await ran.json().catch(() => null)) as {
-        generatedPhotoId?: string;
+      const submitted = await fetch(`/api/photo-jobs/${jobId}/submit`, { method: "POST" });
+      const submitPayload = (await submitted.json().catch(() => null)) as {
         error?: string;
       } | null;
-      if (!ran.ok || !runPayload?.generatedPhotoId) {
+      if (!submitted.ok) {
         return await fail(
-          runPayload?.error ?? "Das Foto konnte nicht erstellt werden."
+          submitPayload?.error ?? "Die Erzeugung konnte nicht gestartet werden."
         );
       }
+
+      // The job now lives on the server; the browser only watches. Every read
+      // reconciles with the provider, so a lost webhook cannot strand it, and
+      // closing the tab loses nothing — the photo lands in the gallery anyway.
+      const finished = await waitForPhotoJob(jobId);
+      if (finished.kind === "timeout") {
+        return await fail(
+          "Die Erzeugung dauert länger als erwartet. Das Foto erscheint in der Galerie des Projekts, sobald es fertig ist."
+        );
+      }
+      if (finished.kind === "failed") return await fail(describePhotoFailure(finished.reason));
 
       // Resolve a display URL through the gallery the panel already renders,
       // rather than minting a second kind of URL for this one surface.
@@ -365,7 +419,7 @@ export function ConfiguratorShell({
         photos?: Array<{ id: string; displayUrl: string }>;
       } | null;
       const created = galleryPayload?.photos?.find(
-        (photo) => photo.id === runPayload.generatedPhotoId
+        (photo) => photo.id === finished.generatedPhotoId
       );
       if (!created) return await fail("Das Foto wurde erstellt, ist aber gerade nicht abrufbar.");
 

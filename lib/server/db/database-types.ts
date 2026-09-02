@@ -125,9 +125,23 @@ export type PhotoJobTable = {
   providerReference: string | null;
   failureReason: string | null;
   attempts: Generated<number>;
+  modelIdentifier: string | null;
+  submittedAt: Timestamp | null;
+  completedAt: Timestamp | null;
+  providerCheckedAt: Timestamp | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   terminalAt: Timestamp | null;
+};
+
+export type PhotoJobProviderEventTable = {
+  id: string;
+  eventId: string;
+  photoJobId: string | null;
+  providerReference: string;
+  status: "starting" | "processing" | "succeeded" | "failed" | "canceled";
+  receivedAt: Timestamp;
+  processedAt: Timestamp | null;
 };
 
 export type GeneratedPhotoTable = {
@@ -173,5 +187,6 @@ export type Database = {
   sourceCapture: SourceCaptureTable;
   photoJob: PhotoJobTable;
   generatedPhoto: GeneratedPhotoTable;
+  photoJobProviderEvent: PhotoJobProviderEventTable;
   quoteRequest: QuoteRequestTable;
 };

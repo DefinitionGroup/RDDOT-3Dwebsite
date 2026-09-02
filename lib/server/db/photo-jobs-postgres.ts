@@ -5,14 +5,22 @@ import type { Kysely } from "kysely";
 import { z } from "zod";
 import type { ObjectStorageModule } from "@/features/object-storage/object-storage-module";
 import { probeImage } from "@/features/photo-jobs/image-probe";
-import type { PhotoGenerationAdapter } from "@/features/photo-jobs/photo-generation-adapter";
+import type {
+  InspectPhotoGenerationOutcome,
+  PhotoGenerationAdapter,
+  ProviderEvent,
+  ProviderEventStatus
+} from "@/features/photo-jobs/photo-generation-adapter";
 import type {
   CancelPhotoJobResult,
   ConfirmCaptureResult,
   PhotoJob,
   PhotoJobModule,
+  ReconcilePhotoJobResult,
+  RecordProviderEventResult,
   RequestPhotoJobResult,
-  RunPhotoJobResult
+  SubmitPhotoJobResult,
+  SweepPhotoJobsResult
 } from "@/features/photo-jobs/photo-job-module";
 import { hashJson } from "@/features/projects/configuration-contract";
 import type { Database } from "@/lib/server/db/database-types";
@@ -31,6 +39,20 @@ const MAX_OUTPUT_BYTES = 24 * 1024 * 1024;
 /** Cheap abuse ceiling until the Phase 4 quota model lands (gap G7). */
 const MAX_JOBS_PER_DAY = 25;
 
+/**
+ * The capture grant handed to the provider. A queued prediction may start
+ * minutes after submission, so it outlives any plausible provider queue.
+ */
+const CAPTURE_GRANT_SECONDS = 3600;
+/** Reads of an in-flight job ask the provider at most this often. */
+const RECONCILE_MIN_INTERVAL_MS = 4_000;
+/** An in-flight job with no terminal outcome by then is reported as uncertain. */
+const UNCERTAIN_AFTER_MS = 10 * 60 * 1000;
+/** ... and is failed, with a best-effort provider cancel, by then. */
+const GIVE_UP_AFTER_MS = 30 * 60 * 1000;
+/** The sweep leaves jobs alone that were checked more recently than this. */
+const SWEEP_MIN_INTERVAL_MS = 60 * 1000;
+
 type JobRow = {
   id: string;
   projectId: string;
@@ -38,8 +60,16 @@ type JobRow = {
   scenePresetKey: string;
   state: PhotoJob["state"];
   failureReason: string | null;
+  modelIdentifier: string | null;
+  submittedAt: Date | null;
+  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+type InFlightRow = JobRow & {
+  providerReference: string | null;
+  providerCheckedAt: Date | null;
 };
 
 function mapJob(row: JobRow, generatedPhotoId: string | null = null): PhotoJob {
@@ -50,6 +80,9 @@ function mapJob(row: JobRow, generatedPhotoId: string | null = null): PhotoJob {
     scenePresetKey: row.scenePresetKey,
     state: row.state,
     failureReason: row.failureReason,
+    modelIdentifier: row.modelIdentifier,
+    submittedAt: row.submittedAt ? new Date(row.submittedAt) : null,
+    completedAt: row.completedAt ? new Date(row.completedAt) : null,
     createdAt: new Date(row.createdAt),
     updatedAt: new Date(row.updatedAt),
     generatedPhotoId
@@ -62,6 +95,8 @@ export type PromptBuilder = (input: {
   scenePresetKey: string;
 }) => string;
 
+type Applied = "unchanged" | "progressed" | "succeeded" | "failed" | "canceled";
+
 export function createPostgresPhotoJobModule(
   database: Kysely<Database>,
   dependencies: {
@@ -72,12 +107,14 @@ export function createPostgresPhotoJobModule(
      * input never reaches it (gap G6).
      */
     buildPrompt: PromptBuilder;
+    /** Public ingress for provider deliveries; null relies on reconciliation. */
+    webhookUrl: string | null;
   },
   clock: () => Date = () => new Date()
 ): PhotoJobModule {
-  const { storage, adapter, buildPrompt } = dependencies;
+  const { storage, adapter, buildPrompt, webhookUrl } = dependencies;
 
-  /** Single owner predicate for every read and write in this module. */
+  /** Single owner predicate for every owner-facing read and write in this module. */
   function ownedJobs(ownerId: string) {
     return database
       .withSchema("app")
@@ -94,8 +131,17 @@ export function createPostgresPhotoJobModule(
     "photoJob.scenePresetKey",
     "photoJob.state",
     "photoJob.failureReason",
+    "photoJob.modelIdentifier",
+    "photoJob.submittedAt",
+    "photoJob.completedAt",
     "photoJob.createdAt",
     "photoJob.updatedAt"
+  ] as const;
+
+  const inFlightColumns = [
+    ...jobColumns,
+    "photoJob.providerReference",
+    "photoJob.providerCheckedAt"
   ] as const;
 
   async function loadJob(ownerId: string, jobId: string) {
@@ -104,21 +150,30 @@ export function createPostgresPhotoJobModule(
       .where("photoJob.id", "=", jobId)
       .executeTakeFirst();
     if (!row) return null;
+    return mapJob(row as JobRow, await findPhotoId(jobId));
+  }
 
+  async function findPhotoId(jobId: string) {
     const photo = await database
       .withSchema("app")
       .selectFrom("generatedPhoto")
       .select("id")
       .where("photoJobId", "=", jobId)
       .executeTakeFirst();
-
-    return mapJob(row as JobRow, photo?.id ?? null);
+    return photo?.id ?? null;
   }
 
   async function markState(
     jobId: string,
     state: PhotoJob["state"],
-    extra: { failureReason?: string | null; providerReference?: string | null } = {}
+    extra: {
+      failureReason?: string | null;
+      providerReference?: string | null;
+      modelIdentifier?: string | null;
+      submittedAt?: Date | null;
+      completedAt?: Date | null;
+      providerCheckedAt?: Date | null;
+    } = {}
   ) {
     const terminal =
       state === "succeeded" || state === "failed" || state === "canceled";
@@ -134,10 +189,189 @@ export function createPostgresPhotoJobModule(
           : {}),
         ...(extra.providerReference !== undefined
           ? { providerReference: extra.providerReference }
+          : {}),
+        ...(extra.modelIdentifier !== undefined
+          ? { modelIdentifier: extra.modelIdentifier }
+          : {}),
+        ...(extra.submittedAt !== undefined ? { submittedAt: extra.submittedAt } : {}),
+        ...(extra.completedAt !== undefined ? { completedAt: extra.completedAt } : {}),
+        ...(extra.providerCheckedAt !== undefined
+          ? { providerCheckedAt: extra.providerCheckedAt }
           : {})
       })
       .where("id", "=", jobId)
       .execute();
+  }
+
+  /**
+   * Claims a job for validation and, if the claim wins, persists the output.
+   * Two concurrent completions — a webhook and a reconciliation, say — leave
+   * exactly one photo: the claim is a conditional update, and the photo row's
+   * unique job reference backs it up.
+   */
+  async function persistGenerated(
+    row: InFlightRow,
+    outcome: Extract<InspectPhotoGenerationOutcome, { kind: "generated" }>
+  ): Promise<Applied> {
+    const claimed = await database
+      .withSchema("app")
+      .updateTable("photoJob")
+      .set({ state: "validating", updatedAt: clock() })
+      .where("id", "=", row.id)
+      .where("state", "in", ["submitted", "running", "uncertain"])
+      .executeTakeFirst();
+    if (Number(claimed.numUpdatedRows ?? 0) === 0) return "unchanged";
+
+    async function fail(reason: string): Promise<Applied> {
+      await markState(row.id, "failed", { failureReason: reason, completedAt: clock() });
+      return "failed";
+    }
+
+    try {
+      if (outcome.bytes.byteLength === 0) return await fail("output-empty");
+      if (outcome.bytes.byteLength > MAX_OUTPUT_BYTES) return await fail("output-too-large");
+      const probed = probeImage(outcome.bytes);
+      if (!probed) return await fail("output-not-an-image");
+
+      // Success is declared only after the bytes are durably in EU storage.
+      const photoId = randomUUID();
+      const extension =
+        probed.contentType === "image/png"
+          ? "png"
+          : probed.contentType === "image/webp"
+            ? "webp"
+            : "jpg";
+      const storageKey = `photos/${photoId}.${extension}`;
+
+      const upload = await storage.presignUpload({
+        key: storageKey,
+        contentType: probed.contentType,
+        byteSize: outcome.bytes.byteLength
+      });
+      const body = new Uint8Array(outcome.bytes.byteLength);
+      body.set(outcome.bytes);
+      const put = await fetch(upload.url, {
+        method: "PUT",
+        headers: upload.requiredHeaders,
+        body
+      });
+      if (!put.ok) return await fail("output-storage-failed");
+
+      await database
+        .withSchema("app")
+        .insertInto("generatedPhoto")
+        .values({
+          id: photoId,
+          photoJobId: row.id,
+          projectId: row.projectId,
+          configurationRevisionId: row.configurationRevisionId,
+          storageKey,
+          contentType: probed.contentType,
+          byteSize: outcome.bytes.byteLength,
+          width: probed.width,
+          height: probed.height
+        })
+        .execute();
+
+      await markState(row.id, "succeeded", {
+        failureReason: null,
+        modelIdentifier: outcome.modelIdentifier,
+        completedAt: clock()
+      });
+      return "succeeded";
+    } catch (error) {
+      if (isPostgresErrorWithCode(error, "23505")) {
+        // A concurrent completion already produced the photo for this job.
+        return "unchanged";
+      }
+      console.error("Photo job completion failed", error);
+      return await fail("execution-error");
+    }
+  }
+
+  /** Applies what the provider reported to a job that is still in flight. */
+  async function applyInspection(
+    row: InFlightRow,
+    outcome: InspectPhotoGenerationOutcome,
+    now: Date
+  ): Promise<Applied> {
+    const terminal =
+      row.state === "succeeded" || row.state === "failed" || row.state === "canceled";
+    if (terminal) return "unchanged";
+
+    switch (outcome.kind) {
+      case "generated":
+        return persistGenerated(row, outcome);
+      case "failed":
+        await markState(row.id, "failed", { failureReason: outcome.reason, completedAt: now });
+        return "failed";
+      case "canceled":
+        await markState(row.id, "canceled", {
+          failureReason: row.state === "canceling" ? "canceled-by-owner" : "canceled-at-provider",
+          completedAt: now
+        });
+        return "canceled";
+      case "unknown":
+        await markState(row.id, "failed", { failureReason: "provider-lost", completedAt: now });
+        return "failed";
+      case "pending": {
+        const age = row.submittedAt ? now.getTime() - new Date(row.submittedAt).getTime() : 0;
+        if (age >= GIVE_UP_AFTER_MS) {
+          if (row.providerReference) await adapter.cancel(row.providerReference);
+          await markState(row.id, "failed", { failureReason: "provider-timeout", completedAt: now });
+          return "failed";
+        }
+        if (row.state === "canceling") return "unchanged";
+        if (age >= UNCERTAIN_AFTER_MS) {
+          if (row.state === "uncertain") return "unchanged";
+          await markState(row.id, "uncertain");
+          return "progressed";
+        }
+        if (outcome.started && row.state === "submitted") {
+          await markState(row.id, "running");
+          return "progressed";
+        }
+        return "unchanged";
+      }
+    }
+  }
+
+  async function applyEventStatus(
+    row: InFlightRow,
+    status: ProviderEventStatus,
+    now: Date
+  ): Promise<Applied> {
+    switch (status) {
+      case "starting":
+      case "processing":
+        return applyInspection(row, { kind: "pending", started: status === "processing" }, now);
+      case "failed":
+        return applyInspection(
+          row,
+          { kind: "failed", reason: "provider-prediction-failed", retryable: true },
+          now
+        );
+      case "canceled":
+        return applyInspection(row, { kind: "canceled" }, now);
+      case "succeeded": {
+        // The event carries no output by contract; the bytes are read back
+        // through the adapter, which also confirms the provider's own view.
+        if (!row.providerReference) return "unchanged";
+        return applyInspection(row, await adapter.inspect(row.providerReference), now);
+      }
+    }
+  }
+
+  async function reconcileRow(row: InFlightRow, now: Date): Promise<Applied> {
+    if (!row.providerReference) return "unchanged";
+    await markState(row.id, row.state, { providerCheckedAt: now });
+    const outcome = await adapter.inspect(row.providerReference);
+    if (row.state === "canceling" && outcome.kind === "pending") {
+      // The provider has not acknowledged the cancel yet; ask again and move on.
+      await adapter.cancel(row.providerReference);
+      return "unchanged";
+    }
+    return applyInspection(row, outcome, now);
   }
 
   return {
@@ -324,6 +558,10 @@ export function createPostgresPhotoJobModule(
               requestHash,
               providerReference: null,
               failureReason: null,
+              modelIdentifier: null,
+              submittedAt: null,
+              completedAt: null,
+              providerCheckedAt: null,
               terminalAt: null
             })
             .execute();
@@ -338,6 +576,9 @@ export function createPostgresPhotoJobModule(
               "scenePresetKey",
               "state",
               "failureReason",
+              "modelIdentifier",
+              "submittedAt",
+              "completedAt",
               "createdAt",
               "updatedAt"
             ])
@@ -446,7 +687,7 @@ export function createPostgresPhotoJobModule(
       return { kind: "ready", job: { ...job, state: "capture-ready" } };
     },
 
-    async runJob(input): Promise<RunPhotoJobResult> {
+    async submitJob(input): Promise<SubmitPhotoJobResult> {
       const ownerId = uuidSchema.parse(input.ownerId);
       const jobId = uuidSchema.parse(input.jobId);
 
@@ -471,11 +712,12 @@ export function createPostgresPhotoJobModule(
       const job = mapJob(row as JobRow);
       if (job.state !== "capture-ready") return { kind: "not-runnable", job };
 
-      // Claim the job so a second call cannot start the same work twice.
+      // Claim the job so a second call cannot submit the same work twice.
+      const now = clock();
       const claimed = await database
         .withSchema("app")
         .updateTable("photoJob")
-        .set({ state: "submitted", updatedAt: clock() })
+        .set({ state: "submitted", submittedAt: now, updatedAt: now })
         .where("id", "=", jobId)
         .where("state", "=", "capture-ready")
         .executeTakeFirst();
@@ -483,27 +725,16 @@ export function createPostgresPhotoJobModule(
         return { kind: "not-runnable", job };
       }
 
-      async function fail(
-        reason: string,
-        providerReference?: string | null
-      ): Promise<RunPhotoJobResult> {
-        // A provider reference issued before the failure is kept as evidence so
-        // the run can be traced at the provider; provider detail never lands here.
-        await markState(jobId, "failed", {
-          failureReason: reason,
-          ...(providerReference ? { providerReference } : {})
-        });
+      async function fail(reason: string): Promise<SubmitPhotoJobResult> {
+        await markState(jobId, "failed", { failureReason: reason, completedAt: clock() });
         return { kind: "failed", job: { ...job, state: "failed" }, reason };
       }
 
       try {
         const captureUrl = await storage.presignDownload({
           key: row.captureKey,
-          expiresInSeconds: 300
+          expiresInSeconds: CAPTURE_GRANT_SECONDS
         });
-        const captureResponse = await fetch(captureUrl.url);
-        if (!captureResponse.ok) return await fail("capture-unreadable");
-        const capture = new Uint8Array(await captureResponse.arrayBuffer());
 
         // Product facts come from the pinned revision, never from the client.
         const prompt = buildPrompt({
@@ -512,93 +743,142 @@ export function createPostgresPhotoJobModule(
           scenePresetKey: row.scenePresetKey
         });
 
-        await markState(jobId, "running");
-        const outcome = await adapter.generate({
-          capture,
+        const outcome = await adapter.submit({
           captureContentType: row.captureContentType,
-          // The same grant the bytes were just read through; it outlives the
-          // provider timeout, so a provider that fetches inputs itself can use it.
           captureUrl: captureUrl.url,
           prompt,
-          aspectRatio: "16:9"
+          aspectRatio: "16:9",
+          webhookUrl
         });
+        if (outcome.kind === "failed") return await fail(outcome.reason);
 
-        if (outcome.kind === "failed") {
-          return await fail(outcome.reason, outcome.providerReference);
-        }
-
-        await markState(jobId, "validating", {
-          providerReference: outcome.providerReference
+        await markState(jobId, "submitted", {
+          providerReference: outcome.providerReference,
+          modelIdentifier: outcome.modelIdentifier
         });
-
-        if (outcome.bytes.byteLength === 0) return await fail("output-empty");
-        if (outcome.bytes.byteLength > MAX_OUTPUT_BYTES) {
-          return await fail("output-too-large");
-        }
-        const probed = probeImage(outcome.bytes);
-        if (!probed) return await fail("output-not-an-image");
-
-        // Success is declared only after the bytes are durably in EU storage.
-        const photoId = randomUUID();
-        const extension =
-          probed.contentType === "image/png"
-            ? "png"
-            : probed.contentType === "image/webp"
-              ? "webp"
-              : "jpg";
-        const storageKey = `photos/${photoId}.${extension}`;
-
-        const upload = await storage.presignUpload({
-          key: storageKey,
-          contentType: probed.contentType,
-          byteSize: outcome.bytes.byteLength
-        });
-        const body = new Uint8Array(outcome.bytes.byteLength);
-        body.set(outcome.bytes);
-        const put = await fetch(upload.url, {
-          method: "PUT",
-          headers: upload.requiredHeaders,
-          body
-        });
-        if (!put.ok) return await fail("output-storage-failed");
-
-        await database
-          .withSchema("app")
-          .insertInto("generatedPhoto")
-          .values({
-            id: photoId,
-            photoJobId: jobId,
-            projectId: job.projectId,
-            configurationRevisionId: job.revisionId,
-            storageKey,
-            contentType: probed.contentType,
-            byteSize: outcome.bytes.byteLength,
-            width: probed.width,
-            height: probed.height
-          })
-          .execute();
-
-        await markState(jobId, "succeeded", { failureReason: null });
         return {
-          kind: "succeeded",
-          job: { ...job, state: "succeeded", generatedPhotoId: photoId },
-          generatedPhotoId: photoId
+          kind: "submitted",
+          job: {
+            ...job,
+            state: "submitted",
+            submittedAt: now,
+            modelIdentifier: outcome.modelIdentifier
+          }
         };
       } catch (error) {
-        if (isPostgresErrorWithCode(error, "23505")) {
-          // A concurrent run already produced the photo for this job.
-          const existing = await loadJob(ownerId, jobId);
-          if (existing?.generatedPhotoId) {
-            return {
-              kind: "succeeded",
-              job: existing,
-              generatedPhotoId: existing.generatedPhotoId
-            };
-          }
-        }
-        console.error("Photo job execution failed", error);
+        console.error("Photo job submission failed", error);
         return await fail("execution-error");
       }
+    },
+
+    async recordProviderEvent(event: ProviderEvent): Promise<RecordProviderEventResult> {
+      const now = clock();
+      const inserted = await database
+        .withSchema("app")
+        .insertInto("photoJobProviderEvent")
+        .values({
+          id: randomUUID(),
+          eventId: event.eventId,
+          photoJobId: null,
+          providerReference: event.providerReference,
+          status: event.status,
+          receivedAt: now,
+          processedAt: null
+        })
+        .onConflict((conflict) => conflict.column("eventId").doNothing())
+        .returning("id")
+        .executeTakeFirst();
+      if (!inserted) return { kind: "duplicate" };
+
+      const row = await database
+        .withSchema("app")
+        .selectFrom("photoJob")
+        .select([...inFlightColumns])
+        .where("photoJob.providerReference", "=", event.providerReference)
+        .executeTakeFirst();
+      if (!row) return { kind: "unknown-reference" };
+
+      await database
+        .withSchema("app")
+        .updateTable("photoJobProviderEvent")
+        .set({ photoJobId: row.id })
+        .where("id", "=", inserted.id)
+        .execute();
+
+      await applyEventStatus(row as InFlightRow, event.status, now);
+
+      await database
+        .withSchema("app")
+        .updateTable("photoJobProviderEvent")
+        .set({ processedAt: clock() })
+        .where("id", "=", inserted.id)
+        .execute();
+      return { kind: "applied", jobId: row.id };
+    },
+
+    async reconcileJob(input): Promise<ReconcilePhotoJobResult> {
+      const ownerId = uuidSchema.parse(input.ownerId);
+      const jobId = uuidSchema.parse(input.jobId);
+
+      const owned = await ownedJobs(ownerId)
+        .select([...inFlightColumns])
+        .where("photoJob.id", "=", jobId)
+        .executeTakeFirst();
+      if (!owned) return { kind: "unavailable" };
+      const row = owned as InFlightRow;
+
+      const inFlight =
+        row.state === "submitted" ||
+        row.state === "running" ||
+        row.state === "uncertain" ||
+        row.state === "canceling";
+      const now = clock();
+      const checkedRecently =
+        row.providerCheckedAt !== null &&
+        now.getTime() - new Date(row.providerCheckedAt).getTime() < RECONCILE_MIN_INTERVAL_MS;
+      if (!inFlight || !row.providerReference || checkedRecently) {
+        return { kind: "unchanged", job: mapJob(row, await findPhotoId(jobId)) };
+      }
+
+      const kind = await reconcileRow(row, now);
+      const job = await loadJob(ownerId, jobId);
+      if (!job) return { kind: "unavailable" };
+      return { kind, job };
+    },
+
+    async sweepInFlightJobs(input = {}): Promise<SweepPhotoJobsResult> {
+      const limit = z.number().int().min(1).max(200).default(20).parse(input.limit);
+      const now = clock();
+      const staleBefore = new Date(now.getTime() - SWEEP_MIN_INTERVAL_MS);
+
+      const rows = await database
+        .withSchema("app")
+        .selectFrom("photoJob")
+        .select([...inFlightColumns])
+        .where("photoJob.state", "in", ["submitted", "running", "uncertain", "canceling"])
+        .where("photoJob.providerReference", "is not", null)
+        .where((expression) =>
+          expression.or([
+            expression("photoJob.providerCheckedAt", "is", null),
+            expression("photoJob.providerCheckedAt", "<", staleBefore)
+          ])
+        )
+        .orderBy("photoJob.updatedAt", "asc")
+        .limit(limit)
+        .execute();
+
+      const result: SweepPhotoJobsResult = {
+        examined: rows.length,
+        progressed: 0,
+        succeeded: 0,
+        failed: 0,
+        canceled: 0
+      };
+      for (const row of rows) {
+        const kind = await reconcileRow(row as InFlightRow, now);
+        if (kind !== "unchanged") result[kind] += 1;
+      }
+      return result;
     },
 
     async getJob(input) {
@@ -625,8 +905,13 @@ export function createPostgresPhotoJobModule(
       const ownerId = uuidSchema.parse(input.ownerId);
       const jobId = uuidSchema.parse(input.jobId);
 
-      const job = await loadJob(ownerId, jobId);
-      if (!job) return { kind: "unavailable" };
+      const owned = await ownedJobs(ownerId)
+        .select([...inFlightColumns])
+        .where("photoJob.id", "=", jobId)
+        .executeTakeFirst();
+      if (!owned) return { kind: "unavailable" };
+      const row = owned as InFlightRow;
+      const job = mapJob(row, await findPhotoId(jobId));
       if (
         job.state === "succeeded" ||
         job.state === "failed" ||
@@ -635,8 +920,31 @@ export function createPostgresPhotoJobModule(
         return { kind: "unchanged", job };
       }
 
-      await markState(jobId, "canceled", { failureReason: "canceled-by-owner" });
+      if (row.providerReference) {
+        // Claim the intent first so a completion racing the cancel sees it.
+        await markState(jobId, "canceling");
+        await adapter.cancel(row.providerReference);
+      }
+      await markState(jobId, "canceled", {
+        failureReason: "canceled-by-owner",
+        completedAt: clock()
+      });
       return { kind: "canceled", job: { ...job, state: "canceled" } };
     }
   };
+}
+
+/** Exposed for the retention and reconciliation schedules that will call it. */
+export const PHOTO_JOB_RECONCILE_WINDOWS = {
+  uncertainAfterMs: UNCERTAIN_AFTER_MS,
+  giveUpAfterMs: GIVE_UP_AFTER_MS
+} as const;
+
+export function isInFlightState(state: PhotoJob["state"]) {
+  return (
+    state === "submitted" ||
+    state === "running" ||
+    state === "uncertain" ||
+    state === "canceling"
+  );
 }

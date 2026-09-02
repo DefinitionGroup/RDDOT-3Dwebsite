@@ -42,7 +42,7 @@ const buildPrompt: PromptBuilder = ({
   return buildPhotoPrompt(preset, cabinetFinish, frontFinish);
 };
 
-function resolveAdapter() {
+export function getPhotoGenerationAdapter() {
   const token = process.env.REPLICATE_API_TOKEN?.trim();
   if (!token) {
     return createUnavailablePhotoGenerationAdapter("provider-not-configured");
@@ -52,13 +52,26 @@ function resolveAdapter() {
   if (process.env.PHOTO_GENERATION_ENABLED !== "true") {
     return createUnavailablePhotoGenerationAdapter("provider-disabled");
   }
-  return createReplicatePhotoGenerationAdapter(token);
+  return createReplicatePhotoGenerationAdapter(token, {
+    webhookSecret: process.env.REPLICATE_WEBHOOK_SIGNING_SECRET ?? null
+  });
+}
+
+/**
+ * Where the provider delivers events. Unset in local development, where the
+ * application is not reachable from outside; jobs then complete through
+ * reconciliation on read and by the sweep.
+ */
+function resolveWebhookUrl() {
+  const url = process.env.PHOTO_WEBHOOK_URL?.trim();
+  return url && url.startsWith("https://") ? url : null;
 }
 
 export function getPhotoJobs() {
   return createPostgresPhotoJobModule(getDatabase(), {
     storage: getObjectStorage(),
-    adapter: resolveAdapter(),
-    buildPrompt
+    adapter: getPhotoGenerationAdapter(),
+    buildPrompt,
+    webhookUrl: resolveWebhookUrl()
   });
 }

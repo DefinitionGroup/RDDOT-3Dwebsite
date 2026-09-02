@@ -175,10 +175,30 @@ CREATE TABLE app.photo_job (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     terminal_at timestamp with time zone,
+    model_identifier text,
+    submitted_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    provider_checked_at timestamp with time zone,
     CONSTRAINT photo_job_attempts_check CHECK ((attempts >= 0)),
     CONSTRAINT photo_job_check CHECK (((state = ANY (ARRAY['succeeded'::text, 'failed'::text, 'canceled'::text])) = (terminal_at IS NOT NULL))),
     CONSTRAINT photo_job_check1 CHECK (((state = ANY (ARRAY['requested'::text, 'canceled'::text, 'failed'::text])) OR (source_capture_id IS NOT NULL))),
     CONSTRAINT photo_job_state_check CHECK ((state = ANY (ARRAY['requested'::text, 'capture-ready'::text, 'submitted'::text, 'running'::text, 'validating'::text, 'uncertain'::text, 'canceling'::text, 'succeeded'::text, 'failed'::text, 'canceled'::text])))
+);
+
+
+--
+-- Name: photo_job_provider_event; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.photo_job_provider_event (
+    id uuid NOT NULL,
+    event_id text NOT NULL,
+    photo_job_id uuid,
+    provider_reference text NOT NULL,
+    status text NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    processed_at timestamp with time zone,
+    CONSTRAINT photo_job_provider_event_status_check CHECK ((status = ANY (ARRAY['starting'::text, 'processing'::text, 'succeeded'::text, 'failed'::text, 'canceled'::text])))
 );
 
 
@@ -533,6 +553,22 @@ ALTER TABLE ONLY app.photo_job
 
 
 --
+-- Name: photo_job_provider_event photo_job_provider_event_event_id_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.photo_job_provider_event
+    ADD CONSTRAINT photo_job_provider_event_event_id_key UNIQUE (event_id);
+
+
+--
+-- Name: photo_job_provider_event photo_job_provider_event_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.photo_job_provider_event
+    ADD CONSTRAINT photo_job_provider_event_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: project project_owner_id_creation_idempotency_key_key; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -750,6 +786,20 @@ CREATE INDEX photo_job_project_created_idx ON app.photo_job USING btree (project
 
 
 --
+-- Name: photo_job_provider_event_job_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX photo_job_provider_event_job_idx ON app.photo_job_provider_event USING btree (photo_job_id, received_at DESC);
+
+
+--
+-- Name: photo_job_provider_reference_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX photo_job_provider_reference_idx ON app.photo_job USING btree (provider_reference) WHERE (provider_reference IS NOT NULL);
+
+
+--
 -- Name: photo_job_revision_idx; Type: INDEX; Schema: app; Owner: -
 --
 
@@ -881,6 +931,14 @@ ALTER TABLE ONLY app.photo_job
 
 
 --
+-- Name: photo_job_provider_event photo_job_provider_event_photo_job_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.photo_job_provider_event
+    ADD CONSTRAINT photo_job_provider_event_photo_job_id_fkey FOREIGN KEY (photo_job_id) REFERENCES app.photo_job(id) ON DELETE CASCADE;
+
+
+--
 -- Name: photo_job photo_job_source_capture_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -961,4 +1019,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260813230000'),
     ('20260814110000'),
     ('20260901120000'),
-    ('20260902200000');
+    ('20260902200000'),
+    ('20260902230000');

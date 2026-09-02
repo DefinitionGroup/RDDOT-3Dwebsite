@@ -1,3 +1,4 @@
+import { createHmac, randomBytes } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   classifyProviderError,
@@ -5,15 +6,15 @@ import {
   type ReplicateAdapterDependencies
 } from "@/lib/server/photo-jobs/replicate-adapter";
 
-type RunOptions = { input: Record<string, unknown>; signal?: AbortSignal };
-type Progress = (prediction: { id: string; status: string }) => void;
+type Prediction = { id: string; status: string; output?: unknown; error?: unknown };
+type CreateOptions = { input: Record<string, unknown>; webhook?: string; webhook_events_filter?: string[] };
 
 const REQUEST = {
-  capture: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]),
   captureContentType: "image/jpeg" as const,
-  captureUrl: null,
+  captureUrl: "https://storage.example/captures/abc.jpg?X-Amz-Signature=sig",
   prompt: "A kitchen",
-  aspectRatio: "16:9" as const
+  aspectRatio: "16:9" as const,
+  webhookUrl: "https://app.example/api/webhooks/replicate"
 };
 
 function apiError(status: number, body = "provider says no") {
@@ -25,13 +26,20 @@ function apiError(status: number, body = "provider says no") {
 }
 
 function createDependencies(
-  run: (options: RunOptions, progress?: Progress) => Promise<unknown>,
+  predictions: Partial<{
+    create: (options: CreateOptions) => Promise<Prediction>;
+    get: (id: string) => Promise<Prediction>;
+    cancel: (id: string) => Promise<Prediction>;
+  }>,
   overrides: Partial<ReplicateAdapterDependencies> = {}
 ): ReplicateAdapterDependencies {
   return {
     client: {
-      run: ((_model: string, options: RunOptions, progress?: Progress) =>
-        run(options, progress)) as never
+      predictions: {
+        create: predictions.create ?? (async () => ({ id: "pred_1", status: "starting" })),
+        get: predictions.get ?? (async (id: string) => ({ id, status: "starting" })),
+        cancel: predictions.cancel ?? (async (id: string) => ({ id, status: "canceled" }))
+      } as never
     },
     fetch: (async () =>
       new Response(new Uint8Array([9, 9, 9]), {
@@ -42,82 +50,90 @@ function createDependencies(
   };
 }
 
+const SECRET_BYTES = randomBytes(24);
+const WEBHOOK_SECRET = `whsec_${SECRET_BYTES.toString("base64")}`;
+
+function signedDelivery(body: string, secret = SECRET_BYTES, id = "msg_1") {
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const signature = createHmac("sha256", secret)
+    .update(`${id}.${timestamp}.${body}`)
+    .digest("base64");
+  return new Request("https://app.example/api/webhooks/replicate", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "webhook-id": id,
+      "webhook-timestamp": timestamp,
+      "webhook-signature": `v1,${signature}`
+    },
+    body
+  });
+}
+
 describe("Replicate photo generation adapter", () => {
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("passes the presigned capture URL to the model when one is granted", async () => {
-    let received: unknown;
+  it("submits the presigned capture URL with the webhook and returns the reference", async () => {
+    let received: CreateOptions | null = null;
     const adapter = createReplicatePhotoGenerationAdapter(
       "token",
-      createDependencies(async (options) => {
-        received = options.input.image;
-        return ["https://replicate.delivery/out.png"];
+      createDependencies({
+        create: async (options) => {
+          received = options;
+          return { id: "pred_42", status: "starting" };
+        }
       })
     );
 
-    const outcome = await adapter.generate({
+    const outcome = await adapter.submit(REQUEST);
+
+    expect(outcome).toEqual({
+      kind: "submitted",
+      providerReference: "pred_42",
+      modelIdentifier: "qwen/qwen-image-2-pro"
+    });
+    expect(received!.input.image).toBe(REQUEST.captureUrl);
+    expect(received!.webhook).toBe(REQUEST.webhookUrl);
+    expect(received!.webhook_events_filter).toEqual(["start", "completed"]);
+  });
+
+  it("submits without a webhook when none is configured, falling back to a named File", async () => {
+    let received: CreateOptions | null = null;
+    const adapter = createReplicatePhotoGenerationAdapter(
+      "token",
+      createDependencies({
+        create: async (options) => {
+          received = options;
+          return { id: "pred_43", status: "starting" };
+        }
+      })
+    );
+
+    await adapter.submit({
       ...REQUEST,
-      captureUrl: "https://storage.example/captures/abc.jpg?X-Amz-Signature=sig"
+      captureUrl: null,
+      capture: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]),
+      webhookUrl: null
     });
 
-    expect(received).toBe(
-      "https://storage.example/captures/abc.jpg?X-Amz-Signature=sig"
-    );
-    expect(outcome.kind).toBe("generated");
+    expect(received!.webhook).toBeUndefined();
+    expect(received!.input.image).toBeInstanceOf(File);
+    expect((received!.input.image as File).name).toBe("capture.jpg");
   });
 
-  it("falls back to a named, typed File when no capture URL exists", async () => {
-    let received: unknown;
-    const adapter = createReplicatePhotoGenerationAdapter(
-      "token",
-      createDependencies(async (options, progress) => {
-        received = options.input.image;
-        progress?.({ id: "pred_123", status: "starting" });
-        return ["https://replicate.delivery/out.png"];
-      })
-    );
-
-    const outcome = await adapter.generate(REQUEST);
-
-    expect(received).toBeInstanceOf(File);
-    const blob = received as File;
-    // The model reads the format off the extension of the uploaded file's URL.
-    expect(blob.name).toBe("capture.jpg");
-    expect(blob.type).toBe("image/jpeg");
-    expect(blob.size).toBe(REQUEST.capture.byteLength);
-    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(REQUEST.capture);
-
-    expect(outcome.kind).toBe("generated");
-    if (outcome.kind !== "generated") return;
-    expect(outcome.providerReference).toBe("pred_123");
-    expect(outcome.declaredContentType).toBe("image/png");
-    expect(Array.from(outcome.bytes)).toEqual([9, 9, 9]);
+  it("refuses to submit with neither a capture URL nor bytes", async () => {
+    const adapter = createReplicatePhotoGenerationAdapter("token", createDependencies({}));
+    const outcome = await adapter.submit({ ...REQUEST, captureUrl: null });
+    expect(outcome).toMatchObject({ kind: "failed", reason: "capture-unavailable" });
   });
 
-  it("keeps the prediction id when the run fails after it was issued", async () => {
-    const adapter = createReplicatePhotoGenerationAdapter(
-      "token",
-      createDependencies(async (_options, progress) => {
-        progress?.({ id: "pred_456", status: "processing" });
-        throw new Error("Prediction failed: content flagged");
-      })
-    );
-
-    const outcome = await adapter.generate(REQUEST);
-
-    expect(outcome).toMatchObject({
-      kind: "failed",
-      reason: "provider-prediction-failed",
-      providerReference: "pred_456"
-    });
-  });
-
-  it("maps HTTP rejections to distinct, honest reason codes", () => {
+  it("maps HTTP rejections to distinct, honest reason codes", async () => {
     expect(classifyProviderError(apiError(401))).toMatchObject({
       reason: "provider-unauthorized",
       retryable: false
@@ -126,83 +142,114 @@ describe("Replicate photo generation adapter", () => {
       reason: "provider-billing",
       retryable: false
     });
-    expect(classifyProviderError(apiError(422, "image is invalid"))).toMatchObject(
-      { reason: "provider-rejected-input", retryable: false }
-    );
-    expect(classifyProviderError(apiError(413))).toMatchObject({
-      reason: "provider-rejected-input"
-    });
-    expect(classifyProviderError(apiError(429))).toMatchObject({
-      reason: "provider-rate-limited",
-      retryable: true
+    expect(classifyProviderError(apiError(422))).toMatchObject({
+      reason: "provider-rejected-input",
+      retryable: false
     });
     expect(classifyProviderError(apiError(503))).toMatchObject({
       reason: "provider-error",
       retryable: true
     });
-    expect(classifyProviderError(new Error("socket hang up"))).toMatchObject({
-      reason: "provider-error",
+
+    const adapter = createReplicatePhotoGenerationAdapter(
+      "token",
+      createDependencies({
+        create: async () => {
+          throw apiError(429);
+        }
+      })
+    );
+    expect(await adapter.submit(REQUEST)).toMatchObject({
+      kind: "failed",
+      reason: "provider-rate-limited",
       retryable: true
     });
   });
 
-  it("carries the provider status and message in the detail, truncated", () => {
-    const failure = classifyProviderError(apiError(422, "x".repeat(2000)));
-    expect(failure.detail.startsWith("HTTP 422: ")).toBe(true);
-    expect(failure.detail.length).toBeLessThan(700);
-  });
-
-  it("reports a canceled slow prediction as a timeout, not as missing output", async () => {
+  it("reads the provider's view back as pending, canceled, failed or generated", async () => {
+    const states: Record<string, Prediction> = {
+      a: { id: "a", status: "starting" },
+      b: { id: "b", status: "processing" },
+      c: { id: "c", status: "canceled" },
+      d: { id: "d", status: "failed", error: "NSFW content detected" },
+      e: { id: "e", status: "succeeded", output: ["https://replicate.delivery/out.png"] },
+      f: { id: "f", status: "succeeded", output: null }
+    };
     const adapter = createReplicatePhotoGenerationAdapter(
       "token",
-      createDependencies(
-        (options) =>
-          new Promise((resolve) => {
-            // Mirrors the SDK: once the signal lapses it stops polling, cancels
-            // the prediction and resolves with whatever output exists — none.
-            options.signal?.addEventListener("abort", () => resolve(null));
-          }),
-        { generateTimeoutMs: 20, generateHardTimeoutMs: 500 }
-      )
+      createDependencies({ get: async (id) => states[id] })
     );
 
-    const outcome = await adapter.generate(REQUEST);
+    expect(await adapter.inspect("a")).toEqual({ kind: "pending", started: false });
+    expect(await adapter.inspect("b")).toEqual({ kind: "pending", started: true });
+    expect(await adapter.inspect("c")).toEqual({ kind: "canceled" });
+    expect(await adapter.inspect("d")).toMatchObject({
+      kind: "failed",
+      reason: "provider-prediction-failed",
+      providerReference: "d"
+    });
+    expect(await adapter.inspect("f")).toMatchObject({ kind: "failed", reason: "provider-no-output" });
 
-    expect(outcome).toMatchObject({ kind: "failed", reason: "provider-timeout" });
+    const generated = await adapter.inspect("e");
+    expect(generated.kind).toBe("generated");
+    if (generated.kind !== "generated") return;
+    expect(Array.from(generated.bytes)).toEqual([9, 9, 9]);
+    expect(generated.declaredContentType).toBe("image/png");
+    expect(generated.providerReference).toBe("e");
   });
 
-  it("gives up when the provider ignores the cancellation", async () => {
+  it("reports a reference the provider no longer knows as unknown", async () => {
     const adapter = createReplicatePhotoGenerationAdapter(
       "token",
-      createDependencies(() => new Promise(() => {}), {
-        generateTimeoutMs: 10,
-        generateHardTimeoutMs: 30
+      createDependencies({
+        get: async () => {
+          throw apiError(404, "not found");
+        }
       })
     );
-
-    const outcome = await adapter.generate(REQUEST);
-
-    expect(outcome).toMatchObject({
-      kind: "failed",
-      reason: "provider-timeout",
-      retryable: true
-    });
+    expect(await adapter.inspect("gone")).toEqual({ kind: "unknown" });
   });
 
-  it("reports an unreachable delivery URL with its status", async () => {
+  it("cancels on a best-effort basis and swallows provider errors", async () => {
+    const canceled: string[] = [];
     const adapter = createReplicatePhotoGenerationAdapter(
       "token",
-      createDependencies(async () => "https://replicate.delivery/gone.png", {
-        fetch: (async () => new Response("", { status: 404 })) as typeof fetch
+      createDependencies({
+        cancel: async (id) => {
+          canceled.push(id);
+          throw apiError(500);
+        }
       })
     );
+    await expect(adapter.cancel("pred_9")).resolves.toBeUndefined();
+    expect(canceled).toEqual(["pred_9"]);
+  });
 
-    const outcome = await adapter.generate(REQUEST);
+  it("accepts a correctly signed webhook and normalises it", async () => {
+    const adapter = createReplicatePhotoGenerationAdapter(
+      "token",
+      createDependencies({}, { webhookSecret: WEBHOOK_SECRET })
+    );
+    const body = JSON.stringify({ id: "pred_77", status: "succeeded", output: ["x"] });
 
-    expect(outcome).toMatchObject({
-      kind: "failed",
-      reason: "provider-output-unreachable",
-      detail: "HTTP 404 while fetching the output"
-    });
+    const event = await adapter.parseWebhook(signedDelivery(body));
+
+    expect(event).toEqual({ eventId: "msg_1", providerReference: "pred_77", status: "succeeded" });
+  });
+
+  it("refuses a webhook with a wrong signature, an unknown status, or no secret", async () => {
+    const adapter = createReplicatePhotoGenerationAdapter(
+      "token",
+      createDependencies({}, { webhookSecret: WEBHOOK_SECRET })
+    );
+    const body = JSON.stringify({ id: "pred_77", status: "succeeded" });
+
+    expect(await adapter.parseWebhook(signedDelivery(body, randomBytes(24)))).toBeNull();
+    expect(
+      await adapter.parseWebhook(signedDelivery(JSON.stringify({ id: "pred_77", status: "weird" })))
+    ).toBeNull();
+
+    const unconfigured = createReplicatePhotoGenerationAdapter("token", createDependencies({}));
+    expect(await unconfigured.parseWebhook(signedDelivery(body))).toBeNull();
   });
 });

@@ -1,43 +1,43 @@
 import "server-only";
 
-import Replicate, { type Prediction } from "replicate";
+import Replicate, { validateWebhook } from "replicate";
 import type {
+  InspectPhotoGenerationOutcome,
   PhotoGenerationAdapter,
-  PhotoGenerationOutcome,
-  PhotoGenerationRequest
+  PhotoGenerationFailure,
+  PhotoGenerationRequest,
+  ProviderEvent,
+  ProviderEventStatus,
+  SubmitPhotoGenerationOutcome
 } from "@/features/photo-jobs/photo-generation-adapter";
 
 /**
  * Replicate under the scoped ADR 0008 exception. Everything provider-shaped —
- * SDK types, prediction identifiers, delivery URLs, HTTP statuses — stops here.
- * The prediction id crosses the seam only as the opaque `providerReference`
- * evidence string; failure `detail` is logged for operators and never persisted.
+ * SDK types, prediction identifiers, delivery URLs, HTTP statuses, webhook
+ * payloads — stops here. The prediction id crosses the seam only as the opaque
+ * `providerReference`; failure `detail` is logged for operators and never
+ * persisted.
  *
- * This calls `run()` synchronously. ADR 0008 requires predictions plus webhook
- * so a job survives browser closure; that is PLAN.md Phase 3 and replaces this
- * adapter's internals without changing the Interface.
+ * Predictions plus webhook (PLAN.md Phase 3): `submit` creates a prediction
+ * and returns; `inspect` reads it back and downloads the output once it has
+ * succeeded; `parseWebhook` verifies a delivery with the account's signing
+ * secret.
  */
 const MODEL = "qwen/qwen-image-2-pro";
-
-/**
- * Cooperative bound. The SDK cancels the prediction at the provider when the
- * signal lapses, so a slow run stops spending instead of finishing unobserved.
- */
-const GENERATE_TIMEOUT_MS = 90_000;
-/** Hard bound in case the provider ignores the cancellation entirely. */
-const GENERATE_HARD_TIMEOUT_MS = GENERATE_TIMEOUT_MS + 30_000;
 const DOWNLOAD_TIMEOUT_MS = 30_000;
 /** Provider error bodies can be long; the log line does not need all of it. */
 const DETAIL_MAX_CHARS = 600;
 
-type ReplicateClient = Pick<Replicate, "run">;
+type ReplicateClient = {
+  predictions: Pick<Replicate["predictions"], "create" | "get" | "cancel">;
+};
 
 export type ReplicateAdapterDependencies = {
   client?: ReplicateClient;
   fetch?: typeof fetch;
-  generateTimeoutMs?: number;
-  generateHardTimeoutMs?: number;
   downloadTimeoutMs?: number;
+  /** From the account's default webhook; without it every delivery is refused. */
+  webhookSecret?: string | null;
 };
 
 type ProviderFailure = { reason: string; retryable: boolean; detail: string };
@@ -141,6 +141,20 @@ export function classifyProviderError(error: unknown): ProviderFailure {
   return { reason: "provider-error", retryable: true, detail };
 }
 
+const EVENT_STATUSES: readonly ProviderEventStatus[] = [
+  "starting",
+  "processing",
+  "succeeded",
+  "failed",
+  "canceled"
+];
+
+function toEventStatus(value: unknown): ProviderEventStatus | null {
+  return typeof value === "string" && (EVENT_STATUSES as string[]).includes(value)
+    ? (value as ProviderEventStatus)
+    : null;
+}
+
 export function createReplicatePhotoGenerationAdapter(
   token: string,
   dependencies: ReplicateAdapterDependencies = {}
@@ -148,79 +162,95 @@ export function createReplicatePhotoGenerationAdapter(
   const client: ReplicateClient =
     dependencies.client ?? new Replicate({ auth: token });
   const fetchImpl = dependencies.fetch ?? fetch;
-  const generateTimeoutMs = dependencies.generateTimeoutMs ?? GENERATE_TIMEOUT_MS;
-  const generateHardTimeoutMs =
-    dependencies.generateHardTimeoutMs ?? GENERATE_HARD_TIMEOUT_MS;
   const downloadTimeoutMs = dependencies.downloadTimeoutMs ?? DOWNLOAD_TIMEOUT_MS;
+  const webhookSecret = dependencies.webhookSecret?.trim() || null;
+
+  function failed(
+    reason: string,
+    retryable: boolean,
+    detail: string,
+    providerReference: string | null = null
+  ): PhotoGenerationFailure {
+    console.error("Photo generation failed", {
+      reason,
+      retryable,
+      model: MODEL,
+      predictionId: providerReference,
+      detail
+    });
+    return { kind: "failed", reason, retryable, providerReference, detail };
+  }
 
   return {
-    async generate(
-      request: PhotoGenerationRequest
-    ): Promise<PhotoGenerationOutcome> {
-      const trace: { predictionId: string | null } = { predictionId: null };
-
-      function failed(
-        reason: string,
-        retryable: boolean,
-        detail: string
-      ): PhotoGenerationOutcome {
-        console.error("Photo generation failed", {
-          reason,
-          retryable,
-          model: MODEL,
-          predictionId: trace.predictionId,
-          detail
-        });
-        return {
-          kind: "failed",
-          reason,
-          retryable,
-          providerReference: trace.predictionId,
-          detail
-        };
+    async submit(request: PhotoGenerationRequest): Promise<SubmitPhotoGenerationOutcome> {
+      const image =
+        request.captureUrl ??
+        (request.capture ? toFile(request.capture, request.captureContentType) : null);
+      if (!image) {
+        return failed("capture-unavailable", false, "Neither a capture URL nor bytes were given");
       }
 
-      const signal = AbortSignal.timeout(generateTimeoutMs);
-
       try {
-        const output = await withTimeout(
-          client.run(
-            MODEL,
-            {
-              input: {
-                image:
-                  request.captureUrl ??
-                  toFile(request.capture, request.captureContentType),
-                prompt: request.prompt,
-                aspect_ratio: request.aspectRatio,
-                negative_prompt: "",
-                match_input_image: false,
-                enable_prompt_expansion: true
-              },
-              signal
-            },
-            (prediction: Prediction) => {
-              if (prediction.id) trace.predictionId = prediction.id;
-            }
-          ),
-          generateHardTimeoutMs,
-          "Provider generation"
-        );
+        const prediction = await client.predictions.create({
+          model: MODEL,
+          input: {
+            image,
+            prompt: request.prompt,
+            aspect_ratio: request.aspectRatio,
+            negative_prompt: "",
+            match_input_image: false,
+            enable_prompt_expansion: true
+          },
+          ...(request.webhookUrl
+            ? {
+                webhook: request.webhookUrl,
+                webhook_events_filter: ["start", "completed"] as const
+              }
+            : {})
+        });
+        if (!prediction.id) {
+          return failed("provider-error", true, "Prediction created without an id");
+        }
+        return {
+          kind: "submitted",
+          providerReference: prediction.id,
+          modelIdentifier: MODEL
+        };
+      } catch (error) {
+        const failure = classifyProviderError(error);
+        return failed(failure.reason, failure.retryable, failure.detail);
+      }
+    },
 
-        if (signal.aborted) {
-          return failed(
-            "provider-timeout",
-            true,
-            `Prediction canceled after ${generateTimeoutMs} ms`
-          );
+    async inspect(providerReference: string): Promise<InspectPhotoGenerationOutcome> {
+      try {
+        const prediction = await client.predictions.get(providerReference);
+        switch (prediction.status) {
+          case "starting":
+            return { kind: "pending", started: false };
+          case "processing":
+            return { kind: "pending", started: true };
+          case "canceled":
+            return { kind: "canceled" };
+          case "failed": {
+            const failure = classifyProviderError(
+              new Error(`Prediction failed: ${String(prediction.error ?? "unknown")}`)
+            );
+            return failed(failure.reason, failure.retryable, failure.detail, providerReference);
+          }
+          case "succeeded":
+            break;
+          default:
+            return { kind: "pending", started: false };
         }
 
-        const outputUrl = extractOutputUrl(output);
+        const outputUrl = extractOutputUrl(prediction.output);
         if (!outputUrl) {
           return failed(
             "provider-no-output",
             true,
-            "Prediction finished without an output URL"
+            "Prediction succeeded without an output URL",
+            providerReference
           );
         }
 
@@ -236,7 +266,8 @@ export function createReplicatePhotoGenerationAdapter(
           return failed(
             "provider-output-unreachable",
             true,
-            `HTTP ${response.status} while fetching the output`
+            `HTTP ${response.status} while fetching the output`,
+            providerReference
           );
         }
 
@@ -246,12 +277,68 @@ export function createReplicatePhotoGenerationAdapter(
           declaredContentType:
             response.headers.get("content-type") ?? "application/octet-stream",
           modelIdentifier: MODEL,
-          providerReference: trace.predictionId
+          providerReference
         };
       } catch (error) {
+        if (isApiError(error) && error.response.status === 404) {
+          return { kind: "unknown" };
+        }
         const failure = classifyProviderError(error);
-        return failed(failure.reason, failure.retryable, failure.detail);
+        return failed(failure.reason, failure.retryable, failure.detail, providerReference);
       }
+    },
+
+    async cancel(providerReference: string) {
+      try {
+        await client.predictions.cancel(providerReference);
+      } catch (error) {
+        // Best effort by contract; reconciliation reads the real outcome later.
+        console.warn("Photo generation cancel failed", {
+          predictionId: providerReference,
+          detail: truncate(error instanceof Error ? error.message : String(error))
+        });
+      }
+    },
+
+    async parseWebhook(request: Request): Promise<ProviderEvent | null> {
+      if (!webhookSecret) {
+        console.error("Photo webhook refused: no signing secret configured");
+        return null;
+      }
+      const id = request.headers.get("webhook-id");
+      const timestamp = request.headers.get("webhook-timestamp");
+      const signature = request.headers.get("webhook-signature");
+      if (!id || !timestamp || !signature) {
+        console.warn("Photo webhook refused: signature headers missing");
+        return null;
+      }
+      const body = await request.text();
+      let valid = false;
+      try {
+        valid = await validateWebhook({ id, timestamp, signature, body, secret: webhookSecret });
+      } catch (error) {
+        console.warn("Photo webhook signature could not be checked", {
+          detail: truncate(error instanceof Error ? error.message : String(error))
+        });
+        return null;
+      }
+      if (!valid) {
+        console.warn("Photo webhook refused: signature mismatch");
+        return null;
+      }
+
+      const eventId = id;
+      let payload: { id?: unknown; status?: unknown };
+      try {
+        payload = JSON.parse(body) as { id?: unknown; status?: unknown };
+      } catch {
+        return null;
+      }
+      const status = toEventStatus(payload.status);
+      if (!eventId || typeof payload.id !== "string" || !payload.id || !status) {
+        return null;
+      }
+      return { eventId, providerReference: payload.id, status };
     }
   };
 }
@@ -264,8 +351,15 @@ export function createUnavailablePhotoGenerationAdapter(
   reason: string
 ): PhotoGenerationAdapter {
   return {
-    async generate(): Promise<PhotoGenerationOutcome> {
+    async submit(): Promise<SubmitPhotoGenerationOutcome> {
       return { kind: "failed", reason, retryable: false };
+    },
+    async inspect(): Promise<InspectPhotoGenerationOutcome> {
+      return { kind: "failed", reason, retryable: false };
+    },
+    async cancel() {},
+    async parseWebhook() {
+      return null;
     }
   };
 }

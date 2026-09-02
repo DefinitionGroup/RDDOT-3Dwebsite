@@ -5,11 +5,12 @@ import { customerSessions } from "@/lib/server/auth/customer-session";
 import { getPhotoJobs } from "@/lib/server/photo-jobs/photo-jobs";
 
 export const runtime = "nodejs";
-// The provider call is synchronous for now. PLAN.md Phase 3 replaces this with
-// predictions plus webhook, at which point this route becomes a submit and the
-// client polls GET /api/photo-jobs/[jobId] instead.
-export const maxDuration = 300;
 
+/**
+ * Hands a capture-ready job to the provider and returns once it is accepted.
+ * The browser then polls GET /api/photo-jobs/[jobId]; the job itself survives
+ * the browser (PLAN.md Phase 3, gap G2).
+ */
 export async function POST(
   request: Request,
   context: { params: Promise<{ jobId: string }> }
@@ -24,7 +25,7 @@ export async function POST(
     return NextResponse.json({ error: "Der Auftrag ist ungültig." }, { status: 400 });
   }
 
-  const result = await getPhotoJobs().runJob({
+  const result = await getPhotoJobs().submitJob({
     ownerId: session.customerAccountId,
     jobId
   });
@@ -39,13 +40,13 @@ export async function POST(
       );
     case "failed":
       return NextResponse.json(
-        { job: serializeJob(result.job), error: "Die Erzeugung ist fehlgeschlagen." },
+        { job: serializeJob(result.job), error: "Die Erzeugung konnte nicht gestartet werden." },
         { status: 502 }
       );
     default:
-      return NextResponse.json({
-        job: serializeJob(result.job),
-        generatedPhotoId: result.generatedPhotoId
-      });
+      return NextResponse.json(
+        { job: serializeJob(result.job) },
+        { status: 202, headers: { "cache-control": "private, no-store" } }
+      );
   }
 }

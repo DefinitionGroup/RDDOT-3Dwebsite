@@ -60,7 +60,7 @@ describe.skipIf(!armed)("Replicate adapter (live, spends one credit)", () => {
   });
 
   it(
-    "generates a photo from a real Source Capture through a presigned capture URL",
+    "generates a photo from a real Source Capture, submitted and reconciled",
     async () => {
       const capture = new Uint8Array(readFileSync(capturePath!));
       const probedCapture = probeImage(capture);
@@ -89,22 +89,37 @@ describe.skipIf(!armed)("Replicate adapter (live, spends one credit)", () => {
 
       const adapter = createReplicatePhotoGenerationAdapter(token!);
       const startedAt = Date.now();
-      const outcome = await adapter.generate({
-        capture,
+      // No webhook can reach a developer machine, so this is the reconciliation
+      // path: submit, then read the provider's view back until it is terminal.
+      const submitted = await adapter.submit({
         captureContentType: "image/jpeg",
         captureUrl: download.url,
         prompt,
-        aspectRatio: "16:9"
+        aspectRatio: "16:9",
+        webhookUrl: null
       });
+      if (submitted.kind === "failed") {
+        throw new Error(
+          `Submission failed: ${submitted.reason} (retryable=${submitted.retryable}) ${submitted.detail ?? ""}`
+        );
+      }
+
+      let outcome = await adapter.inspect(submitted.providerReference);
+      while (outcome.kind === "pending" && Date.now() - startedAt < 120_000) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        outcome = await adapter.inspect(submitted.providerReference);
+      }
       const elapsedMs = Date.now() - startedAt;
 
       // A failure is reported with everything the adapter now records, so a
       // single run is diagnostic either way.
-      if (outcome.kind === "failed") {
+      if (outcome.kind !== "generated") {
+        const detail =
+          outcome.kind === "failed"
+            ? `${outcome.reason} (retryable=${outcome.retryable}) ${outcome.detail ?? ""}`
+            : outcome.kind;
         throw new Error(
-          `Generation failed after ${elapsedMs} ms: ${outcome.reason} ` +
-            `(retryable=${outcome.retryable}, prediction=${outcome.providerReference ?? "none"}) ` +
-            `${outcome.detail ?? ""}`
+          `Generation did not complete after ${elapsedMs} ms (prediction ${submitted.providerReference}): ${detail}`
         );
       }
 

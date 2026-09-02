@@ -107,25 +107,56 @@ describe("photo job contract", () => {
     });
   });
 
-  function moduleWith(adapter: PhotoGenerationAdapter) {
-    return createPostgresPhotoJobModule(context.database, {
-      storage,
-      adapter,
-      buildPrompt: ({ scenePresetKey }) => `prompt for ${scenePresetKey}`
-    });
+  function moduleWith(adapter: PhotoGenerationAdapter, clock?: () => Date) {
+    return createPostgresPhotoJobModule(
+      context.database,
+      {
+        storage,
+        adapter,
+        buildPrompt: ({ scenePresetKey }) => `prompt for ${scenePresetKey}`,
+        webhookUrl: null
+      },
+      clock
+    );
   }
 
-  const generatingAdapter: PhotoGenerationAdapter = {
-    async generate() {
-      return {
-        kind: "generated",
-        bytes: jpegBytes(1920, 1080),
-        declaredContentType: "image/jpeg",
-        modelIdentifier: "test/model",
-        providerReference: "pred_123"
-      };
-    }
-  };
+  /**
+   * A provider that accepts every submission and, when inspected, has the
+   * output ready. Overrides shape the failure paths. References are unique so
+   * events can be routed to the right job.
+   */
+  function fakeAdapter(overrides: Partial<PhotoGenerationAdapter> = {}) {
+    const submitted: string[] = [];
+    const canceled: string[] = [];
+    const adapter: PhotoGenerationAdapter & { submitted: string[]; canceled: string[] } = {
+      submitted,
+      canceled,
+      async submit() {
+        const providerReference = `pred_${crypto.randomUUID()}`;
+        submitted.push(providerReference);
+        return { kind: "submitted", providerReference, modelIdentifier: "test/model" };
+      },
+      async inspect(providerReference) {
+        return {
+          kind: "generated",
+          bytes: jpegBytes(1920, 1080),
+          declaredContentType: "image/jpeg",
+          modelIdentifier: "test/model",
+          providerReference
+        };
+      },
+      async cancel(providerReference) {
+        canceled.push(providerReference);
+      },
+      async parseWebhook() {
+        return null;
+      },
+      ...overrides
+    };
+    return adapter;
+  }
+
+  const generatingAdapter = fakeAdapter();
 
   async function seedProject() {
     const ownerId = crypto.randomUUID();
@@ -322,46 +353,129 @@ describe("photo job contract", () => {
     return { ownerId, jobId: result.job.id, photoJobs };
   }
 
-  it("writes a Generated Photo row and stores the bytes on success", async () => {
-    const { ownerId, jobId, photoJobs } = await readyJob();
+  async function submittedJob(adapter = fakeAdapter(), clock?: () => Date) {
+    const photoJobs = moduleWith(adapter, clock);
+    const { ownerId, jobId } = await readyJob(photoJobs);
+    const submitted = await photoJobs.submitJob({ ownerId, jobId });
+    if (submitted.kind !== "submitted") throw new Error(`setup failed: ${submitted.kind}`);
+    const reference = adapter.submitted[adapter.submitted.length - 1];
+    return { ownerId, jobId, photoJobs, adapter, reference };
+  }
 
-    const run = await photoJobs.runJob({ ownerId, jobId });
-    expect(run.kind).toBe("succeeded");
-    if (run.kind !== "succeeded") return;
+  it("submits a capture-ready job and remembers the provider reference", async () => {
+    const { jobId, reference, adapter, photoJobs, ownerId } = await submittedJob();
+
+    const row = await context.database
+      .withSchema("app")
+      .selectFrom("photoJob")
+      .select(["state", "providerReference", "modelIdentifier", "submittedAt"])
+      .where("id", "=", jobId)
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("submitted");
+    expect(row.providerReference).toBe(reference);
+    expect(row.modelIdentifier).toBe("test/model");
+    expect(row.submittedAt).not.toBeNull();
+    expect(adapter.submitted).toHaveLength(1);
+
+    const job = await photoJobs.getJob({ ownerId, jobId });
+    expect(job?.state).toBe("submitted");
+    expect(job?.submittedAt).toBeInstanceOf(Date);
+  });
+
+  it("completes a job from a verified provider event and stores the photo", async () => {
+    const { jobId, reference, photoJobs } = await submittedJob();
+
+    const applied = await photoJobs.recordProviderEvent({
+      eventId: `evt-${crypto.randomUUID()}`,
+      providerReference: reference,
+      status: "succeeded"
+    });
+    expect(applied).toEqual({ kind: "applied", jobId });
 
     const photo = await context.database
       .withSchema("app")
       .selectFrom("generatedPhoto")
-      .select(["id", "storageKey", "width", "height", "contentType", "projectId"])
+      .select(["id", "storageKey", "width", "height", "contentType"])
       .where("photoJobId", "=", jobId)
       .executeTakeFirstOrThrow();
-
-    expect(photo.id).toBe(run.generatedPhotoId);
     expect(photo.width).toBe(1920);
     expect(photo.height).toBe(1080);
     // Dimensions come from probing the bytes, and the bytes are really stored.
     expect(objects.has(photo.storageKey)).toBe(true);
-    expect(run.job.state).toBe("succeeded");
+
+    const row = await context.database
+      .withSchema("app")
+      .selectFrom("photoJob")
+      .select(["state", "completedAt", "terminalAt"])
+      .where("id", "=", jobId)
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("succeeded");
+    expect(row.completedAt).not.toBeNull();
+    expect(row.terminalAt).not.toBeNull();
   });
 
-  it("does not run a job whose capture is not confirmed", async () => {
-    const photoJobs = moduleWith(generatingAdapter);
-    const { ownerId, result } = await requestJob(photoJobs);
-    if (result.kind !== "requested") throw new Error("setup failed");
+  it("ignores a redelivered event and acknowledges an unknown reference", async () => {
+    const { jobId, reference, photoJobs } = await submittedJob();
+    const eventId = `evt-${crypto.randomUUID()}`;
 
-    const run = await photoJobs.runJob({ ownerId, jobId: result.job.id });
-    expect(run.kind).toBe("not-runnable");
+    await photoJobs.recordProviderEvent({ eventId, providerReference: reference, status: "processing" });
+    const redelivered = await photoJobs.recordProviderEvent({
+      eventId,
+      providerReference: reference,
+      status: "processing"
+    });
+    expect(redelivered).toEqual({ kind: "duplicate" });
+
+    const unknown = await photoJobs.recordProviderEvent({
+      eventId: `evt-${crypto.randomUUID()}`,
+      providerReference: "pred_nobody",
+      status: "succeeded"
+    });
+    expect(unknown).toEqual({ kind: "unknown-reference" });
+
+    const row = await context.database
+      .withSchema("app")
+      .selectFrom("photoJob")
+      .select("state")
+      .where("id", "=", jobId)
+      .executeTakeFirstOrThrow();
+    expect(row.state).toBe("running");
+
+    const events = await context.database
+      .withSchema("app")
+      .selectFrom("photoJobProviderEvent")
+      .select(["photoJobId", "processedAt"])
+      .where("eventId", "=", eventId)
+      .execute();
+    expect(events).toHaveLength(1);
+    expect(events[0].photoJobId).toBe(jobId);
+    expect(events[0].processedAt).not.toBeNull();
   });
 
-  it("runs a job only once even when called twice", async () => {
-    const { ownerId, jobId, photoJobs } = await readyJob();
+  it("completes a job by reconciliation when no webhook ever arrives", async () => {
+    const { ownerId, jobId, photoJobs } = await submittedJob();
 
-    const [first, second] = await Promise.all([
-      photoJobs.runJob({ ownerId, jobId }),
-      photoJobs.runJob({ ownerId, jobId })
+    const reconciled = await photoJobs.reconcileJob({ ownerId, jobId });
+    expect(reconciled.kind).toBe("succeeded");
+    if (reconciled.kind !== "succeeded") return;
+    expect(reconciled.job.generatedPhotoId).not.toBeNull();
+
+    // A second read right away is throttled, not a second provider call.
+    const again = await photoJobs.reconcileJob({ ownerId, jobId });
+    expect(again.kind).toBe("unchanged");
+  });
+
+  it("never files two photos when a webhook and a reconciliation race", async () => {
+    const { ownerId, jobId, reference, photoJobs } = await submittedJob();
+
+    await Promise.all([
+      photoJobs.recordProviderEvent({
+        eventId: `evt-${crypto.randomUUID()}`,
+        providerReference: reference,
+        status: "succeeded"
+      }),
+      photoJobs.reconcileJob({ ownerId, jobId })
     ]);
-    const kinds = [first.kind, second.kind].sort();
-    expect(kinds).toEqual(["not-runnable", "succeeded"]);
 
     const photos = await context.database
       .withSchema("app")
@@ -372,18 +486,77 @@ describe("photo job contract", () => {
     expect(photos).toHaveLength(1);
   });
 
-  it("fails the job and writes no photo when the provider fails", async () => {
-    const failing: PhotoGenerationAdapter = {
-      async generate() {
+  it("reports a stalled job uncertain, then fails it with a provider cancel", async () => {
+    let now = new Date("2026-09-02T12:00:00.000Z");
+    const adapter = fakeAdapter({
+      async inspect() {
+        return { kind: "pending", started: true };
+      }
+    });
+    const { ownerId, jobId, reference, photoJobs } = await submittedJob(adapter, () => now);
+
+    now = new Date(now.getTime() + 11 * 60 * 1000);
+    const uncertain = await photoJobs.reconcileJob({ ownerId, jobId });
+    expect(uncertain.kind).toBe("progressed");
+    if (uncertain.kind !== "progressed") return;
+    expect(uncertain.job.state).toBe("uncertain");
+
+    now = new Date(now.getTime() + 20 * 60 * 1000);
+    const failed = await photoJobs.reconcileJob({ ownerId, jobId });
+    expect(failed.kind).toBe("failed");
+    if (failed.kind !== "failed") return;
+    expect(failed.job.failureReason).toBe("provider-timeout");
+    expect(adapter.canceled).toEqual([reference]);
+  });
+
+  it("sweeps in-flight jobs across owners", async () => {
+    const adapter = fakeAdapter();
+    const first = await submittedJob(adapter);
+    const second = await submittedJob(adapter);
+
+    const swept = await first.photoJobs.sweepInFlightJobs({ limit: 50 });
+    expect(swept.succeeded).toBeGreaterThanOrEqual(2);
+
+    for (const { ownerId, jobId, photoJobs } of [first, second]) {
+      expect((await photoJobs.getJob({ ownerId, jobId }))?.state).toBe("succeeded");
+    }
+  });
+
+  it("does not submit a job whose capture is not confirmed", async () => {
+    const photoJobs = moduleWith(generatingAdapter);
+    const { ownerId, result } = await requestJob(photoJobs);
+    if (result.kind !== "requested") throw new Error("setup failed");
+
+    const submitted = await photoJobs.submitJob({ ownerId, jobId: result.job.id });
+    expect(submitted.kind).toBe("not-runnable");
+  });
+
+  it("submits a job only once even when asked twice at the same time", async () => {
+    const adapter = fakeAdapter();
+    const photoJobs = moduleWith(adapter);
+    const { ownerId, jobId } = await readyJob(photoJobs);
+
+    const [first, second] = await Promise.all([
+      photoJobs.submitJob({ ownerId, jobId }),
+      photoJobs.submitJob({ ownerId, jobId })
+    ]);
+    expect([first.kind, second.kind].sort()).toEqual(["not-runnable", "submitted"]);
+    expect(adapter.submitted).toHaveLength(1);
+  });
+
+  it("fails the job and writes no photo when the provider refuses the submission", async () => {
+    const refusing = fakeAdapter({
+      async submit() {
         return { kind: "failed", reason: "provider-disabled", retryable: false };
       }
-    };
-    const { ownerId, jobId, photoJobs } = await readyJob(moduleWith(failing));
+    });
+    const photoJobs = moduleWith(refusing);
+    const { ownerId, jobId } = await readyJob(photoJobs);
 
-    const run = await photoJobs.runJob({ ownerId, jobId });
-    expect(run.kind).toBe("failed");
-    if (run.kind !== "failed") return;
-    expect(run.reason).toBe("provider-disabled");
+    const submitted = await photoJobs.submitJob({ ownerId, jobId });
+    expect(submitted.kind).toBe("failed");
+    if (submitted.kind !== "failed") return;
+    expect(submitted.reason).toBe("provider-disabled");
 
     const photos = await context.database
       .withSchema("app")
@@ -395,23 +568,23 @@ describe("photo job contract", () => {
   });
 
   it("rejects provider output that is not a decodable image", async () => {
-    const garbage: PhotoGenerationAdapter = {
-      async generate() {
+    const garbage = fakeAdapter({
+      async inspect(providerReference) {
         return {
           kind: "generated",
           bytes: new TextEncoder().encode("provider returned prose"),
           declaredContentType: "image/jpeg",
           modelIdentifier: "test/model",
-          providerReference: null
+          providerReference
         };
       }
-    };
-    const { ownerId, jobId, photoJobs } = await readyJob(moduleWith(garbage));
+    });
+    const { ownerId, jobId, photoJobs } = await submittedJob(garbage);
 
-    const run = await photoJobs.runJob({ ownerId, jobId });
-    expect(run.kind).toBe("failed");
-    if (run.kind !== "failed") return;
-    expect(run.reason).toBe("output-not-an-image");
+    const reconciled = await photoJobs.reconcileJob({ ownerId, jobId });
+    expect(reconciled.kind).toBe("failed");
+    if (reconciled.kind !== "failed") return;
+    expect(reconciled.job.failureReason).toBe("output-not-an-image");
   });
 
   it("cancels a job before it runs and leaves it terminal", async () => {
@@ -424,5 +597,21 @@ describe("photo job contract", () => {
 
     const again = await photoJobs.cancelJob({ ownerId, jobId: result.job.id });
     expect(again.kind).toBe("unchanged");
+  });
+
+  it("cancels a submitted job at the provider on a best-effort basis", async () => {
+    const { ownerId, jobId, reference, adapter, photoJobs } = await submittedJob();
+
+    const canceled = await photoJobs.cancelJob({ ownerId, jobId });
+    expect(canceled.kind).toBe("canceled");
+    expect(adapter.canceled).toEqual([reference]);
+
+    // A late success event cannot resurrect a canceled job.
+    await photoJobs.recordProviderEvent({
+      eventId: `evt-${crypto.randomUUID()}`,
+      providerReference: reference,
+      status: "succeeded"
+    });
+    expect((await photoJobs.getJob({ ownerId, jobId }))?.state).toBe("canceled");
   });
 });

@@ -82,7 +82,7 @@ working tree rather than inferred:
 | Phase 0 — Containment | **Not started** | No `PHOTO_PROTOTYPE_ENABLED` and no session import in `app/api/photo/route.ts`; the route builds into the production route table as a live `ƒ /api/photo` |
 | Phase 1 — Job foundation | Not started | No `photo_job` / `generated_photo` / `source_capture` migrations; no `lib/server/photo-jobs/` |
 | Phase 2 — Source Capture | Not started | No EU object storage selected, no ADR written |
-| Phase 3 — Adapter + reconciliation | Not started | Route still calls Replicate synchronously; no webhook route, inbox, or outbox |
+| Phase 3 — Adapter + reconciliation | Done 2026-09-02 (except moderation gate and cost evidence) | Predictions + webhook, idempotent inbox, reconcile-on-read, sweep; see §5 |
 | Phase 4 — Governance | Not started | No template/model release records; no quota or budget enforcement |
 | Phase 5 — Customer experience | Not started | `photo-popover.tsx` still holds the result in browser memory |
 | Phase 6 — Activation gate | Not started | ADR 0008 exception remains unactivated |
@@ -262,21 +262,33 @@ provider call yet.
 
 ### Phase 3 — Provider adapter, webhooks, reconciliation (~3–4 days)
 
-- [ ] `PhotoGenerationAdapter` for Replicate using **predictions + webhook**
-      (not blocking `run()`): submit, get, best-effort cancel. Provider
-      identifiers stay internal (G2).
-- [ ] Webhook ingress route with signature verification; events land in an
-      idempotent inbox keyed by provider event id.
-- [ ] Outbox worker + scheduled reconciliation sweep for `Uncertain` jobs
-      (missing/duplicated/out-of-order events).
-- [ ] Output validation before success: decode, dimension check, basic
-      safety/moderation gate (G10); persist Generated Photo to EU storage,
-      then — and only then — mark `Succeeded` (G3).
-- [ ] Provider attempt evidence rows: timestamps, model identifier,
-      estimated vs reconciled cost (G8, foundation for Phase 4).
+- [x] `PhotoGenerationAdapter` for Replicate using **predictions + webhook**
+      (not blocking `run()`): submit, inspect, best-effort cancel. Provider
+      identifiers stay internal (G2). *2026-09-02.*
+- [x] Webhook ingress route (`POST /api/webhooks/replicate`) with signature
+      verification against the account's signing secret; deliveries land in an
+      idempotent inbox (`photo_job_provider_event`) keyed by delivery id. *2026-09-02.*
+- [x] Reconciliation: every read of an in-flight job asks the provider
+      (throttled), and `POST /api/photo-jobs/sweep` (token-protected, to be
+      scheduled) reconciles across owners. Jobs stalled beyond 10 min become
+      `uncertain`, beyond 30 min are failed with a best-effort cancel. No
+      separate outbox worker: the submission is synchronous and short, and the
+      job row is durable before it. *2026-09-02.*
+- [x] Output validation before success: decode, dimension check; persist the
+      Generated Photo to EU storage, then — and only then — mark `Succeeded`
+      (G3). *Already in place; unchanged.*
+- [ ] Basic safety/moderation gate on the output (G10).
+- [~] Provider attempt evidence: `model_identifier`, `submitted_at`,
+      `completed_at`, `provider_checked_at` on the job. Cost estimation and
+      reconciliation (G8) remain for Phase 4.
 
 *Exit:* browser closure mid-generation loses nothing; a killed webhook is
 recovered by reconciliation; success implies a durable EU-stored photo.
+*Evidence:* `tests/integration/photo-job-contract.test.ts` covers submit-once,
+webhook completion, redelivery, unknown references, reconciliation, the
+webhook/reconcile race, the uncertain and give-up windows, the sweep and
+provider-side cancel; `lib/server/photo-jobs/replicate-adapter.test.ts` covers
+the signature check with a real HMAC.
 
 ### Phase 4 — Governance: templates, models, quotas, budgets (~2–3 days)
 

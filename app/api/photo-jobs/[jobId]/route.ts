@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { serializeJob } from "@/features/photo-jobs/serialize-job";
 import { customerSessions } from "@/lib/server/auth/customer-session";
+import { isInFlightState } from "@/lib/server/db/photo-jobs-postgres";
 import { getPhotoJobs } from "@/lib/server/photo-jobs/photo-jobs";
 
 export const runtime = "nodejs";
@@ -29,13 +30,21 @@ export async function GET(
   const resolved = await resolve(request, jobId);
   if (resolved.error) return resolved.error;
 
-  const job = await getPhotoJobs().getJob({ ownerId: resolved.ownerId!, jobId });
+  const photoJobs = getPhotoJobs();
+  const job = await photoJobs.getJob({ ownerId: resolved.ownerId!, jobId });
   if (!job) {
     return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
   }
 
+  // A read of an in-flight job asks the provider (throttled), so a lost
+  // webhook is recovered by the next poll rather than by the next sweep.
+  const current = isInFlightState(job.state)
+    ? await photoJobs.reconcileJob({ ownerId: resolved.ownerId!, jobId })
+    : null;
+  const latest = current && current.kind !== "unavailable" ? current.job : job;
+
   return NextResponse.json(
-    { job: serializeJob(job) },
+    { job: serializeJob(latest) },
     { headers: { "cache-control": "private, no-store" } }
   );
 }

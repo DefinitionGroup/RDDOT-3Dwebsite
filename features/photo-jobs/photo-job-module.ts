@@ -1,4 +1,5 @@
 import type { PresignedUpload } from "@/features/object-storage/object-storage-module";
+import type { ProviderEvent } from "@/features/photo-jobs/photo-generation-adapter";
 import type {
   ConfigurationRevisionId,
   CustomerAccountId,
@@ -26,6 +27,14 @@ export const TERMINAL_PHOTO_JOB_STATES: readonly PhotoJobState[] = [
   "canceled"
 ];
 
+/** States in which the provider holds the job and the application waits. */
+export const IN_FLIGHT_PHOTO_JOB_STATES: readonly PhotoJobState[] = [
+  "submitted",
+  "running",
+  "uncertain",
+  "canceling"
+];
+
 export type PhotoJob = {
   id: PhotoJobId;
   projectId: ProjectId;
@@ -33,6 +42,10 @@ export type PhotoJob = {
   scenePresetKey: string;
   state: PhotoJobState;
   failureReason: string | null;
+  /** Provenance evidence: which model the provider ran. */
+  modelIdentifier: string | null;
+  submittedAt: Date | null;
+  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   /** Present once the job has succeeded and its photo is in EU storage. */
@@ -56,11 +69,31 @@ export type ConfirmCaptureResult =
   | { kind: "rejected"; job: PhotoJob; reason: string }
   | { kind: "unavailable" };
 
-export type RunPhotoJobResult =
-  | { kind: "succeeded"; job: PhotoJob; generatedPhotoId: string }
+export type SubmitPhotoJobResult =
+  | { kind: "submitted"; job: PhotoJob }
   | { kind: "failed"; job: PhotoJob; reason: string }
   | { kind: "not-runnable"; job: PhotoJob }
   | { kind: "unavailable" };
+
+export type ReconcilePhotoJobResult =
+  | {
+      kind: "unchanged" | "progressed" | "succeeded" | "failed" | "canceled";
+      job: PhotoJob;
+    }
+  | { kind: "unavailable" };
+
+export type RecordProviderEventResult =
+  | { kind: "applied"; jobId: PhotoJobId }
+  | { kind: "duplicate" }
+  | { kind: "unknown-reference" };
+
+export type SweepPhotoJobsResult = {
+  examined: number;
+  progressed: number;
+  succeeded: number;
+  failed: number;
+  canceled: number;
+};
 
 export type CancelPhotoJobResult =
   | { kind: "canceled"; job: PhotoJob }
@@ -95,14 +128,35 @@ export type PhotoJobModule = {
   }): Promise<ConfirmCaptureResult>;
 
   /**
-   * Executes a capture-ready job: provider call, output validation, persistence
-   * to EU object storage, then the Generated Photo row. Success is declared only
-   * after the validated bytes are stored (gap G3).
+   * Hands a capture-ready job to the provider and returns as soon as it is
+   * accepted. Completion arrives through `recordProviderEvent` or
+   * `reconcileJob`; the job survives the browser that submitted it (gap G2).
    */
-  runJob(input: {
+  submitJob(input: {
     ownerId: CustomerAccountId;
     jobId: PhotoJobId;
-  }): Promise<RunPhotoJobResult>;
+  }): Promise<SubmitPhotoJobResult>;
+
+  /**
+   * Applies a verified provider delivery. Idempotent on the delivery id, so
+   * redeliveries and out-of-order events cannot double-complete a job. Success
+   * is declared only after the validated output is in EU storage (gap G3).
+   */
+  recordProviderEvent(event: ProviderEvent): Promise<RecordProviderEventResult>;
+
+  /**
+   * Reads the provider's view of an in-flight job and applies it, so a lost
+   * webhook is recovered on the next read. Throttled per job. Jobs that stay
+   * in flight beyond the windows become uncertain and are eventually failed
+   * with a best-effort provider cancel.
+   */
+  reconcileJob(input: {
+    ownerId: CustomerAccountId;
+    jobId: PhotoJobId;
+  }): Promise<ReconcilePhotoJobResult>;
+
+  /** The scheduled counterpart of `reconcileJob`, across every owner. */
+  sweepInFlightJobs(input?: { limit?: number }): Promise<SweepPhotoJobsResult>;
 
   getJob(input: {
     ownerId: CustomerAccountId;
@@ -115,6 +169,7 @@ export type PhotoJobModule = {
     limit?: number;
   }): Promise<PhotoJob[]>;
 
+  /** Cancels at the provider on a best-effort basis; the job is terminal either way. */
   cancelJob(input: {
     ownerId: CustomerAccountId;
     jobId: PhotoJobId;
