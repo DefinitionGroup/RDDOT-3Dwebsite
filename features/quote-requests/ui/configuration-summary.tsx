@@ -1,3 +1,4 @@
+import { Label } from "@/components/design-system/label";
 import { formatCurrency } from "@/features/configurator/product-definition";
 
 /** Serializable description of the configuration a Quote Request is about. */
@@ -22,8 +23,8 @@ function formatQuantity(item: ConfigurationSummaryData["lineItems"][number]) {
 
 /**
  * The configuration as the person will see it on the request and on the
- * confirmation. Flat, hairline-separated, in the gallery system — no lifted
- * card, because this is a document, not a cart.
+ * confirmation: a charcoal card, one step above the void, read like a
+ * document rather than a cart.
  */
 export function ConfigurationSummary({
   heading = "Ihre Konfiguration",
@@ -33,21 +34,21 @@ export function ConfigurationSummary({
   summary: ConfigurationSummaryData;
 }) {
   return (
-    <section aria-labelledby="configuration-summary-heading" className="border-t border-ink pt-5">
-      <h2
-        className="text-sm font-medium uppercase tracking-[0.14em] text-graphite"
-        id="configuration-summary-heading"
-      >
-        {heading}
-      </h2>
-      <dl className="mt-5 space-y-3 text-body">
+    <section
+      aria-labelledby="configuration-summary-heading"
+      className="rounded-card bg-charcoal p-6"
+    >
+      <Label as="span" className="block" >
+        <span id="configuration-summary-heading">{heading}</span>
+      </Label>
+      <dl className="tnum m-0 mt-4 flex flex-col text-[0.875rem]">
         <Row label="Produkt" value={summary.productTitle} />
         <Row label="Aufbau" value={summary.layoutLabel} />
         <Row label="Korpus" value={summary.cabinetFinish} />
         <Row label="Front" value={summary.frontFinish} />
       </dl>
 
-      <div className="mt-8 space-y-2 text-sm text-graphite">
+      <div className="tnum mt-6 flex flex-col gap-2 text-caption text-graphite">
         {summary.lineItems.map((item) => (
           <div className="flex justify-between gap-6" key={item.key}>
             <span>
@@ -70,13 +71,13 @@ export function ConfigurationSummary({
         </div>
       </div>
 
-      <div className="mt-5 flex items-end justify-between gap-6 border-t border-hairline pt-4">
-        <span className="text-body text-graphite">Richtpreis</span>
-        <span className="text-lead font-semibold text-ink">
+      <div className="mt-5 flex items-baseline justify-between gap-6 border-t border-hairline pt-4">
+        <Label as="span">Richtpreis</Label>
+        <span className="tnum text-title font-display leading-none text-ink">
           {formatCurrency(summary.totalCents)}
         </span>
       </div>
-      <p className="mt-3 text-xs leading-5 text-graphite">
+      <p className="m-0 mt-3 text-caption text-ash">
         Unverbindliche Preisindikation zum Zeitpunkt der Anfrage. Ein Angebot
         erhalten Sie nach der Prüfung durch unsere Planung.
       </p>
@@ -86,9 +87,9 @@ export function ConfigurationSummary({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-6 border-b border-hairline pb-3">
-      <dt className="text-graphite">{label}</dt>
-      <dd className="text-right text-ink">{value}</dd>
+    <div className="flex items-center justify-between gap-6 border-b border-hairline py-2.5">
+      <dt className="font-label text-label uppercase tracking-label text-graphite">{label}</dt>
+      <dd className="m-0 text-right text-ink">{value}</dd>
     </div>
   );
 }

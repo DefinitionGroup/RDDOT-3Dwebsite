@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
+import { Label } from "@/components/design-system/label";
+import { Pill } from "@/components/design-system/pill";
 import { ConfiguratorShell } from "@/features/configurator/ui/configurator-shell";
 import type { ConfiguratorState } from "@/features/configurator/types";
 import type { RevisionDisplaySnapshot } from "@/features/projects/revision-display";
@@ -87,40 +88,37 @@ export function SharedRevisionPage({ linkId }: { linkId: string }) {
   }
 
   return (
-    <main className="min-h-screen bg-canvas px-5 py-6 text-ink md:px-12 md:py-10">
-      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[82rem] flex-col md:min-h-[calc(100vh-5rem)]">
+    <main className="min-h-svh bg-canvas px-5 py-6 text-ink md:px-12 md:py-8">
+      <div className="mx-auto flex min-h-[calc(100svh-3rem)] max-w-[82rem] flex-col md:min-h-[calc(100svh-4rem)]">
         <BrandLogo href="/" />
         <div aria-live="polite" className="my-auto max-w-[42rem] py-16">
           {state.phase === "loading" ? (
             <>
-              <h1 className="text-[clamp(2.75rem,7vw,6rem)] font-[200] leading-none tracking-[-0.03em]">
-                Geteilter Küchenstand<span className="text-signature">.</span>
+              <Label>Geteilter Stand</Label>
+              <h1 className="m-0 mt-5 text-heading">
+                Ein <em>Küchenstand</em>, festgehalten.
               </h1>
-              <div className="mt-10 h-px overflow-hidden bg-hairline" aria-hidden="true">
-                <span className="block h-full w-1/3 animate-pulse bg-signature" />
+              <div aria-hidden="true" className="mt-10 h-px overflow-hidden bg-hairline">
+                <span className="block h-full w-1/3 animate-pulse bg-ink" />
               </div>
-              <p className="mt-5 text-body text-graphite">
+              <p className="m-0 mt-5 text-body text-graphite">
                 Der unveränderliche Stand wird sicher geladen.
               </p>
             </>
           ) : (
             <>
-              <h1 className="text-[clamp(2.75rem,7vw,6rem)] font-[200] leading-none tracking-[-0.03em]">
-                Link nicht verfügbar<span className="text-signature">.</span>
+              <Label>Geteilter Stand</Label>
+              <h1 className="m-0 mt-5 text-heading">
+                Link nicht <em>verfügbar</em>.
               </h1>
-              <p className="mt-6 max-w-[52ch] text-body text-graphite">
-                {state.message}
-              </p>
-              <Link
-                className="mt-8 inline-flex min-h-12 items-center justify-center bg-ink px-6 text-body text-paper transition-colors hover:bg-signature"
-                href="/configure"
-              >
+              <p className="m-0 mt-6 max-w-[52ch] text-body text-graphite">{state.message}</p>
+              <Pill className="mt-8" href="/configure">
                 Eigene Küche konfigurieren
-              </Link>
+              </Pill>
             </>
           )}
         </div>
-        <p className="border-t border-hairline pt-5 text-sm text-graphite">
+        <p className="m-0 border-t border-hairline pt-5 text-caption text-graphite">
           rotpunkt Signature · Geteilte Ansicht ohne Projektdaten
         </p>
       </div>

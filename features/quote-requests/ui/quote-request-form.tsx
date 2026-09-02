@@ -3,6 +3,10 @@
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { type FormEvent, useId, useRef, useState } from "react";
+import { FieldLabel, TextArea, TextField } from "@/components/design-system/field";
+import { Label } from "@/components/design-system/label";
+import { Pill } from "@/components/design-system/pill";
+import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
 import { QUOTE_REQUEST_LIMITS } from "@/features/quote-requests/quote-request-contract";
 import { formatQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
 import type { SerializedQuoteRequest } from "@/features/quote-requests/serialize-quote-request";
@@ -12,9 +16,6 @@ type Outcome =
   | { kind: "conflict"; currentVersion: number }
   | { kind: "signed-out" }
   | { kind: "error"; message: string };
-
-const FIELD =
-  "mt-3 min-h-14 w-full border-0 border-b border-ink bg-transparent px-0 text-lg outline-none transition-colors placeholder:text-graphite focus:border-signature";
 
 /**
  * The commercial handoff of the First Production Release: a Quote Request
@@ -109,31 +110,29 @@ export function QuoteRequestForm({
       <motion.div
         animate={{ opacity: 1, y: 0 }}
         aria-live="polite"
-        initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: REVEAL_RISE }}
+        transition={{ duration: DURATION.reveal, ease: SIGNATURE_EASE }}
       >
-        <p className="text-xs font-medium uppercase tracking-[0.16em] text-signature">
-          Anfrage eingegangen
-        </p>
-        <h1 className="mt-5 max-w-3xl font-editorial text-[clamp(2.6rem,7vw,5.6rem)] leading-[0.92]">
-          Vielen Dank, {submitted.contact.name}.
+        <Label>Anfrage eingegangen</Label>
+        <h1 className="m-0 mt-5 max-w-3xl text-heading">
+          Vielen <em>Dank</em>, {submitted.contact.name}.
         </h1>
-        <p className="mt-6 max-w-[46ch] text-body leading-7 text-graphite">
+        <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
           Ihre Anfrage für „{submitted.projectName}“ ist bei uns eingegangen.
           Unsere Planung prüft die Konfiguration und meldet sich bei Ihnen unter{" "}
           <span className="text-ink">{submitted.contact.email}</span>.
         </p>
 
-        <dl className="mt-10 max-w-md space-y-3 border-t border-ink pt-5 text-body">
-          <div className="flex justify-between gap-6 border-b border-hairline pb-3">
-            <dt className="text-graphite">Referenz</dt>
-            <dd className="font-semibold tracking-[0.06em] text-ink">
+        <dl className="tnum m-0 mt-10 flex max-w-md flex-col border-t border-ink text-[0.875rem]">
+          <div className="flex justify-between gap-6 border-b border-hairline py-3">
+            <dt className="font-label text-label uppercase tracking-label text-graphite">Referenz</dt>
+            <dd className="m-0 font-label tracking-[0.06em] text-ink">
               {formatQuoteRequestReference(submitted.reference)}
             </dd>
           </div>
-          <div className="flex justify-between gap-6 border-b border-hairline pb-3">
-            <dt className="text-graphite">Eingegangen am</dt>
-            <dd className="text-ink">
+          <div className="flex justify-between gap-6 border-b border-hairline py-3">
+            <dt className="font-label text-label uppercase tracking-label text-graphite">Eingegangen</dt>
+            <dd className="m-0 text-ink">
               {new Intl.DateTimeFormat("de-DE", {
                 day: "2-digit",
                 month: "2-digit",
@@ -146,25 +145,16 @@ export function QuoteRequestForm({
           </div>
         </dl>
 
-        <p className="mt-6 max-w-[46ch] text-sm leading-6 text-graphite">
-          Die Anfrage bleibt mit genau diesem Planungsstand in Ihrem Bereich
-          hinterlegt. Sie können Ihr Projekt weiter verändern, ohne die Anfrage
-          zu berühren.
+        <p className="m-0 mt-6 max-w-[46ch] text-caption text-graphite">
+          Die Anfrage bleibt mit genau diesem Planungsstand in Ihrem Bereich hinterlegt. Sie
+          können Ihr Projekt weiter verändern, ohne die Anfrage zu berühren.
         </p>
 
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link
-            className="inline-flex min-h-12 items-center justify-center bg-ink px-6 text-body text-paper transition-colors duration-300 hover:bg-signature"
-            href="/konto"
-          >
-            Zu meinen Anfragen
-          </Link>
-          <Link
-            className="inline-flex min-h-12 items-center justify-center border border-ink px-6 text-body text-ink transition-colors duration-300 hover:bg-ink hover:text-paper"
-            href={`/configure?project=${projectId}`}
-          >
+        <div className="mt-10 flex flex-wrap items-center gap-3">
+          <Pill href="/konto">Zu meinen Anfragen</Pill>
+          <Pill href={`/configure?project=${projectId}`} variant="secondary">
             Zum Projekt
-          </Link>
+          </Pill>
         </div>
       </motion.div>
     );
@@ -172,13 +162,11 @@ export function QuoteRequestForm({
 
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-signature">
-        Anfrage
-      </p>
-      <h1 className="mt-5 max-w-3xl font-editorial text-[clamp(2.6rem,7vw,5.6rem)] leading-[0.92]">
-        Planung anfragen.
+      <Label>Anfrage</Label>
+      <h1 className="m-0 mt-5 max-w-3xl text-heading">
+        Planung <em>anfragen</em>.
       </h1>
-      <p className="mt-6 max-w-[46ch] text-body leading-7 text-graphite">
+      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
         Wir prüfen „{projectName}“ in genau diesem Stand und melden uns mit
         einem Angebot und den nächsten Schritten. Die Anfrage ist unverbindlich.
       </p>
@@ -186,12 +174,9 @@ export function QuoteRequestForm({
       <form className="mt-10 max-w-xl" noValidate={false} onSubmit={submit}>
         <div className="grid gap-8 sm:grid-cols-2">
           <div>
-            <label className="block text-body text-ink" htmlFor={nameId}>
-              Name
-            </label>
-            <input
+            <FieldLabel htmlFor={nameId}>Name</FieldLabel>
+            <TextField
               autoComplete="name"
-              className={FIELD}
               id={nameId}
               maxLength={QUOTE_REQUEST_LIMITS.nameMax}
               onChange={(event) => setName(event.target.value)}
@@ -201,12 +186,9 @@ export function QuoteRequestForm({
             />
           </div>
           <div>
-            <label className="block text-body text-ink" htmlFor={emailId}>
-              E-Mail-Adresse
-            </label>
-            <input
+            <FieldLabel htmlFor={emailId}>E-Mail-Adresse</FieldLabel>
+            <TextField
               autoComplete="email"
-              className={FIELD}
               id={emailId}
               maxLength={QUOTE_REQUEST_LIMITS.emailMax}
               onChange={(event) => setEmail(event.target.value)}
@@ -218,12 +200,11 @@ export function QuoteRequestForm({
         </div>
 
         <div className="mt-8">
-          <label className="block text-body text-ink" htmlFor={phoneId}>
-            Telefon <span className="text-graphite">(optional)</span>
-          </label>
-          <input
+          <FieldLabel hint="optional" htmlFor={phoneId}>
+            Telefon
+          </FieldLabel>
+          <TextField
             autoComplete="tel"
-            className={FIELD}
             id={phoneId}
             maxLength={QUOTE_REQUEST_LIMITS.phoneMax}
             onChange={(event) => setPhone(event.target.value)}
@@ -233,18 +214,17 @@ export function QuoteRequestForm({
         </div>
 
         <div className="mt-8">
-          <label className="block text-body text-ink" htmlFor={noteId}>
-            Notiz zur Planung <span className="text-graphite">(optional)</span>
-          </label>
-          <textarea
-            className="mt-3 min-h-32 w-full border-0 border-b border-ink bg-transparent px-0 py-2 text-lg outline-none transition-colors placeholder:text-graphite focus:border-signature"
+          <FieldLabel hint="optional" htmlFor={noteId}>
+            Notiz zur Planung
+          </FieldLabel>
+          <TextArea
             id={noteId}
             maxLength={QUOTE_REQUEST_LIMITS.noteMax}
             onChange={(event) => setNote(event.target.value)}
             placeholder="Raummaße, Wünsche, ein passender Zeitraum …"
             value={note}
           />
-          <p className="mt-2 text-right text-xs text-graphite">
+          <p className="tnum m-0 mt-2 text-right text-caption text-ash">
             {note.length} / {QUOTE_REQUEST_LIMITS.noteMax}
           </p>
         </div>
@@ -258,28 +238,24 @@ export function QuoteRequestForm({
             required
             type="checkbox"
           />
-          <label className="text-sm leading-6 text-graphite" htmlFor={consentId}>
+          <label className="text-caption text-graphite" htmlFor={consentId}>
             Ich bin damit einverstanden, dass rotpunkt meine Angaben und diese
             Konfiguration zur Bearbeitung meiner Anfrage verarbeitet und mich
             dazu kontaktiert. Die Anfrage ist unverbindlich.
           </label>
         </div>
 
-        <button
-          className="mt-10 inline-flex min-h-12 w-full items-center justify-center bg-signature px-6 text-body text-paper transition-colors duration-300 hover:bg-ink disabled:cursor-wait disabled:bg-graphite sm:w-auto"
-          disabled={isPending || !consent}
-          type="submit"
-        >
+        <Pill className="mt-10 w-full sm:w-auto" disabled={isPending || !consent} type="submit">
           {isPending ? "Anfrage wird gesendet …" : "Anfrage senden"}
-        </button>
+        </Pill>
 
-        <div aria-live="polite" className="mt-6 min-h-6 text-sm leading-6 text-signature">
+        <div aria-live="polite" className="mt-6 min-h-6 text-caption text-ink">
           {outcome.kind === "error" && outcome.message}
           {outcome.kind === "signed-out" && (
             <>
               Ihre Sitzung ist abgelaufen.{" "}
               <Link
-                className="underline decoration-hairline underline-offset-4 hover:text-ink"
+                className="underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain"
                 href={`/konto?next=${encodeURIComponent(`/anfrage?project=${projectId}`)}`}
               >
                 Erneut anmelden
@@ -290,7 +266,7 @@ export function QuoteRequestForm({
             <>
               Dieses Projekt wurde inzwischen an anderer Stelle geändert.{" "}
               <button
-                className="underline decoration-hairline underline-offset-4 hover:text-ink"
+                className="underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain"
                 onClick={() => window.location.reload()}
                 type="button"
               >

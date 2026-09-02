@@ -11,11 +11,13 @@ Design direction (decided 2026-09-02, rebuilt 2026-09-03 on the Sequel style fro
 red only as the dot and one filled action per view; Manrope 300/400/500 plus one Instrument
 Serif word per headline; pills, glass HUD chips, 10 px cards; one motion curve. Canvas:
 https://claude.ai/code/artifact/5fed3dc8-f9bd-4489-845d-29cfbaa07be3 (pages Website,
-Konfigurator, System). Implemented so far: the foundation (tokens, fonts, primitives,
-motion contract) and the homepage with the rotpunkt film as hero. Next: the configurator
-(dark studio, glass HUDs, charcoal Datenblatt panel with accordions, material overlay,
-mobile sheet), then account, sign-in and Anfrage on the same system. Until then those
-surfaces render dark through the shared tokens but keep their old shapes.
+Konfigurator, System). Implemented 2026-09-03 across four commits: the foundation
+(tokens, fonts, primitives, motion contract), the homepage with the rotpunkt film as
+hero, the configurator (dark studio, glass HUDs, charcoal Datenblatt with accordions,
+material overlay, bottom sheet on phones) and the account, sign-in, Anfrage and shared
+states. Open on the design side: Impressum/Datenschutz pages (the footer carries no
+legal column until they exist) and a dark studio render for the homepage's configurator
+card (it shows the evening photo for now).
 
 Gates at reconciliation: `pnpm test` 76/76 (covers `features` and `lib`), `pnpm test:db`
 61/61 (Neon), `pnpm lint` clean, `tsc --noEmit` clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
@@ -35,6 +37,14 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   `GlassSegments` (sliding highlight, red dot), `Card`, `MediaCard`, `Label`, `SectionIntro`,
   `Reveal` (the one entrance), `Overlay` (portal sheet or card, focus and scroll handling),
   `MotionProvider` (`reducedMotion="user"`). Motion constants live in `lib/motion.ts`.
+- Configurator on the dark system (`features/configurator/ui`): `configurator-hud.tsx`
+  (brand, stage/view/camera chips, scene actions, save state), `datasheet-panel.tsx`
+  (summary rows, accordions, foot; card on desktop, sheet on phones, one mounted at a time
+  via `lib/use-media.ts`), `material-overlay.tsx` (live choice, cancel restores),
+  `project-save-controls.tsx` (autosave for the life of the configurator; decision
+  states as a card over the scene). Studio stage darkened in `kitchen-scene.tsx`.
+- Account, sign-in, Anfrage, shared-link states restyled with `components/design-system/field.tsx`
+  (the one underline input) and the pill/card primitives.
 - Homepage sections (`components/sections`): `SignatureHero` (the rotpunkt film, muted loop,
   fade from black, still for reduced motion, "Den Film ansehen" goes fullscreen),
   `SignaturePromises`, `MaterialCards` (horizontal band on phones), `ConfiguratorTeaser`

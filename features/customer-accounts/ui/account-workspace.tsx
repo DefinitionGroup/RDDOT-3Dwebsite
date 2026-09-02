@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
+import { Label } from "@/components/design-system/label";
+import { Pill } from "@/components/design-system/pill";
 import {
   galleryPageKey,
   type SerializedGalleryPage
@@ -12,6 +14,7 @@ import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import type { SerializedQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { QuoteRequestList } from "@/features/quote-requests/ui/quote-request-list";
 import { authClient } from "@/lib/auth-client";
+import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
 
 type AccountProject = {
   id: string;
@@ -19,6 +22,19 @@ type AccountProject = {
   lifecycle: "active" | "archived" | "trashed";
   updatedAt: string;
 };
+
+function ArrowIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-3 transition-transform duration-state ease-signature group-hover:translate-x-0.5"
+      fill="none"
+      viewBox="0 0 12 12"
+    >
+      <path d="M2 6h8m0 0L6 2m4 4-4 4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
+    </svg>
+  );
+}
 
 export function AccountWorkspace({
   expiresAt,
@@ -90,52 +106,42 @@ export function AccountWorkspace({
     <motion.div
       animate={{ opacity: 1, y: 0 }}
       className="w-full max-w-[37rem]"
-      initial={{ opacity: 0, y: 16 }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: REVEAL_RISE }}
+      transition={{ duration: DURATION.reveal, ease: SIGNATURE_EASE }}
     >
       <div className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-[clamp(2.65rem,6vw,4.8rem)] font-[200] leading-[0.96] tracking-[-0.03em]">
-            Mein Bereich.
+          <h1 className="m-0 text-heading">
+            Mein <em>Bereich</em>.
           </h1>
-          <p className="mt-5 max-w-[42ch] text-body text-graphite">
-            Ihre Projekte, Versionen und späteren Anfragen bleiben hier privat
-            zusammen.
+          <p className="m-0 mt-5 max-w-[42ch] text-body text-graphite">
+            Ihre Projekte, Versionen und späteren Anfragen bleiben hier privat zusammen.
           </p>
         </div>
-        <button
-          className="shrink-0 text-sm text-graphite underline decoration-hairline underline-offset-4 transition-colors hover:text-ink disabled:cursor-wait"
-          disabled={isSigningOut}
-          onClick={signOut}
-          type="button"
-        >
+        <Pill className="-mr-5 shrink-0" disabled={isSigningOut} onClick={signOut} variant="ghost">
           {isSigningOut ? "Abmeldung …" : "Abmelden"}
-        </button>
+        </Pill>
       </div>
 
-      <section className="mt-12 border-t border-ink pt-5">
+      <section className="mt-12">
         {pendingImport && (
-          <div
-            aria-live="polite"
-            className="mb-8 border-b border-hairline pb-6"
-          >
+          <div aria-live="polite" className="mb-6 rounded-card border border-hairline p-4">
             {importError ? (
               <>
-                <p className="text-body text-signature">{importError}</p>
-                <button
-                  className="mt-4 min-h-11 bg-ink px-5 text-body text-paper transition-colors hover:bg-signature"
+                <p className="m-0 text-caption text-ink">{importError}</p>
+                <Pill
+                  className="mt-4 h-11"
                   onClick={() => setImportAttempt((attempt) => attempt + 1)}
-                  type="button"
                 >
                   Erneut speichern
-                </button>
+                </Pill>
               </>
             ) : (
-              <div className="flex items-center gap-3 text-body text-graphite">
+              <div className="flex items-center gap-3 text-caption text-graphite">
                 <motion.span
                   animate={{ rotate: prefersReducedMotion ? 0 : 360 }}
                   aria-hidden="true"
-                  className="size-3 border border-graphite border-t-transparent"
+                  className="size-3 rounded-pill border border-graphite border-t-transparent"
                   transition={{
                     duration: 0.8,
                     ease: "linear",
@@ -148,47 +154,45 @@ export function AccountWorkspace({
           </div>
         )}
 
-        <div className="flex items-baseline justify-between gap-6">
-          <h2 className="text-lead">Projekte</h2>
-          <span className="text-sm text-graphite">
+        <div className="flex items-baseline justify-between gap-6 border-t border-ink pt-5">
+          <h2 className="m-0 text-nav">Projekte</h2>
+          <Label as="span">
             {projects.length === 1 ? "1 Projekt" : `${projects.length} Projekte`}
-          </span>
+          </Label>
         </div>
 
         {projects.length === 0 ? (
-          <div className="py-10">
-            <p className="max-w-[40ch] text-body text-graphite">
-              Noch ist hier alles offen. Starten Sie im Konfigurator und
-              speichern Sie Ihren Entwurf als privates Projekt.
+          <div className="py-8">
+            <p className="m-0 max-w-[40ch] text-body text-graphite">
+              Noch ist hier alles offen. Starten Sie im Konfigurator und speichern Sie Ihren
+              Entwurf als privates Projekt.
             </p>
-            <Link
-              className="mt-7 inline-flex min-h-12 items-center bg-signature px-6 text-body text-paper transition-colors duration-300 hover:bg-ink"
-              href="/configure"
-            >
+            <Pill className="mt-7" href="/configure">
               Küche konfigurieren
-            </Link>
+            </Pill>
           </div>
         ) : (
-          <ul className="mt-4 divide-y divide-hairline border-b border-hairline">
+          <ul className="m-0 mt-4 grid list-none gap-3 p-0">
             {projects.map((project) => (
               <li key={project.id}>
                 <Link
-                  className="group grid min-w-0 gap-2 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signature focus-visible:ring-offset-4 focus-visible:ring-offset-canvas sm:grid-cols-[1fr_auto] sm:items-end"
+                  className="group flex min-w-0 items-end justify-between gap-4 rounded-card bg-charcoal p-5 transition-colors duration-state ease-signature hover:bg-[#262626]"
                   href={`/configure?project=${project.id}`}
                 >
-                  <div className="min-w-0">
-                  <p className="text-lead">{project.name}</p>
-                  <p className="mt-1 text-sm text-graphite">
-                    Zuletzt geändert am{" "}
-                    {new Intl.DateTimeFormat("de-DE", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric"
-                    }).format(new Date(project.updatedAt))}
-                  </p>
-                  </div>
-                  <span className="text-sm text-graphite transition-colors group-hover:text-ink">
-                    Projekt öffnen →
+                  <span className="min-w-0">
+                    <span className="block truncate text-card">{project.name}</span>
+                    <span className="mt-1 block text-caption text-graphite">
+                      Zuletzt geändert am{" "}
+                      {new Intl.DateTimeFormat("de-DE", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                      }).format(new Date(project.updatedAt))}
+                    </span>
+                  </span>
+                  <span className="inline-flex shrink-0 items-center gap-2 text-nav text-graphite transition-colors duration-state ease-signature group-hover:text-ink">
+                    Öffnen
+                    <ArrowIcon />
                   </span>
                 </Link>
               </li>
@@ -212,13 +216,15 @@ export function AccountWorkspace({
         />
       </div>
 
-      <p className="mt-8 text-xs leading-5 text-graphite">
-        Sitzung geschützt bis {new Intl.DateTimeFormat("de-DE", {
+      <p className="m-0 mt-8 text-caption text-ash">
+        Sitzung geschützt bis{" "}
+        {new Intl.DateTimeFormat("de-DE", {
           day: "2-digit",
           month: "2-digit",
           hour: "2-digit",
           minute: "2-digit"
-        }).format(new Date(expiresAt))} Uhr.
+        }).format(new Date(expiresAt))}{" "}
+        Uhr.
       </p>
     </motion.div>
   );

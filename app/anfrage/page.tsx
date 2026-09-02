@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { z } from "zod";
 import { AppHeader } from "@/components/design-system/app-header";
+import { Label } from "@/components/design-system/label";
+import { Pill } from "@/components/design-system/pill";
 import {
   getConfiguratorQuote,
   getLocalizedLabel
@@ -78,7 +79,7 @@ export default async function QuoteRequestPage({ searchParams }: QuoteRequestPag
             projectId={workspace.id}
             projectName={workspace.name}
           />
-          <aside className="lg:pt-24">
+          <aside className="lg:pt-[6.5rem]">
             <ConfigurationSummary summary={summary} />
           </aside>
         </div>
@@ -89,9 +90,9 @@ export default async function QuoteRequestPage({ searchParams }: QuoteRequestPag
   }
 
   return (
-    <main className="min-h-svh bg-canvas px-6 py-8 text-ink sm:px-10 lg:px-[clamp(3rem,7vw,7rem)] lg:py-10">
+    <main className="min-h-svh bg-canvas px-5 py-6 text-ink sm:px-10 lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
       <AppHeader action={{ href: backHref, label: "Zur Konfiguration" }} className="mx-auto max-w-6xl" />
-      <div className="mx-auto mt-14 max-w-6xl lg:mt-20">{content}</div>
+      <div className="mx-auto mt-14 max-w-6xl pb-16 lg:mt-20">{content}</div>
     </main>
   );
 }
@@ -134,21 +135,18 @@ function SaveFirst({ guestCode }: { guestCode: string | null }) {
     : "/configure";
   return (
     <div className="max-w-2xl">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-signature">Anfrage</p>
-      <h1 className="mt-5 font-editorial text-[clamp(2.6rem,7vw,5.6rem)] leading-[0.92]">
-        Zuerst als Projekt speichern.
+      <Label>Anfrage</Label>
+      <h1 className="m-0 mt-5 text-heading">
+        Zuerst als <em>Projekt</em> speichern.
       </h1>
-      <p className="mt-6 max-w-[46ch] text-body leading-7 text-graphite">
-        Eine Anfrage bezieht sich immer auf einen festgehaltenen Planungsstand
-        eines Projekts. Speichern Sie Ihre Konfiguration, dann fragen Sie sie
-        direkt aus dem Projekt heraus an.
+      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
+        Eine Anfrage bezieht sich immer auf einen festgehaltenen Planungsstand eines
+        Projekts. Speichern Sie Ihre Konfiguration, dann fragen Sie sie direkt aus dem
+        Projekt heraus an.
       </p>
-      <Link
-        className="mt-10 inline-flex min-h-12 items-center justify-center bg-signature px-6 text-body text-paper transition-colors duration-300 hover:bg-ink"
-        href={saveHref}
-      >
+      <Pill className="mt-10" href={saveHref}>
         {guestCode ? "Als Projekt speichern" : "Zum Konfigurator"}
-      </Link>
+      </Pill>
     </div>
   );
 }
@@ -160,17 +158,14 @@ function Unavailable({
 }) {
   return (
     <div className="max-w-2xl">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-signature">Anfrage</p>
-      <h1 className="mt-5 font-editorial text-[clamp(2.6rem,7vw,5.6rem)] leading-[0.92]">
-        Hier fehlt noch das Projekt.
+      <Label>Anfrage</Label>
+      <h1 className="m-0 mt-5 text-heading">
+        Hier fehlt noch das <em>Projekt</em>.
       </h1>
-      <p className="mt-6 max-w-[46ch] text-body leading-7 text-graphite">{reason}</p>
-      <Link
-        className="mt-10 inline-flex min-h-12 items-center justify-center bg-ink px-6 text-body text-paper transition-colors duration-300 hover:bg-signature"
-        href="/konto"
-      >
+      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{reason}</p>
+      <Pill className="mt-10" href="/konto" variant="secondary">
         Zu meinen Projekten
-      </Link>
+      </Pill>
     </div>
   );
 }

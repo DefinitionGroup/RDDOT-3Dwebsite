@@ -3,7 +3,10 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { FormEvent, startTransition, useId, useState } from "react";
+import { FieldLabel, TextField } from "@/components/design-system/field";
+import { Pill } from "@/components/design-system/pill";
 import { authClient } from "@/lib/auth-client";
+import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
 
 type Step = "email" | "code";
 
@@ -20,11 +23,18 @@ function getErrorMessage(error: { message?: string; status?: number } | null) {
   return "Das hat noch nicht funktioniert. Prüfen Sie Ihre Eingabe und versuchen Sie es erneut.";
 }
 
+const step = {
+  initial: { opacity: 0, y: REVEAL_RISE },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -REVEAL_RISE / 2 },
+  transition: { duration: DURATION.overlay, ease: SIGNATURE_EASE }
+};
+
 export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
   const router = useRouter();
   const emailId = useId();
   const codeId = useId();
-  const [step, setStep] = useState<Step>("email");
+  const [currentStep, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [developmentCapture, setDevelopmentCapture] =
@@ -93,31 +103,22 @@ export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
 
   return (
     <div className="w-full max-w-[31rem]">
-      <AnimatePresence mode="wait" initial={false}>
-        {step === "email" ? (
-          <motion.div
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
-            key="email"
-            transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <h1 className="max-w-md text-[clamp(2.65rem,6vw,4.8rem)] font-[200] leading-[0.96] tracking-[-0.03em]">
-              Planung fortsetzen.
+      <AnimatePresence initial={false} mode="wait">
+        {currentStep === "email" ? (
+          <motion.div key="email" {...step}>
+            <h1 className="m-0 max-w-md text-heading">
+              Planung <em>fortsetzen</em>.
             </h1>
-            <p className="mt-6 max-w-[42ch] text-body text-graphite">
-              Geben Sie Ihre E-Mail-Adresse ein. Sie erhalten einen einmaligen
-              Code – ohne Passwort und ohne neues Kontoformular.
+            <p className="m-0 mt-6 max-w-[42ch] text-body text-graphite">
+              Geben Sie Ihre E-Mail-Adresse ein. Sie erhalten einen einmaligen Code – ohne
+              Passwort und ohne neues Kontoformular.
             </p>
 
             <form className="mt-10" onSubmit={sendCode}>
-              <label className="block text-body text-ink" htmlFor={emailId}>
-                E-Mail-Adresse
-              </label>
-              <input
+              <FieldLabel htmlFor={emailId}>E-Mail-Adresse</FieldLabel>
+              <TextField
                 autoComplete="email"
                 autoFocus
-                className="mt-3 min-h-14 w-full border-0 border-b border-ink bg-transparent px-0 text-lg outline-none transition-colors placeholder:text-graphite focus:border-signature"
                 id={emailId}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="name@beispiel.de"
@@ -125,51 +126,35 @@ export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
                 type="email"
                 value={email}
               />
-              <button
-                className="mt-8 inline-flex min-h-12 w-full items-center justify-center bg-ink px-6 text-body text-paper transition-colors duration-300 hover:bg-signature disabled:cursor-wait disabled:bg-graphite"
-                disabled={isPending}
-                type="submit"
-              >
+              <Pill className="mt-8 w-full" disabled={isPending} type="submit">
                 {isPending ? "Code wird vorbereitet …" : "Code anfordern"}
-              </button>
+              </Pill>
             </form>
 
-            <p className="mt-5 text-sm leading-6 text-graphite">
-              Mit dem Code melden Sie sich an oder erstellen beim ersten Mal
-              automatisch Ihren privaten Planungsbereich.
+            <p className="m-0 mt-5 text-caption text-graphite">
+              Mit dem Code melden Sie sich an oder erstellen beim ersten Mal automatisch Ihren
+              privaten Planungsbereich.
             </p>
           </motion.div>
         ) : (
-          <motion.div
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-            initial={{ opacity: 0, y: 14, filter: "blur(4px)" }}
-            key="code"
-            transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <button
-              className="mb-8 text-body text-graphite underline decoration-hairline underline-offset-4 transition-colors hover:text-ink"
-              onClick={returnToEmail}
-              type="button"
-            >
+          <motion.div key="code" {...step}>
+            <Pill className="-ml-5 mb-6" onClick={returnToEmail} variant="ghost">
               E-Mail-Adresse ändern
-            </button>
-            <h1 className="max-w-md text-[clamp(2.65rem,6vw,4.8rem)] font-[200] leading-[0.96] tracking-[-0.03em]">
-              Sechs Ziffern.
+            </Pill>
+            <h1 className="m-0 max-w-md text-heading">
+              Sechs <em>Ziffern</em>.
             </h1>
-            <p className="mt-6 max-w-[42ch] text-body text-graphite">
-              Wir haben den Code an <strong className="text-ink">{email}</strong>{" "}
+            <p className="m-0 mt-6 max-w-[42ch] text-body text-graphite">
+              Wir haben den Code an <strong className="font-label text-ink">{email}</strong>{" "}
               gesendet. Er ist fünf Minuten gültig.
             </p>
 
             <form className="mt-10" onSubmit={verifyCode}>
-              <label className="block text-body text-ink" htmlFor={codeId}>
-                Einmaliger Code
-              </label>
-              <input
+              <FieldLabel htmlFor={codeId}>Einmaliger Code</FieldLabel>
+              <TextField
                 autoComplete="one-time-code"
                 autoFocus
-                className="mt-3 min-h-16 w-full border-0 border-b border-ink bg-transparent px-0 text-[2rem] tracking-[0.2em] outline-none transition-colors placeholder:text-graphite focus:border-signature"
+                className="tnum h-16 text-title tracking-[0.2em]"
                 id={codeId}
                 inputMode="numeric"
                 maxLength={6}
@@ -181,25 +166,27 @@ export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
                 required
                 value={code}
               />
-              <button
-                className="mt-8 inline-flex min-h-12 w-full items-center justify-center bg-signature px-6 text-body text-paper transition-colors duration-300 hover:bg-ink disabled:cursor-wait disabled:bg-graphite"
+              <Pill
+                className="mt-8 w-full"
                 disabled={isPending || code.length !== 6}
                 type="submit"
               >
                 {isPending ? "Anmeldung läuft …" : "Sicher anmelden"}
-              </button>
+              </Pill>
             </form>
 
             {developmentCapture && (
-              <div className="mt-8 border-t border-hairline pt-5">
-                <p className="text-sm text-graphite">Nur in der lokalen Entwicklung</p>
+              <div className="mt-8 rounded-card border border-hairline p-4">
+                <p className="m-0 font-label text-label uppercase tracking-label text-graphite">
+                  Nur in der lokalen Entwicklung
+                </p>
                 <button
-                  className="mt-2 text-left text-2xl tracking-[0.18em] text-ink transition-colors hover:text-signature"
+                  className="tnum mt-2 inline-flex min-h-11 items-center text-left text-title text-ink transition-colors duration-state ease-signature hover:text-porcelain"
                   onClick={() => setCode(developmentCapture.code)}
                   type="button"
                 >
                   {developmentCapture.code}
-                  <span className="ml-3 text-sm tracking-normal text-graphite">
+                  <span className="ml-3 text-caption tracking-normal text-graphite">
                     zum Einsetzen
                   </span>
                 </button>
@@ -209,7 +196,7 @@ export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
         )}
       </AnimatePresence>
 
-      <p aria-live="polite" className="mt-6 min-h-6 text-sm text-signature">
+      <p aria-live="polite" className="m-0 mt-6 min-h-6 text-caption text-ink">
         {message}
       </p>
     </div>

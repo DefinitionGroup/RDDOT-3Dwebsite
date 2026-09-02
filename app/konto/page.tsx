@@ -43,67 +43,68 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       ];
 
   return (
-    <main className="grid min-h-svh bg-canvas lg:grid-cols-[minmax(0,1.08fr)_minmax(28rem,0.92fr)]">
-      <section className="relative min-h-[31svh] overflow-hidden lg:min-h-svh">
+    <main className="grid min-h-svh bg-canvas text-ink lg:grid-cols-[minmax(0,1.08fr)_minmax(28rem,0.92fr)]">
+      <section className="relative min-h-[31svh] overflow-hidden bg-charcoal lg:min-h-svh">
         <Image
           alt=""
-          className="object-cover object-center animate-soft-reveal lg:object-[58%_center]"
+          className="animate-soft-reveal object-cover object-center lg:object-[58%_center]"
           fill
+          loading="eager"
           priority
           sizes="(min-width: 1024px) 55vw, 100vw"
           src="/images/signature-panorama.webp"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,18,16,0.12)_0%,rgba(20,18,16,0.06)_45%,rgba(20,18,16,0.62)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 p-6 text-paper sm:p-10 lg:p-14">
-          <BrandLogo
-            className="[&>span:first-child]:text-[clamp(1.7rem,3vw,2.8rem)]"
-            href="/"
-          />
-          <p className="mt-5 max-w-[34ch] text-base leading-7 text-white/86">
-            Eine Küche entsteht nicht in einem Moment. Ihr Planungsstand wartet
-            dort, wo Sie ihn verlassen haben.
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.25)_0%,rgba(0,0,0,0.05)_40%,rgba(0,0,0,0.82)_100%)]"
+        />
+        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-10 lg:p-14">
+          <BrandLogo href="/" />
+          <p className="m-0 mt-5 max-w-[34ch] text-body text-graphite">
+            Eine Küche entsteht nicht in einem Moment. Ihr Planungsstand wartet dort, wo Sie
+            ihn verlassen haben.
           </p>
         </div>
       </section>
 
-      <section className="flex min-h-[69svh] flex-col px-6 py-8 sm:px-10 lg:min-h-svh lg:px-[clamp(3rem,7vw,7rem)] lg:py-10">
+      <section className="flex min-h-[69svh] flex-col px-5 py-6 sm:px-10 lg:min-h-svh lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
         <AppHeader
           action={{ href: "/configure", label: "Zum Konfigurator" }}
           showAccount={false}
         />
 
         <div className="flex flex-1 items-center py-10">
-        {session ? (
-          <AccountWorkspace
-            expiresAt={session.expiresAt.toISOString()}
-            gallery={gallery}
-            pendingImport={
-              params.intent === "save" &&
-              typeof params.c === "string" &&
-              typeof params.import === "string"
-                ? {
-                    configurationCode: params.c,
-                    idempotencyKey: params.import
-                  }
-                : null
-            }
-            projects={accountProjects.map((project) => ({
-              ...project,
-              updatedAt: project.updatedAt.toISOString()
-            }))}
-            quoteRequests={serializeQuoteRequestPage(requests)}
-          />
-        ) : (
-          <AccountAccess
-            returnTo={
-              typeof params.next === "string" &&
-              (params.next.startsWith("/configure?project=") ||
-                params.next.startsWith("/anfrage?project="))
-                ? params.next
-                : "/konto"
-            }
-          />
-        )}
+          {session ? (
+            <AccountWorkspace
+              expiresAt={session.expiresAt.toISOString()}
+              gallery={gallery}
+              pendingImport={
+                params.intent === "save" &&
+                typeof params.c === "string" &&
+                typeof params.import === "string"
+                  ? {
+                      configurationCode: params.c,
+                      idempotencyKey: params.import
+                    }
+                  : null
+              }
+              projects={accountProjects.map((project) => ({
+                ...project,
+                updatedAt: project.updatedAt.toISOString()
+              }))}
+              quoteRequests={serializeQuoteRequestPage(requests)}
+            />
+          ) : (
+            <AccountAccess
+              returnTo={
+                typeof params.next === "string" &&
+                (params.next.startsWith("/configure?project=") ||
+                  params.next.startsWith("/anfrage?project="))
+                  ? params.next
+                  : "/konto"
+              }
+            />
+          )}
         </div>
       </section>
     </main>
