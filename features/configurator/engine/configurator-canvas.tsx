@@ -2,7 +2,9 @@
 
 import { Pathtracer, usePathtracer } from "@react-three/gpu-pathtracer";
 import { Canvas, useThree } from "@react-three/fiber";
-import { Suspense, useEffect } from "react";
+import { Component, type ReactNode, Suspense, useEffect } from "react";
+import { AssetManifestError } from "@/features/configurator/modules/asset-manifest";
+import { DeterministicVisualFallback } from "@/features/configurator/ui/visual-fallback";
 import type { WebGLPathTracer } from "three-gpu-pathtracer";
 import type {
   CameraView,
@@ -50,7 +52,52 @@ function configurePathTracer(pathTracer: WebGLPathTracer | null) {
   };
 }
 
-export function ConfiguratorCanvas({
+/**
+ * The Deterministic Visual Fallback path (ADR 0009). Errors thrown inside the
+ * Canvas — a failed WebGL context, an asset the manifest cannot account for, a
+ * shader failure — are rethrown by fiber to this boundary, which swaps the
+ * scene for the approved poster so the configuration tasks stay usable.
+ *
+ * Deliberately not the Canvas `fallback` prop: fiber renders that as canvas
+ * child content, which assistive technology reads even while 3D works.
+ */
+class SceneErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("3D scene unavailable, showing the visual fallback", error);
+  }
+
+  render() {
+    if (this.state.error) {
+      const reason =
+        this.state.error instanceof AssetManifestError
+          ? "asset"
+          : /webgl/i.test(this.state.error.message)
+            ? "webgl"
+            : "error";
+      return <DeterministicVisualFallback reason={reason} />;
+    }
+    return this.props.children;
+  }
+}
+
+export function ConfiguratorCanvas(props: ConfiguratorCanvasProps) {
+  return (
+    <SceneErrorBoundary>
+      <SceneCanvas {...props} />
+    </SceneErrorBoundary>
+  );
+}
+
+function SceneCanvas({
   cameraView,
   captureRef,
   edit,

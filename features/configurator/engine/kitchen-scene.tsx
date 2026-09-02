@@ -43,6 +43,7 @@ import {
   KitchenModel,
   type KitchenEditProps
 } from "@/features/configurator/engine/kitchen-model";
+import { getStudioCameraPresets } from "@/features/configurator/modules/asset-manifest";
 
 type KitchenSceneProps = {
   cameraView: CameraView;
@@ -59,18 +60,6 @@ const STUDIO_STAGE_Y = -0.7;
 const STUDIO_FLOOR_OFFSET = -0.04;
 const STUDIO_FLOOR_Y = STUDIO_STAGE_Y + STUDIO_FLOOR_OFFSET;
 const STUDIO_REFLECTION_PROBE_Y = 1.15;
-
-const cameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [5.05, 2.75, 6.25, 0, 0.45, -0.08],
-  front: [0, 1.55, 6.05, 0, 0.48, 0],
-  detail: [2.05, 1.45, 3.05, 0.82, 0.38, 0.08]
-};
-
-const mobileCameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [7.4, 4.5, 9.2, 0, -2.45, -0.05],
-  front: [0, 2.8, 9.4, 0, -1.05, 0],
-  detail: [3.15, 1.7, 4.45, 0.75, -0.04, 0.04]
-};
 
 // Floor level in the baked scene is y = -1.369; eye heights are relative to it.
 const apartment2CameraPresets: Record<CameraView, CameraPreset> = {
@@ -108,9 +97,7 @@ export function KitchenScene({
       ? isCompactViewport
         ? mobileApartment2CameraPresets
         : apartment2CameraPresets
-      : isCompactViewport
-        ? mobileCameraPresets
-        : cameraPresets;
+      : getStudioCameraPresets(isCompactViewport);
     const preset = presets[cameraView];
     // A first switch into a visualization suspends on its assets, which can
     // swallow the initial setLookAt (the controls remount around it). Retry

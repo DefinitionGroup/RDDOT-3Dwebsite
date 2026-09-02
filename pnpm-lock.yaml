@@ -81,6 +81,9 @@ importers:
       '@gltf-transform/cli':
         specifier: ^4.4.1
         version: 4.4.2(@types/node@26.1.0)
+      '@gltf-transform/core':
+        specifier: ^4.4.1
+        version: 4.4.2
       '@testcontainers/postgresql':
         specifier: 12.1.0
         version: 12.1.0

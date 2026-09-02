@@ -1,4 +1,4 @@
-import manifest from "@/features/configurator/modules/kitchen-line-manifest.json";
+import { KITCHEN_ASSET_MANIFEST } from "@/features/configurator/modules/asset-manifest";
 import { getIslandBackComposition } from "@/features/configurator/product-definition";
 import type { ConfiguratorState, WallModuleKey } from "@/features/configurator/types";
 
@@ -34,8 +34,10 @@ export type ModulePlacement = {
   x: number;
 };
 
-const MODULE_ENTRIES = manifest.modules as ModuleManifestEntry[];
-const CONTINUOUS_ENTRIES = manifest.continuous as ContinuousManifestEntry[];
+// Placements come from the validated Asset Manifest (ADR 0009), never from
+// the segmentation pipeline's intermediate output directly.
+const MODULE_ENTRIES: ModuleManifestEntry[] = KITCHEN_ASSET_MANIFEST.modules;
+const CONTINUOUS_ENTRIES: ContinuousManifestEntry[] = KITCHEN_ASSET_MANIFEST.continuous;
 
 export function getModuleManifest() {
   return MODULE_ENTRIES;

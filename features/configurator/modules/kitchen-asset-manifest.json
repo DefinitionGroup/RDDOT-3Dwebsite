@@ -1,0 +1,1145 @@
+{
+  "manifestVersion": 1,
+  "assetKey": "rdtdot-signature-kitchen-modules",
+  "model": {
+    "path": "/models/kitchen-modules.glb",
+    "byteSize": 1469632,
+    "sha256": "fb5cc57bf31bbb2157e4c9e77dcc534cb84f7d99eac852c5c540659157c7502c"
+  },
+  "compatibility": {
+    "renderContract": 1,
+    "three": "0.184"
+  },
+  "provenance": {
+    "source": "rotpunkt Signature kitchen line (kitchen-line.glb)",
+    "pipeline": "scripts/segment-kitchen-modules.py → scripts/build-asset-manifest.mjs",
+    "license": "Owned by rotpunkt; confirm before the Production Release Gate."
+  },
+  "budgets": {
+    "limits": {
+      "transferBytes": 2000000,
+      "triangles": 120000,
+      "drawCalls": 200
+    },
+    "measured": {
+      "transferBytes": 1469632,
+      "triangles": 76926,
+      "drawCalls": 122
+    }
+  },
+  "roles": {
+    "required": [
+      "backdrop",
+      "cabinet",
+      "countertop",
+      "front",
+      "handle",
+      "plinth"
+    ],
+    "runtime": [
+      "appliance"
+    ]
+  },
+  "nodes": [
+    {
+      "name": "backdrop__Box117",
+      "role": "backdrop",
+      "prefab": "continuous__wall-backpanel",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "backdrop__Plane559",
+      "role": "backdrop",
+      "prefab": "continuous__wall-backwall",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "cabinet__Box003",
+      "role": "cabinet",
+      "prefab": "module__island-end-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box004",
+      "role": "cabinet",
+      "prefab": "module__island-front-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box005",
+      "role": "cabinet",
+      "prefab": "module__island-front-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box007",
+      "role": "cabinet",
+      "prefab": "module__island-front-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box008",
+      "role": "cabinet",
+      "prefab": "module__island-end-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box009",
+      "role": "cabinet",
+      "prefab": "module__island-front-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box010",
+      "role": "cabinet",
+      "prefab": "module__island-front-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box011",
+      "role": "cabinet",
+      "prefab": "module__island-front-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box012",
+      "role": "cabinet",
+      "prefab": "module__island-front-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box039",
+      "role": "cabinet",
+      "prefab": "module__island-back-90-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box040",
+      "role": "cabinet",
+      "prefab": "module__island-back-90-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box043",
+      "role": "cabinet",
+      "prefab": "module__island-back-60-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box044",
+      "role": "cabinet",
+      "prefab": "module__island-back-60-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box053",
+      "role": "cabinet",
+      "prefab": "module__island-back-60-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box054",
+      "role": "cabinet",
+      "prefab": "module__island-back-60-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box055",
+      "role": "cabinet",
+      "prefab": "module__island-back-60-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box056",
+      "role": "cabinet",
+      "prefab": "module__island-back-60-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box057",
+      "role": "cabinet",
+      "prefab": "module__island-back-90-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box058",
+      "role": "cabinet",
+      "prefab": "module__island-back-90-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box059",
+      "role": "cabinet",
+      "prefab": "continuous__island-midpanel",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box060",
+      "role": "cabinet",
+      "prefab": "module__island-back-60-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box061",
+      "role": "cabinet",
+      "prefab": "module__wall-big-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box062",
+      "role": "cabinet",
+      "prefab": "module__wall-big-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box063",
+      "role": "cabinet",
+      "prefab": "module__wall-big-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box064",
+      "role": "cabinet",
+      "prefab": "module__wall-big-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box067",
+      "role": "cabinet",
+      "prefab": "module__wall-small-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box068",
+      "role": "cabinet",
+      "prefab": "module__wall-small-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box069",
+      "role": "cabinet",
+      "prefab": "module__wall-small-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box070",
+      "role": "cabinet",
+      "prefab": "module__wall-small-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box071",
+      "role": "cabinet",
+      "prefab": "module__wall-small-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box072",
+      "role": "cabinet",
+      "prefab": "module__wall-small-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box073",
+      "role": "cabinet",
+      "prefab": "module__wall-small-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box074",
+      "role": "cabinet",
+      "prefab": "module__wall-small-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box075",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box076",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box077",
+      "role": "cabinet",
+      "prefab": "module__wall-big-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box078",
+      "role": "cabinet",
+      "prefab": "module__wall-big-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box083",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box084",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box085",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box090",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box091",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box092",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box096",
+      "role": "cabinet",
+      "prefab": "module__wall-big-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box097",
+      "role": "cabinet",
+      "prefab": "module__wall-small-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box098",
+      "role": "cabinet",
+      "prefab": "module__wall-small-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box099",
+      "role": "cabinet",
+      "prefab": "module__wall-small-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box100",
+      "role": "cabinet",
+      "prefab": "module__wall-small-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box101",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box102",
+      "role": "cabinet",
+      "prefab": "module__wall-big-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box103",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box106",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box107",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box108",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box109",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box110",
+      "role": "cabinet",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box111",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box112",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box113",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box115",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box116",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box120",
+      "role": "cabinet",
+      "prefab": "module__wall-big-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box123",
+      "role": "cabinet",
+      "prefab": "module__wall-big-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box124",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "cabinet__Box125",
+      "role": "cabinet",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "countertop__Box021",
+      "role": "countertop",
+      "prefab": "continuous__island-countertop",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2252
+    },
+    {
+      "name": "countertop__Box104",
+      "role": "countertop",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "countertop__Box105",
+      "role": "countertop",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "countertop__Plane001",
+      "role": "countertop",
+      "prefab": "module__wall-big-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "countertop__Plane002",
+      "role": "countertop",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "countertop__Plane003",
+      "role": "countertop",
+      "prefab": "module__wall-small-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "countertop__Plane004",
+      "role": "countertop",
+      "prefab": "module__wall-small-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "countertop__Plane005",
+      "role": "countertop",
+      "prefab": "module__wall-small-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "countertop__Plane006",
+      "role": "countertop",
+      "prefab": "module__wall-small-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "countertop__Plane007",
+      "role": "countertop",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "countertop__Plane008",
+      "role": "countertop",
+      "prefab": "module__wall-big-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 2
+    },
+    {
+      "name": "front__Box013",
+      "role": "front",
+      "prefab": "module__island-front-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box014",
+      "role": "front",
+      "prefab": "module__island-front-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box015",
+      "role": "front",
+      "prefab": "module__island-front-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box016",
+      "role": "front",
+      "prefab": "module__island-front-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box017",
+      "role": "front",
+      "prefab": "module__island-front-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box018",
+      "role": "front",
+      "prefab": "module__island-front-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box019",
+      "role": "front",
+      "prefab": "module__island-front-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box020",
+      "role": "front",
+      "prefab": "module__island-front-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box037",
+      "role": "front",
+      "prefab": "module__island-back-90-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box038",
+      "role": "front",
+      "prefab": "module__island-back-90-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box045",
+      "role": "front",
+      "prefab": "module__island-back-60-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box046",
+      "role": "front",
+      "prefab": "module__island-back-60-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box047",
+      "role": "front",
+      "prefab": "module__island-back-60-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box048",
+      "role": "front",
+      "prefab": "module__island-back-60-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box049",
+      "role": "front",
+      "prefab": "module__island-back-90-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box050",
+      "role": "front",
+      "prefab": "module__island-back-90-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box079",
+      "role": "front",
+      "prefab": "module__wall-big-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box080",
+      "role": "front",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box081",
+      "role": "front",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box082",
+      "role": "front",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box086",
+      "role": "front",
+      "prefab": "module__wall-small-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box087",
+      "role": "front",
+      "prefab": "module__wall-small-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box088",
+      "role": "front",
+      "prefab": "module__wall-small-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box089",
+      "role": "front",
+      "prefab": "module__wall-small-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box093",
+      "role": "front",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box094",
+      "role": "front",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box095",
+      "role": "front",
+      "prefab": "module__wall-big-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "front__Box114",
+      "role": "front",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "handle__Line013",
+      "role": "handle",
+      "prefab": "module__island-front-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line016",
+      "role": "handle",
+      "prefab": "module__island-front-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line017",
+      "role": "handle",
+      "prefab": "module__island-front-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line020",
+      "role": "handle",
+      "prefab": "module__island-front-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line025",
+      "role": "handle",
+      "prefab": "module__island-front-4",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line026",
+      "role": "handle",
+      "prefab": "module__island-front-3",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line027",
+      "role": "handle",
+      "prefab": "module__island-front-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line028",
+      "role": "handle",
+      "prefab": "module__island-front-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line029",
+      "role": "handle",
+      "prefab": "module__wall-device-A",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "handle__Line030",
+      "role": "handle",
+      "prefab": "module__wall-device-B",
+      "materialSlot": "Material__2147462586",
+      "triangles": 1468
+    },
+    {
+      "name": "plinth__Box036",
+      "role": "plinth",
+      "prefab": "continuous__island-back-plinth",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "plinth__Box041",
+      "role": "plinth",
+      "prefab": "module__island-back-90-R",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "plinth__Box042",
+      "role": "plinth",
+      "prefab": "module__island-back-60-2",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "plinth__Box051",
+      "role": "plinth",
+      "prefab": "module__island-back-60-1",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "plinth__Box052",
+      "role": "plinth",
+      "prefab": "module__island-back-90-L",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    },
+    {
+      "name": "plinth__Box121",
+      "role": "plinth",
+      "prefab": "continuous__wall-plinth-strip",
+      "materialSlot": "Material__2147462586",
+      "triangles": 588
+    }
+  ],
+  "modules": [
+    {
+      "key": "wall-big-L",
+      "type": "wall-big",
+      "prefab": "module__wall-big-L",
+      "xMin": 2.101,
+      "width": 0.619,
+      "meshCount": 7
+    },
+    {
+      "key": "island-end-L",
+      "type": "island-end",
+      "prefab": "module__island-end-L",
+      "xMin": 2.3334,
+      "width": 0.019,
+      "meshCount": 1
+    },
+    {
+      "key": "island-back-90-L",
+      "type": "island-back-90",
+      "prefab": "module__island-back-90-L",
+      "xMin": 2.3524,
+      "width": 0.9,
+      "meshCount": 5
+    },
+    {
+      "key": "island-front-1",
+      "type": "island-front",
+      "prefab": "module__island-front-1",
+      "xMin": 2.3524,
+      "width": 0.769,
+      "meshCount": 6
+    },
+    {
+      "key": "wall-device-A",
+      "type": "wall-device",
+      "prefab": "module__wall-device-A",
+      "xMin": 2.72,
+      "width": 0.638,
+      "meshCount": 17
+    },
+    {
+      "key": "island-front-2",
+      "type": "island-front",
+      "prefab": "module__island-front-2",
+      "xMin": 3.1221,
+      "width": 0.7684,
+      "meshCount": 6
+    },
+    {
+      "key": "island-back-60-1",
+      "type": "island-back-60",
+      "prefab": "module__island-back-60-1",
+      "xMin": 3.2524,
+      "width": 0.638,
+      "meshCount": 7
+    },
+    {
+      "key": "wall-small-1",
+      "type": "wall-small",
+      "prefab": "module__wall-small-1",
+      "xMin": 3.358,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-small-2",
+      "type": "wall-small",
+      "prefab": "module__wall-small-2",
+      "xMin": 3.658,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "island-back-60-2",
+      "type": "island-back-60",
+      "prefab": "module__island-back-60-2",
+      "xMin": 3.8904,
+      "width": 0.619,
+      "meshCount": 6
+    },
+    {
+      "key": "island-front-3",
+      "type": "island-front",
+      "prefab": "module__island-front-3",
+      "xMin": 3.891,
+      "width": 0.7684,
+      "meshCount": 6
+    },
+    {
+      "key": "wall-small-3",
+      "type": "wall-small",
+      "prefab": "module__wall-small-3",
+      "xMin": 3.958,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-small-4",
+      "type": "wall-small",
+      "prefab": "module__wall-small-4",
+      "xMin": 4.258,
+      "width": 0.3,
+      "meshCount": 5
+    },
+    {
+      "key": "island-back-90-R",
+      "type": "island-back-90",
+      "prefab": "module__island-back-90-R",
+      "xMin": 4.5094,
+      "width": 0.9,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-device-B",
+      "type": "wall-device",
+      "prefab": "module__wall-device-B",
+      "xMin": 4.558,
+      "width": 0.638,
+      "meshCount": 17
+    },
+    {
+      "key": "island-front-4",
+      "type": "island-front",
+      "prefab": "module__island-front-4",
+      "xMin": 4.66,
+      "width": 0.7494,
+      "meshCount": 5
+    },
+    {
+      "key": "wall-big-R",
+      "type": "wall-big",
+      "prefab": "module__wall-big-R",
+      "xMin": 5.196,
+      "width": 0.619,
+      "meshCount": 7
+    },
+    {
+      "key": "island-end-R",
+      "type": "island-end",
+      "prefab": "module__island-end-R",
+      "xMin": 5.4094,
+      "width": 0.019,
+      "meshCount": 1
+    }
+  ],
+  "continuous": [
+    {
+      "key": "wall-backwall",
+      "prefab": "continuous__wall-backwall",
+      "xMin": 2.096,
+      "width": 3.724
+    },
+    {
+      "key": "wall-backpanel",
+      "prefab": "continuous__wall-backpanel",
+      "xMin": 2.1362,
+      "width": 3.6435
+    },
+    {
+      "key": "wall-plinth-strip",
+      "prefab": "continuous__wall-plinth-strip",
+      "xMin": 2.1473,
+      "width": 3.6213
+    },
+    {
+      "key": "island-countertop",
+      "prefab": "continuous__island-countertop",
+      "xMin": 2.3304,
+      "width": 3.101
+    },
+    {
+      "key": "island-midpanel",
+      "prefab": "continuous__island-midpanel",
+      "xMin": 2.3524,
+      "width": 3.057
+    },
+    {
+      "key": "island-back-plinth",
+      "prefab": "continuous__island-back-plinth",
+      "xMin": 2.455,
+      "width": 2.8518
+    }
+  ],
+  "cameras": {
+    "studio": {
+      "desktop": {
+        "signature": [
+          5.05,
+          2.75,
+          6.25,
+          0,
+          0.45,
+          -0.08
+        ],
+        "front": [
+          0,
+          1.55,
+          6.05,
+          0,
+          0.48,
+          0
+        ],
+        "detail": [
+          2.05,
+          1.45,
+          3.05,
+          0.82,
+          0.38,
+          0.08
+        ]
+      },
+      "compact": {
+        "signature": [
+          7.4,
+          4.5,
+          9.2,
+          0,
+          -2.45,
+          -0.05
+        ],
+        "front": [
+          0,
+          2.8,
+          9.4,
+          0,
+          -1.05,
+          0
+        ],
+        "detail": [
+          3.15,
+          1.7,
+          4.45,
+          0.75,
+          -0.04,
+          0.04
+        ]
+      }
+    }
+  },
+  "fallback": {
+    "kind": "poster",
+    "src": "/images/signature-panorama.webp",
+    "alt": "Signature Küche in Graphit und Porzellan, fotografiert im Studio.",
+    "note": "Deterministic Visual Fallback: shown when stable 3D is unavailable. Illustrative, not the exact configuration."
+  }
+}

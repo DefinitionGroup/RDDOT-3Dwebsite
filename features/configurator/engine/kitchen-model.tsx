@@ -1,6 +1,10 @@
 "use client";
 
 import { useGLTF, useTexture } from "@react-three/drei";
+import {
+  resolveSemanticRole,
+  type SemanticSceneRole
+} from "@/features/configurator/modules/asset-manifest";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useEffect, useLayoutEffect, useMemo } from "react";
 import {
@@ -337,14 +341,7 @@ function getFinishProfile(
   };
 }
 
-type ModelRole =
-  | "appliance"
-  | "backdrop"
-  | "cabinet"
-  | "countertop"
-  | "front"
-  | "handle"
-  | "plinth";
+type ModelRole = SemanticSceneRole;
 
 function composeKitchenScene(sourceScene: Object3D, layout: KitchenLayout) {
   const prefabs = new Map<string, Object3D>();
@@ -391,6 +388,8 @@ function composeKitchenScene(sourceScene: Object3D, layout: KitchenLayout) {
     ] as const;
     const mesh = new Mesh(new BoxGeometry(size[0], size[1], size[2]));
     mesh.name = `${box.role}__generated-${box.key}`;
+    // Generated at runtime, so not in the Asset Manifest; the role is explicit.
+    mesh.userData.configuratorRole = box.role;
     mesh.position.set(
       box.min[0] + size[0] / 2,
       box.min[1] + size[1] / 2,
@@ -411,11 +410,14 @@ function composeKitchenScene(sourceScene: Object3D, layout: KitchenLayout) {
 function addApplianceFront(moduleInstance: Object3D) {
   const front = new Mesh(new BoxGeometry(0.55, 0.42, 0.018));
   front.name = "appliance__generated-oven-front";
+  // Generated at runtime, so not in the Asset Manifest; roles are explicit.
+  front.userData.configuratorRole = "appliance";
   front.position.set(0.319, 1.215, -4.716);
   moduleInstance.add(front);
 
   const handle = new Mesh(new BoxGeometry(0.48, 0.016, 0.016));
   handle.name = "handle__generated-oven-handle";
+  handle.userData.configuratorRole = "handle";
   handle.position.set(0.319, 1.385, -4.7);
   moduleInstance.add(handle);
 }
@@ -449,7 +451,9 @@ function prepareKitchenModel(sourceScene: Object3D, state: ConfiguratorState) {
     // so each render pipeline needs an isolated geometry instance.
     object.geometry = object.geometry.clone();
     ownedGeometries.push(object.geometry);
-    object.userData.configuratorRole = getBakedRole(object) ?? classifyMesh(object);
+    // Model nodes resolve through the Asset Manifest; an unmapped node throws
+    // rather than being guessed from its shape (ADR 0009).
+    object.userData.configuratorRole ??= resolveSemanticRole(object.name);
     ensurePlanarUVs(object.geometry);
     normalizeMaterialGroups(object.geometry);
   });
@@ -585,16 +589,6 @@ function applyEditTreatment(
   };
 }
 
-/** Roles are baked into mesh names by the segmentation step: `<role>__<name>`. */
-function getBakedRole(mesh: Mesh): ModelRole | null {
-  const separator = mesh.name.indexOf("__");
-  if (separator <= 0) {
-    return null;
-  }
-  const prefix = mesh.name.slice(0, separator);
-  return isModelRole(prefix) ? prefix : null;
-}
-
 function normalizeMaterialGroups(geometry: BufferGeometry) {
   const indexCount = geometry.index?.count;
   const vertexCount = geometry.getAttribute("position")?.count;
@@ -663,54 +657,6 @@ function isModelRole(role: unknown): role is ModelRole {
     role === "handle" ||
     role === "plinth"
   );
-}
-
-function classifyMesh(mesh: Mesh): ModelRole {
-  const bounds = new Box3().setFromObject(mesh);
-  const size = new Vector3();
-  const center = new Vector3();
-  bounds.getSize(size);
-  bounds.getCenter(center);
-
-  const name = mesh.name.toLowerCase();
-  const isLine = name.startsWith("line");
-  const isLargeBackPlane =
-    name === "plane559" || (size.z <= 0.025 && size.x >= 2.8 && size.y >= 1.8);
-  const isCountertop =
-    size.y <= 0.12 &&
-    center.y >= 0.82 &&
-    center.y <= 1.08 &&
-    (size.x >= 1.2 || (size.x >= 0.54 && size.z >= 0.45));
-  const isPlinth =
-    size.y <= 0.16 && center.y <= 0.2 && (size.x >= 1.2 || size.z >= 0.7);
-  const isDoorLikePanel =
-    size.z <= 0.04 &&
-    size.x >= 0.12 &&
-    size.x <= 1.2 &&
-    size.y >= 0.25 &&
-    center.y >= 0.25;
-
-  if (isLine) {
-    return "handle";
-  }
-
-  if (isLargeBackPlane) {
-    return "backdrop";
-  }
-
-  if (isCountertop || name.startsWith("plane")) {
-    return "countertop";
-  }
-
-  if (isPlinth) {
-    return "plinth";
-  }
-
-  if (isDoorLikePanel) {
-    return "front";
-  }
-
-  return "cabinet";
 }
 
 function createMicroSurfaceTexture() {
