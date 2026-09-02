@@ -1,9 +1,16 @@
 # rotpunkt Signature Status
 
 Last reconciled: 2026-09-02
-Working branch: `cc/devstart-002` — the main development branch from 2026-09-02, cut from
-`cc/devstart-001` at `6640d45` (23 commits ahead of `redesign/devstart`). `cc/devstart-001`
-is frozen at that commit; it is not merged back and does not need to be.
+Working branch: `cc/devstart-003` — the main development branch from 2026-09-03, cut from
+`cc/devstart-002` at `957698f` (36 commits ahead of `redesign/devstart`). Earlier
+`cc/devstart-*` branches are frozen at their last commit; none is merged back and none
+needs to be.
+
+Design direction for the next configurator UI (decided 2026-09-02): the "Datenblatt"
+direction, made elegant — the scene full-bleed, HUD elements over it, the configuration
+as a translucent panel with accordions, deeper choices as overlays, a bottom sheet on
+mobile. Canvas: https://claude.ai/code/artifact/5fed3dc8-f9bd-4489-845d-29cfbaa07be3
+(page "Datenblatt"; the two unchosen directions on page "Richtungen"). Not yet built.
 
 Gates at reconciliation: `pnpm test` 76/76 (covers `features` and `lib`), `pnpm test:db`
 61/61 (Neon), `pnpm lint` clean, `tsc --noEmit` clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
