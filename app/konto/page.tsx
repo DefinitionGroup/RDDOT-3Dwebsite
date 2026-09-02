@@ -56,9 +56,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,18,16,0.12)_0%,rgba(20,18,16,0.06)_45%,rgba(20,18,16,0.62)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 p-6 text-paper sm:p-10 lg:p-14">
           <BrandLogo
-            className="[&>span]:text-[clamp(1.7rem,3vw,2.8rem)]"
+            className="[&>span:first-child]:text-[clamp(1.7rem,3vw,2.8rem)]"
             href="/"
-            tone="light"
           />
           <p className="mt-5 max-w-[34ch] text-base leading-7 text-white/86">
             Eine Küche entsteht nicht in einem Moment. Ihr Planungsstand wartet

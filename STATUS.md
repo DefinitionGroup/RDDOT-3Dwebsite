@@ -1,16 +1,21 @@
 # rotpunkt Signature Status
 
-Last reconciled: 2026-09-02
+Last reconciled: 2026-09-03
 Working branch: `cc/devstart-003` — the main development branch from 2026-09-03, cut from
 `cc/devstart-002` at `957698f` (36 commits ahead of `redesign/devstart`). Earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
-Design direction for the next configurator UI (decided 2026-09-02): the "Datenblatt"
-direction, made elegant — the scene full-bleed, HUD elements over it, the configuration
-as a translucent panel with accordions, deeper choices as overlays, a bottom sheet on
-mobile. Canvas: https://claude.ai/code/artifact/5fed3dc8-f9bd-4489-845d-29cfbaa07be3
-(page "Datenblatt"; the two unchosen directions on page "Richtungen"). Not yet built.
+Design direction (decided 2026-09-02, rebuilt 2026-09-03 on the Sequel style from Refero):
+"rotpunkt after dark" — black stage, charcoal cards, three greys, white structure, signature
+red only as the dot and one filled action per view; Manrope 300/400/500 plus one Instrument
+Serif word per headline; pills, glass HUD chips, 10 px cards; one motion curve. Canvas:
+https://claude.ai/code/artifact/5fed3dc8-f9bd-4489-845d-29cfbaa07be3 (pages Website,
+Konfigurator, System). Implemented so far: the foundation (tokens, fonts, primitives,
+motion contract) and the homepage with the rotpunkt film as hero. Next: the configurator
+(dark studio, glass HUDs, charcoal Datenblatt panel with accordions, material overlay,
+mobile sheet), then account, sign-in and Anfrage on the same system. Until then those
+surfaces render dark through the shared tokens but keep their old shapes.
 
 Gates at reconciliation: `pnpm test` 76/76 (covers `features` and `lib`), `pnpm test:db`
 61/61 (Neon), `pnpm lint` clean, `tsc --noEmit` clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
@@ -24,20 +29,18 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 ## Done
 
 - Built the first Tailwind/Next.js design system pass from the Figma directions.
-- Added reusable design-system components:
-  - `BrandLogo`
-  - `SiteHeader`
-  - `SignatureButton`
-  - `CartIndicator`
-  - `CollectionStep`
-  - `ImagePanel`
-  - `SectionHeading`
-  - `FeatureList`
-- Built homepage sections:
-  - `SignatureHero`
-  - `CollectionCompare`
-  - `MaterialRhythm`
-  - `ProductStory`
+- Design-system primitives (rebuilt 2026-09-03 for the dark system, `components/design-system`):
+  `BrandLogo`, `SiteHeader` (frosted on scroll, full-screen menu on phones), `SiteFooter`,
+  `AppHeader`, `Pill` (primary / secondary / ghost) and `RoundButton`, `Glass`, `GlassBadge`,
+  `GlassSegments` (sliding highlight, red dot), `Card`, `MediaCard`, `Label`, `SectionIntro`,
+  `Reveal` (the one entrance), `Overlay` (portal sheet or card, focus and scroll handling),
+  `MotionProvider` (`reducedMotion="user"`). Motion constants live in `lib/motion.ts`.
+- Homepage sections (`components/sections`): `SignatureHero` (the rotpunkt film, muted loop,
+  fade from black, still for reduced motion, "Den Film ansehen" goes fullscreen),
+  `SignaturePromises`, `MaterialCards` (horizontal band on phones), `ConfiguratorTeaser`
+  (living HUD cycling the three decisions, the real default-configuration price, explainer
+  overlay), `CollectionLines`, `ClosingStatement`. No Impressum/Datenschutz pages exist yet,
+  so the footer carries no legal column.
 - Moved navigation outside the hero and converted it to a fixed floating navbar with motion-based hide/show behavior.
 - Improved hero typography animation with staggered motion.
 - Added `/configure` as the first 3D configurator route.

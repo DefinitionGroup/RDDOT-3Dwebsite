@@ -2,34 +2,29 @@ import Link from "next/link";
 
 type BrandLogoProps = {
   className?: string;
-  tone?: "light" | "dark";
+  /** Hides the "Signature" suffix on tight surfaces. */
   compact?: boolean;
   href?: string;
 };
 
-export function BrandLogo({
-  className = "",
-  compact = false,
-  href = "#top",
-  tone = "dark"
-}: BrandLogoProps) {
-  const textTone = tone === "light" ? "text-white" : "text-ink";
-
+/** The wordmark: weight 500, the red dot as the o. Always white — every surface is dark. */
+export function BrandLogo({ className = "", compact = false, href = "/" }: BrandLogoProps) {
   return (
     <Link
       aria-label="rotpunkt Signature Startseite"
-      className={`group inline-flex items-baseline whitespace-nowrap font-base tracking-tight ${textTone} ${className}`}
+      className={`group inline-flex items-center gap-4 whitespace-nowrap text-ink ${className}`}
       href={href}
     >
-      <span className="relative inline-flex items-center text-[1.3rem] leading-none">
+      <span className="inline-flex items-center text-[1.375rem] font-label leading-none tracking-[-0.02em]">
         r
-        <span className="mx-[0.04em] inline-block size-[0.3em] rounded-full bg-signature transition-transform duration-300 ease-signature group-hover:scale-110" />
+        <span className="mx-px inline-block size-[7px] rounded-pill bg-signature transition-transform duration-state ease-signature group-hover:scale-110" />
         tpunkt
       </span>
       {!compact && (
-        <span className="ml-2.5 border-l border-current pl-2.5 text-[1.3rem] leading-none opacity-55">
-          Signature
-        </span>
+        <>
+          <span aria-hidden="true" className="h-[18px] w-px bg-hairline" />
+          <span className="text-[0.875rem] tracking-[0.02em] text-graphite">Signature</span>
+        </>
       )}
     </Link>
   );

@@ -602,7 +602,6 @@ export function ConfiguratorShell({
           }
           className="pointer-events-auto h-fit p-5 md:p-6 lg:p-8"
           showAccount={!sharedView}
-          tone="dark"
         />
 
         <AnimatePresence initial={false}>

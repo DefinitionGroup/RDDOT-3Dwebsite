@@ -89,7 +89,7 @@ export function SharedRevisionPage({ linkId }: { linkId: string }) {
   return (
     <main className="min-h-screen bg-canvas px-5 py-6 text-ink md:px-12 md:py-10">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-[82rem] flex-col md:min-h-[calc(100vh-5rem)]">
-        <BrandLogo href="/" tone="dark" />
+        <BrandLogo href="/" />
         <div aria-live="polite" className="my-auto max-w-[42rem] py-16">
           {state.phase === "loading" ? (
             <>

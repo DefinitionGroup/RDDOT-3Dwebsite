@@ -3,24 +3,42 @@
 @tailwind utilities;
 
 :root {
-  /* Gallery-white field, near-black ink, one red accent. */
-  --color-canvas: 250 250 249;
-  --color-paper: 255 255 255;
-  --color-mist: 240 239 237;
-  --color-ink: 26 25 23;
-  --color-graphite: 108 104 99;
-  --color-ash: 168 163 157;
-  --color-porcelain: 245 244 242;
-  --color-hairline: 226 224 221;
-  --color-signature: 227 6 19;
+  /*
+   * rotpunkt after dark — seven colours.
+   * Black stage, charcoal surfaces, three greys, white structure, one red.
+   * The names stay semantic so a surface never picks a hex directly.
+   */
+  --color-canvas: 0 0 0; /* the void: page and scene */
+  --color-charcoal: 32 32 32; /* cards, sheets, panels */
+  --color-mist: 32 32 32; /* image placeholders — same plane as charcoal */
+  --color-hairline: 51 51 51; /* dividers, quiet strokes */
+  --color-graphite: 153 153 153; /* secondary copy and labels ("smoke") */
+  --color-ash: 102 102 102; /* the lowest emphasis, disabled */
+  --color-ink: 255 255 255; /* text, structure, outlined actions */
+  --color-paper: 0 0 0; /* what sits on ink: text on a white fill */
+  --color-porcelain: 245 241 234; /* cream: link hover, the material on screen */
+  --color-signature: 227 6 19; /* the dot, and one filled action per view */
+  --color-signature-hover: 201 5 17;
+  --color-signature-pressed: 169 4 14;
 
-  /* Sharp geometry everywhere. */
-  --radius-hero: 0;
-  --radius-soft: 0;
+  /* Two radii: pills and cards. Inputs stay square (underline only). */
+  --radius-card: 10px;
+  --radius-pill: 9999px;
+  --radius-hero: var(--radius-card);
+  --radius-soft: var(--radius-card);
 
-  /* The single site-wide font weight; display headlines go light. */
+  /* One family, three weights. Headlines go light; labels and actions medium. */
   --font-weight-base: 400;
-  --font-weight-display: 200;
+  --font-weight-display: 300;
+  --font-weight-label: 500;
+
+  /* One curve, four durations. --motion-factor collapses them under reduced motion. */
+  --ease-signature: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-factor: 1;
+  --duration-state: calc(160ms * var(--motion-factor));
+  --duration-accordion: calc(240ms * var(--motion-factor));
+  --duration-overlay: calc(420ms * var(--motion-factor));
+  --duration-reveal: calc(600ms * var(--motion-factor));
 
   --container: 82rem;
 }
@@ -31,6 +49,7 @@
 
 html {
   background: rgb(var(--color-canvas));
+  color-scheme: dark;
   scroll-behavior: smooth;
 }
 
@@ -39,7 +58,7 @@ body {
   margin: 0;
   background: rgb(var(--color-canvas));
   color: rgb(var(--color-ink));
-  font-family: var(--font-sans), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans), "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: var(--font-weight-base);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -48,7 +67,7 @@ body {
 
 ::selection {
   background: rgb(var(--color-signature));
-  color: rgb(var(--color-paper));
+  color: rgb(var(--color-ink));
 }
 
 button,
@@ -56,25 +75,37 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+:focus-visible {
+  outline: 1px solid rgb(var(--color-ink));
+  outline-offset: 3px;
+}
+
 @layer base {
-  /* One weight only — hierarchy comes from size, color and space. */
   h1,
-  h2,
+  h2 {
+    font-weight: var(--font-weight-display);
+  }
+
   h3,
   h4,
   strong,
   b {
-    font-weight: var(--font-weight-base);
+    font-weight: var(--font-weight-label);
   }
 
-  h1,
-  h2,
-  h3,
-  p {
-    letter-spacing: 0;
+  /* Exactly one serif word per headline: <em> is that word. */
+  em {
+    font-family: var(--font-serif), "Times New Roman", Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
   }
 
-  img {
+  a {
+    transition: color var(--duration-state) var(--ease-signature);
+  }
+
+  img,
+  video {
     max-width: 100%;
   }
 }
@@ -91,35 +122,62 @@ a {
     }
   }
 
-  /* Retained for the configurator overlay UI. */
+  @media (min-width: 1024px) {
+    .signature-container {
+      width: min(100% - 8rem, var(--container));
+    }
+  }
+
+  /* Frosted chip over imagery or the scene. */
+  .glass,
   .glass-surface {
-    background: rgb(26 25 23 / 0.55);
-    border: 1px solid rgb(255 255 255 / 0.12);
-    backdrop-filter: blur(14px);
+    background: rgb(200 200 200 / 0.1);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow:
+      rgb(0 0 0 / 0.35) 0 10px 30px 0,
+      inset rgb(255 255 255 / 0.08) 0 1px 0 0;
   }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* Gradient that seats a caption on imagery. */
+  .media-shade {
+    background: linear-gradient(180deg, rgb(0 0 0 / 0) 45%, rgb(0 0 0 / 0.55) 100%);
   }
 
-  .text-pretty {
-    text-wrap: pretty;
+  .media-shade-deep {
+    background: linear-gradient(180deg, rgb(0 0 0 / 0) 35%, rgb(0 0 0 / 0.7) 100%);
   }
 
-  .image-shade {
-    background: linear-gradient(180deg, rgb(8 9 9 / 0.28), transparent 40%);
+  .hero-shade {
+    background: linear-gradient(
+      180deg,
+      rgb(0 0 0 / 0.55) 0%,
+      rgb(0 0 0 / 0.05) 35%,
+      rgb(0 0 0 / 0.75) 100%
+    );
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-factor: 0;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
 }

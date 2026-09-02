@@ -1,99 +1,114 @@
 "use client";
 
-import Image from "next/image";
-import { motion } from "motion/react";
-import type { Variants } from "motion/react";
-import { SignatureButton } from "@/components/design-system/button";
-import { RedStop } from "@/components/design-system/section-heading";
+import { motion, useReducedMotion } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { GlassBadge } from "@/components/design-system/glass";
+import { Pill } from "@/components/design-system/pill";
+import { configureHref, heroFilm } from "@/lib/content";
+import { DURATION, REVEAL_RISE, SIGNATURE_EASE, STAGGER } from "@/lib/motion";
 
-const signatureEase: [number, number, number, number] = [0.22, 1, 0.36, 1];
+type FullscreenVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
 
-const sequence: Variants = {
-  hidden: {},
-  show: {
-    transition: {
-      delayChildren: 0.2,
-      staggerChildren: 0.12
-    }
-  }
-};
-
-const rise: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, ease: signatureEase }
-  }
-};
-
-export function SignatureHero() {
+function PlayCircle() {
   return (
-    <section className="pt-36 md:pt-48" id="top">
-      <motion.div
-        animate="show"
-        className="signature-container"
-        initial="hidden"
-        variants={sequence}
-      >
-        <motion.p
-          className="mb-8 text-body uppercase tracking-[0.22em] text-graphite"
-          variants={rise}
-        >
-          Premium Küchen
-        </motion.p>
-        <motion.h1
-          className="max-w-[16ch] text-balance text-display text-ink"
-          variants={rise}
-        >
-          <RedStop text="Küchen, auf den Punkt." />
-        </motion.h1>
-        <motion.div
-          className="mt-12 flex flex-col justify-between gap-8 md:mt-16 md:flex-row md:items-end"
-          variants={rise}
-        >
-          <p className="max-w-[26rem] text-pretty text-lead text-graphite">
-            Von 0 auf 100 °C in vier Klicks. Geplant in Ihrem Raum, gefertigt in
-            Deutschland.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <SignatureButton href="/configure">Küche konfigurieren</SignatureButton>
-            <SignatureButton href="#collections" tone="light">
-              Collections
-            </SignatureButton>
-          </div>
-        </motion.div>
-      </motion.div>
+    <span className="inline-flex size-8 items-center justify-center rounded-pill border border-ink">
+      <svg aria-hidden="true" fill="currentColor" height="10" viewBox="0 0 10 10" width="10">
+        <path d="M2 1l7 4-7 4z" />
+      </svg>
+    </span>
+  );
+}
 
-      <div className="signature-container mt-16 md:mt-24">
-        <motion.figure
-          animate={{ opacity: 1 }}
-          className="m-0"
-          initial={{ opacity: 0 }}
-          transition={{ delay: 0.5, duration: 1, ease: signatureEase }}
-        >
-          <div className="relative aspect-[4/3] overflow-hidden bg-mist md:aspect-[21/10]">
-            <motion.div
-              animate={{ scale: 1 }}
-              className="absolute inset-0"
-              initial={{ scale: 1.07 }}
-              transition={{ delay: 0.5, duration: 2.4, ease: signatureEase }}
+/**
+ * The film and one sentence. The loop plays silently under a gradient;
+ * the page fades in from black once the first frame is there. People who
+ * asked for less motion get the still, and the film only on request.
+ */
+export function SignatureHero() {
+  const reduceMotion = useReducedMotion();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || reduceMotion) {
+      setReady(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setReady(true), 1200);
+    video.play().catch(() => setReady(true));
+    return () => window.clearTimeout(timer);
+  }, [reduceMotion]);
+
+  const watchFilm = useCallback(() => {
+    const video = videoRef.current as FullscreenVideo | null;
+    if (!video) return;
+    void video.play();
+    if (video.requestFullscreen) {
+      void video.requestFullscreen().catch(() => undefined);
+    } else if (video.webkitEnterFullscreen) {
+      video.webkitEnterFullscreen();
+    }
+  }, []);
+
+  const rise = (index: number) => ({
+    initial: { opacity: 0, y: REVEAL_RISE },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: DURATION.reveal, ease: SIGNATURE_EASE, delay: 0.2 + index * STAGGER }
+  });
+
+  return (
+    <section
+      className="relative h-[100svh] max-h-[900px] min-h-[640px] overflow-hidden bg-canvas"
+      id="top"
+    >
+      <video
+        aria-hidden="true"
+        className="absolute inset-0 size-full object-cover object-[60%_center] md:object-center"
+        loop
+        muted
+        onPlaying={() => setReady(true)}
+        playsInline
+        poster={heroFilm.poster}
+        preload="metadata"
+        ref={videoRef}
+        src={heroFilm.src}
+      />
+      <div aria-hidden="true" className="hero-shade absolute inset-0" />
+      <motion.div
+        animate={{ opacity: ready ? 0 : 1 }}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-canvas"
+        initial={{ opacity: 1 }}
+        transition={{ duration: 1.2, ease: SIGNATURE_EASE }}
+      />
+
+      <div className="signature-container absolute inset-x-0 bottom-8 flex items-end justify-between gap-16 md:bottom-[72px]">
+        <div className="flex max-w-[860px] flex-col gap-5 md:gap-7">
+          <motion.h1 className="m-0 text-balance text-display" {...rise(0)}>
+            Die Küche, die <em>bleibt</em>.
+          </motion.h1>
+          <motion.p className="m-0 max-w-[42ch] text-body text-graphite md:text-lead" {...rise(1)}>
+            Modulare Signature-Küchen: in 3D geplant, in Deutschland gefertigt, als Projekt
+            gespeichert.
+          </motion.p>
+          <motion.div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" {...rise(2)}>
+            <Pill className="w-full sm:w-auto" href={configureHref}>
+              Küche konfigurieren
+            </Pill>
+            <Pill
+              className="h-12 w-full border-ink/70 pl-2 pr-[22px] font-base text-caption uppercase tracking-film sm:w-auto"
+              leading={<PlayCircle />}
+              onClick={watchFilm}
+              variant="secondary"
             >
-              <Image
-                alt="Offene Signature Küche mit Insel und warmem Abendlicht"
-                className="object-cover"
-                fill
-                priority
-                sizes="100vw"
-                src="/images/signature-hero.jpg"
-              />
-            </motion.div>
-          </div>
-          <figcaption className="mt-3 flex justify-between gap-6 text-body text-graphite">
-            <span>Signature Küche — Exclusive Line</span>
-            <span className="hidden md:block">Eiche, Feinstein, mattes Schwarz</span>
-          </figcaption>
-        </motion.figure>
+              Den Film ansehen
+            </Pill>
+          </motion.div>
+        </div>
+        <motion.div className="hidden md:block" {...rise(3)}>
+          <GlassBadge className="h-9 px-4">Gefertigt in Deutschland</GlassBadge>
+        </motion.div>
       </div>
     </section>
   );
