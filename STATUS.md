@@ -43,11 +43,17 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   via `lib/use-media.ts`), `material-overlay.tsx` (live choice, cancel restores),
   `project-save-controls.tsx` (autosave for the life of the configurator; decision
   states as a card over the scene). Studio stage darkened in `kitchen-scene.tsx`.
+- Photo first (2026-09-03): a signed-in person without a Project takes a photo straight
+  away — the photo card asks for a Project name, `POST /api/projects` (now accepts `name`
+  and returns version/updatedAt) creates it, the shell switches to it without a reload and
+  the photo continues. Projects can be renamed inline (`ProjectNameField` in the photo card
+  and the Datenblatt; `PATCH /api/projects/[projectId]`, `projects.renameProject`, covered
+  by the persistence contract test). Gates: `pnpm test:db` 62/62 (+1 skipped).
 - Account, sign-in, Anfrage, shared-link states restyled with `components/design-system/field.tsx`
   (the one underline input) and the pill/card primitives.
 - Homepage sections (`components/sections`): `SignatureHero` (the rotpunkt film, muted loop,
   fade from black, still for reduced motion, "Den Film ansehen" goes fullscreen; headline
-  "Küchen, auf den Punkt." rescued from the first site), `Ticker` band, `Manifest` ("Eine
+  "Küchen, auf den Punkt." rescued from the first site), `Manifest` ("Eine
   Küche ist kein Möbel…" rescued; the one scroll-linked sequence: words light up on scroll),
   `SignaturePromises` (each promise opens a detail card that morphs out of its "+" trigger
   via a shared layoutId), `MaterialCards` (four fronts incl. Porzellan as a colour card;

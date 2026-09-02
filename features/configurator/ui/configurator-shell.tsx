@@ -60,9 +60,11 @@ import {
   ProjectAutosave
 } from "@/features/configurator/ui/project-save-controls";
 import { galleryPageKey } from "@/features/photo-gallery/serialize-gallery";
+import type { GalleryResponse } from "@/features/photo-gallery/ui/gallery-types";
 import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import type { RevisionDisplaySnapshot } from "@/features/projects/revision-display";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
+import { ProjectNameField } from "@/features/projects/ui/project-name-field";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
 import type { ProjectAutosaveStatus } from "@/features/projects/ui/use-project-autosave";
 import { ProjectShareLinks } from "@/features/sharing/ui/project-share-links";
@@ -73,6 +75,8 @@ type ConfiguratorShellProps = {
   initialState: ConfiguratorState;
   locale?: LocaleCode;
   project?: EditableProject;
+  /** A signed-in person without a Project: the photo can create one. */
+  signedIn?: boolean;
   sharedView?: {
     displaySnapshot: RevisionDisplaySnapshot | null;
     expiresAt: string;
@@ -139,10 +143,14 @@ function stageForSection(section: DatasheetSection | null): PlanningStage {
 export function ConfiguratorShell({
   initialState,
   locale = "de",
-  project,
-  sharedView
+  project: projectProp,
+  sharedView,
+  signedIn = false
 }: ConfiguratorShellProps) {
   const [config, setConfig] = useState(() => normalizeConfiguratorState(initialState));
+  // A Project created or renamed in this session, ahead of the server's props.
+  const [projectOverride, setProjectOverride] = useState<EditableProject | null>(null);
+  const project = projectOverride ?? projectProp;
   const [cameraView, setCameraView] = useState<CameraView>("signature");
   const [copied, setCopied] = useState(false);
   const [isPanelOpen, setPanelOpen] = useState(true);
@@ -388,15 +396,18 @@ export function ConfiguratorShell({
    * grant, confirm it server-side, submit it to the provider, then watch the
    * job until it is terminal.
    */
-  async function generatePhoto() {
-    if (!project) {
-      setPhotoStatus({ phase: "blocked", reason: "guest" });
+  async function generatePhoto(target: EditableProject | undefined = project) {
+    if (!target) {
+      // Signed in: the photo creates the Project, named in the card. A guest
+      // saves first, which signs them in on the way.
+      setPhotoStatus(signedIn ? { phase: "name" } : { phase: "blocked", reason: "guest" });
       return;
     }
+    const inSession = target !== projectProp;
     // The autosaved version is owned by the save controls, so it is read from
     // the server here. A change that lands in between makes the request 409,
     // which is the correct outcome: the photo must pin what the customer saw.
-    const current = await fetch(`/api/projects/${project.id}/configuration`, {
+    const current = await fetch(`/api/projects/${target.id}/configuration`, {
       cache: "no-store"
     });
     const currentPayload = (await current.json().catch(() => null)) as {
@@ -425,7 +436,7 @@ export function ConfiguratorShell({
     }
 
     try {
-      const requested = await fetch(`/api/projects/${project.id}/photo-jobs`, {
+      const requested = await fetch(`/api/projects/${target.id}/photo-jobs`, {
         body: JSON.stringify({
           expectedVersion: savedVersionNow,
           idempotencyKey: crypto.randomUUID(),
@@ -481,17 +492,78 @@ export function ConfiguratorShell({
       // The job now lives on the server; the browser only watches. Every read
       // reconciles with the provider, so a lost webhook cannot strand it, and
       // closing the tab loses nothing — the photo lands in the gallery anyway.
-      await watchPhotoJob(project.id, jobId, captured.previewUrl);
+      await watchPhotoJob(target.id, jobId, captured.previewUrl, inSession);
     } catch {
       await fail("Die Verbindung wurde unterbrochen. Bitte versuchen Sie es erneut.");
     }
   }
 
   /**
+   * A signed-in person without a Project takes a photo: the Project is
+   * created here with the name they typed, the shell switches to it without
+   * a reload, and the photo continues against it.
+   */
+  async function createProjectAndShoot(name: string) {
+    setPhotoStatus({ phase: "creating" });
+    try {
+      const response = await fetch("/api/projects", {
+        body: JSON.stringify({
+          configurationCode: encodedConfig,
+          idempotencyKey: crypto.randomUUID(),
+          name
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST"
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        project?: { id: string; name: string; version: number; updatedAt: string };
+        error?: string;
+      } | null;
+      if (!response.ok || !payload?.project) {
+        setPhotoStatus({
+          phase: "error",
+          message: payload?.error ?? "Das Projekt konnte nicht angelegt werden."
+        });
+        return;
+      }
+      const created: EditableProject = {
+        id: payload.project.id,
+        name: payload.project.name,
+        updatedAt: payload.project.updatedAt,
+        version: payload.project.version,
+        revisions: [],
+        revisionTotalCount: 0,
+        revisionNextCursor: null,
+        shareLinks: [],
+        gallery: { photos: [], totalCount: 0, nextCursor: null }
+      };
+      setProjectOverride(created);
+      await generatePhoto(created);
+    } catch {
+      setPhotoStatus({
+        phase: "error",
+        message: "Die Verbindung wurde unterbrochen. Bitte versuchen Sie es erneut."
+      });
+    }
+  }
+
+  function renameProject(name: string) {
+    setProjectOverride((current) => {
+      const base = current ?? project;
+      return base ? { ...base, name } : current;
+    });
+  }
+
+  /**
    * Follows a submitted job to its end and shows the result. Shared by a
    * fresh request and by a job picked up again after the page was reloaded.
    */
-  async function watchPhotoJob(projectId: string, jobId: string, previewUrl: string | null) {
+  async function watchPhotoJob(
+    projectId: string,
+    jobId: string,
+    previewUrl: string | null,
+    inSession = false
+  ) {
     function fail(message: string) {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPhotoStatus({ phase: "error", message });
@@ -510,9 +582,7 @@ export function ConfiguratorShell({
     const gallery = await fetch(`/api/projects/${projectId}/photos`, {
       cache: "no-store"
     });
-    const galleryPayload = (await gallery.json().catch(() => null)) as {
-      photos?: Array<{ id: string; displayUrl: string }>;
-    } | null;
+    const galleryPayload = (await gallery.json().catch(() => null)) as GalleryResponse | null;
     const created = galleryPayload?.photos?.find(
       (photo) => photo.id === finished.generatedPhotoId
     );
@@ -524,6 +594,25 @@ export function ConfiguratorShell({
       imageUrl: created.displayUrl,
       photoId: created.id
     });
+    if (inSession) {
+      // The Project was created a moment ago; a refresh would remount the
+      // shell under its Project key and drop this card. Seed the panel
+      // gallery from the page just fetched instead.
+      const photos = galleryPayload?.photos ?? [];
+      setProjectOverride((current) =>
+        current
+          ? {
+              ...current,
+              gallery: {
+                photos,
+                totalCount: galleryPayload?.totalCount ?? photos.length,
+                nextCursor: galleryPayload?.nextCursor ?? null
+              }
+            }
+          : current
+      );
+      return;
+    }
     // Re-seeds the panel gallery from the server so the new photo appears there too.
     startTransition(() => router.refresh());
   }
@@ -622,10 +711,8 @@ export function ConfiguratorShell({
         }`,
         content: (
           <div className="flex flex-col gap-5">
-            <div aria-live="polite" className="flex items-baseline justify-between gap-4">
-              <p className="m-0 min-w-0 truncate text-caption text-ink" title={project.name}>
-                {project.name}
-              </p>
+            <div aria-live="polite" className="flex items-center justify-between gap-4">
+              <ProjectNameField name={project.name} onRenamed={renameProject} projectId={project.id} />
               <p className="m-0 shrink-0 text-caption text-graphite">
                 {describeAutosave(autosaveStatus) ?? "…"}
               </p>
@@ -854,10 +941,13 @@ export function ConfiguratorShell({
         <PhotoPopover
           locale={locale}
           onClose={() => setPhotoOpen(false)}
+          onCreateProject={(name) => void createProjectAndShoot(name)}
           onGenerate={() => void generatePhoto()}
+          onRenamed={renameProject}
           onSaveAsProject={() => saveConfigurationAsProject(encodedConfig)}
           onSelectPreset={setPhotoPresetKey}
           open={isPhotoOpen}
+          project={project ? { id: project.id, name: project.name } : null}
           selectedPresetKey={photoPresetKey}
           status={photoStatus}
         />

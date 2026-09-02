@@ -93,6 +93,11 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
   }
 
   const initialState = getInitialConfiguratorState(params[CONFIG_QUERY_PARAM]);
+  // A signed-in person without a Project can still take a photo: the shell
+  // creates the Project for them, so it needs to know they are signed in.
+  const session = await customerSessions.resolve(await headers());
 
-  return <ConfiguratorShell initialState={initialState} locale="de" />;
+  return (
+    <ConfiguratorShell initialState={initialState} locale="de" signedIn={Boolean(session)} />
+  );
 }

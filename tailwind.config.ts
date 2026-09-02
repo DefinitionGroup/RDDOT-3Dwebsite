@@ -99,15 +99,10 @@ const config: Config = {
         "soft-reveal": {
           "0%": { opacity: "0", transform: "translateY(12px)" },
           "100%": { opacity: "1", transform: "translateY(0)" }
-        },
-        ticker: {
-          "0%": { transform: "translateX(0)" },
-          "100%": { transform: "translateX(-50%)" }
         }
       },
       animation: {
-        "soft-reveal": "soft-reveal var(--duration-reveal) cubic-bezier(0.22, 1, 0.36, 1) both",
-        ticker: "ticker 56s linear infinite"
+        "soft-reveal": "soft-reveal var(--duration-reveal) cubic-bezier(0.22, 1, 0.36, 1) both"
       }
     }
   },

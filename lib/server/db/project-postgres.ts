@@ -13,6 +13,7 @@ import type {
   ConfigurationRevisionSummary,
   ProjectModule,
   ProjectWorkspace,
+  RenameProjectResult,
   RestoreRevisionResult
 } from "@/features/projects/project-module";
 import type {
@@ -219,6 +220,26 @@ export function createPostgresProjectModule(
         uuidSchema.parse(input.ownerId),
         uuidSchema.parse(input.projectId)
       );
+    },
+
+    async renameProject(input): Promise<RenameProjectResult> {
+      const ownerId = uuidSchema.parse(input.ownerId);
+      const projectId = uuidSchema.parse(input.projectId);
+      const name = projectNameSchema.parse(input.name);
+      const updatedAt = new Date();
+
+      const renamed = await database
+        .withSchema("app")
+        .updateTable("project")
+        .set({ name, updatedAt })
+        .where("id", "=", projectId)
+        .where("ownerId", "=", ownerId)
+        .where("lifecycle", "!=", "trashed")
+        .returning(["name"])
+        .executeTakeFirst();
+
+      if (!renamed) return { kind: "unavailable" };
+      return { kind: "renamed", name: renamed.name, updatedAt };
     },
 
     async listConfigurationRevisions(input) {

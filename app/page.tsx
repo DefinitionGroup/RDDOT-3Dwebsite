@@ -1,6 +1,5 @@
 import { SiteFooter } from "@/components/design-system/site-footer";
 import { SiteHeader } from "@/components/design-system/site-header";
-import { Ticker } from "@/components/design-system/ticker";
 import { ClosingStatement } from "@/components/sections/closing-statement";
 import { CollectionLines } from "@/components/sections/collection-lines";
 import { ConfiguratorTeaser } from "@/components/sections/configurator-teaser";
@@ -16,7 +15,7 @@ import {
   RDTD_KITCHEN_PRODUCT_V2
 } from "@/features/configurator/product-definition";
 import { CONFIG_QUERY_PARAM, encodeConfiguration } from "@/features/configurator/state-codec";
-import { materials, tickerItems } from "@/lib/content";
+import { materials } from "@/lib/content";
 
 export default function Home() {
   // The teaser shows the real price of the default configuration, never a typed number.
@@ -49,9 +48,6 @@ export default function Home() {
       <SiteHeader />
       <main>
         <SignatureHero />
-        <div className="mt-12 md:mt-16">
-          <Ticker items={tickerItems} />
-        </div>
         <Manifest />
         <SignaturePromises />
         <MaterialCards links={materialLinks} />

@@ -84,6 +84,10 @@ export type RestoreRevisionResult =
   | { kind: "unsupported-product-definition"; productDefinitionVersion: string }
   | { kind: "unavailable" };
 
+export type RenameProjectResult =
+  | { kind: "renamed"; name: string; updatedAt: Date }
+  | { kind: "unavailable" };
+
 export type ProjectModule = {
   listProjects(input: {
     ownerId: CustomerAccountId;
@@ -102,6 +106,13 @@ export type ProjectModule = {
     ownerId: CustomerAccountId;
     projectId: ProjectId;
   }): Promise<ProjectWorkspace | null>;
+
+  /** Renames a Project the owner can still work in; a trashed one is unavailable. */
+  renameProject(input: {
+    ownerId: CustomerAccountId;
+    projectId: ProjectId;
+    name: string;
+  }): Promise<RenameProjectResult>;
 
   listConfigurationRevisions(input: {
     ownerId: CustomerAccountId;

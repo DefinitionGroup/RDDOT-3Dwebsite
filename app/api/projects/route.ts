@@ -9,7 +9,8 @@ export const runtime = "nodejs";
 
 const createProjectSchema = z.object({
   configurationCode: z.string().trim().min(1).max(4_000),
-  idempotencyKey: z.uuid()
+  idempotencyKey: z.uuid(),
+  name: z.string().trim().min(1).max(120).optional()
 });
 
 export async function POST(request: Request) {
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   const workspace = await projects.createProject({
     ownerId: session.customerAccountId,
     idempotencyKey: `guest-import:${body.data.idempotencyKey}`,
-    name: "Meine Signature Küche",
+    name: body.data.name ?? "Meine Signature Küche",
     configuration,
     productDefinitionVersion: RDTD_KITCHEN_PRODUCT_VERSION
   });
@@ -59,7 +60,9 @@ export async function POST(request: Request) {
     {
       project: {
         id: workspace.id,
-        name: workspace.name
+        name: workspace.name,
+        version: workspace.workingConfiguration.version,
+        updatedAt: workspace.workingConfiguration.updatedAt.toISOString()
       }
     },
     { status: 201 }

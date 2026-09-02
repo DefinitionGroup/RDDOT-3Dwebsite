@@ -2,12 +2,15 @@
 
 import { Camera, Download, RotateCcw, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { type FormEvent, useId, useState } from "react";
+import { FieldLabel, TextField } from "@/components/design-system/field";
 import { Label } from "@/components/design-system/label";
 import { Pill, RoundButton } from "@/components/design-system/pill";
 import { PHOTO_PRESETS } from "@/features/configurator/photo/photo-presets";
 import { getLocalizedLabel } from "@/features/configurator/product-definition";
 import type { LocaleCode } from "@/features/configurator/types";
 import { PHOTO_DISCLOSURE } from "@/features/photo-gallery/ui/gallery-types";
+import { ProjectNameField } from "@/features/projects/ui/project-name-field";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
 
 export type PhotoStatus =
@@ -18,6 +21,9 @@ export type PhotoStatus =
    * revision can be pinned.
    */
   | { phase: "blocked"; reason: "guest" | "not-yet-saved" }
+  /** Signed in without a Project: the photo creates one, named here. */
+  | { phase: "name" }
+  | { phase: "creating" }
   | {
       phase: "working";
       step: "uploading" | "generating";
@@ -30,13 +36,18 @@ export type PhotoStatus =
 type PhotoPopoverProps = {
   locale: LocaleCode;
   onClose: () => void;
+  onCreateProject: (name: string) => void;
   onGenerate: () => void;
+  onRenamed: (name: string) => void;
   onSaveAsProject: () => void;
   onSelectPreset: (key: string) => void;
   open: boolean;
+  project: { id: string; name: string } | null;
   selectedPresetKey: string;
   status: PhotoStatus;
 };
+
+const DEFAULT_PROJECT_NAME = "Meine Signature Küche";
 
 const STEP_COPY: Record<"uploading" | "generating", string> = {
   uploading: "Die Aufnahme wird übertragen und geprüft …",
@@ -47,14 +58,24 @@ const STEP_COPY: Record<"uploading" | "generating", string> = {
 export function PhotoPopover({
   locale,
   onClose,
+  onCreateProject,
   onGenerate,
+  onRenamed,
   onSaveAsProject,
   onSelectPreset,
   open,
+  project,
   selectedPresetKey,
   status
 }: PhotoPopoverProps) {
-  const isBusy = status.phase === "working";
+  const isBusy = status.phase === "working" || status.phase === "creating";
+  const nameId = useId();
+  const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
+
+  function createProject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onCreateProject(projectName.trim() || DEFAULT_PROJECT_NAME);
+  }
 
   return (
     <AnimatePresence>
@@ -87,6 +108,57 @@ export function PhotoPopover({
                 <X aria-hidden="true" size={14} strokeWidth={1.5} />
               </RoundButton>
             </div>
+
+            {project && (
+              <div className="mb-6 flex items-center justify-between gap-4 border-b border-hairline pb-4">
+                <Label as="span">Projekt</Label>
+                <ProjectNameField name={project.name} onRenamed={onRenamed} projectId={project.id} />
+              </div>
+            )}
+
+            {status.phase === "name" && (
+              <form onSubmit={createProject}>
+                <p className="m-0 text-pretty text-body text-graphite">
+                  Ein Foto gehört zu einem gespeicherten Projekt. Wir legen es jetzt für Sie an —
+                  Versionen, Fotos und Anfragen bleiben dann zusammen.
+                </p>
+                <div className="mt-6">
+                  <FieldLabel htmlFor={nameId}>Name des Projekts</FieldLabel>
+                  <TextField
+                    autoFocus
+                    className="h-12 text-body"
+                    id={nameId}
+                    maxLength={120}
+                    onChange={(event) => setProjectName(event.target.value)}
+                    onFocus={(event) => event.currentTarget.select()}
+                    placeholder={DEFAULT_PROJECT_NAME}
+                    value={projectName}
+                  />
+                </div>
+                <Pill
+                  className="mt-6 w-full"
+                  leading={<Camera aria-hidden="true" size={15} strokeWidth={1.5} />}
+                  type="submit"
+                >
+                  Projekt anlegen und Foto aufnehmen
+                </Pill>
+              </form>
+            )}
+
+            {status.phase === "creating" && (
+              <div>
+                <div className="relative aspect-video w-full overflow-hidden rounded-card bg-canvas">
+                  <motion.div
+                    animate={{ x: ["-100%", "100%"] }}
+                    className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                    transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity }}
+                  />
+                </div>
+                <p aria-live="polite" className="m-0 mt-5 text-center text-body text-graphite">
+                  Ihr Projekt wird angelegt …
+                </p>
+              </div>
+            )}
 
             {status.phase === "blocked" && (
               <div>

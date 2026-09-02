@@ -256,6 +256,45 @@ describe("PostgreSQL persistence contract", () => {
     }
   });
 
+  it("renames a Project for its owner only", async () => {
+    const identity = createPostgresIdentityAdapter(context.database);
+    const projects = createPostgresProjectModule(context.database);
+    const ownerId = await identity.resolveCustomerAccount({
+      provider: "better-auth",
+      providerSubject: `auth-user-${crypto.randomUUID()}`
+    });
+    const stranger = await identity.resolveCustomerAccount({
+      provider: "better-auth",
+      providerSubject: `auth-user-${crypto.randomUUID()}`
+    });
+    const workspace = await projects.createProject({
+      ownerId,
+      idempotencyKey: `create-${crypto.randomUUID()}`,
+      name: "Meine Küche",
+      configuration: initialConfiguration,
+      productDefinitionVersion: "signature-line@1"
+    });
+
+    const renamed = await projects.renameProject({
+      ownerId,
+      projectId: workspace.id,
+      name: "  Küche Altbau  "
+    });
+    expect(renamed).toMatchObject({ kind: "renamed", name: "Küche Altbau" });
+    const reloaded = await projects.getWorkspace({ ownerId, projectId: workspace.id });
+    expect(reloaded?.name).toBe("Küche Altbau");
+
+    const foreign = await projects.renameProject({
+      ownerId: stranger,
+      projectId: workspace.id,
+      name: "Fremd"
+    });
+    expect(foreign).toEqual({ kind: "unavailable" });
+    await expect(
+      projects.renameProject({ ownerId, projectId: workspace.id, name: "   " })
+    ).rejects.toThrow();
+  });
+
   it("deduplicates checkpoints and rejects changed idempotent requests", async () => {
     const identity = createPostgresIdentityAdapter(context.database);
     const projects = createPostgresProjectModule(context.database);

@@ -78,17 +78,6 @@ export const navItems: NavItem[] = [
   { title: "Mein Bereich", href: "/konto", quiet: true }
 ];
 
-/** The band between film and manifest: what every Signature Küche brings. */
-export const tickerItems = [
-  "Gefertigt in Deutschland",
-  "Grifflose Fronten",
-  "In 3D geplant",
-  "In Ihrem Raum gesehen",
-  "Als Projekt gespeichert",
-  "Persönliche Planung",
-  "Zwei Linien, eine Haltung"
-];
-
 export const manifest = {
   label: "Haltung",
   statement: [
