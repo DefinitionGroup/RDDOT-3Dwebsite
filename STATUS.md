@@ -5,8 +5,8 @@ Working branch: `cc/devstart-002` — the main development branch from 2026-09-0
 `cc/devstart-001` at `6640d45` (23 commits ahead of `redesign/devstart`). `cc/devstart-001`
 is frozen at that commit; it is not merged back and does not need to be.
 
-Gates at reconciliation: `pnpm test` 54/54 (now covers `features` and `lib`), `pnpm test:db`
-40/40 (Neon), `pnpm lint` clean, `tsc --noEmit` clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
+Gates at reconciliation: `pnpm test` 64/64 (covers `features` and `lib`), `pnpm test:db`
+47/47 (Neon), `pnpm lint` clean, `tsc --noEmit` clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
 **unset** — with the local `development-capture` value it fails closed by design
 (ADR 0010). See Build & Verification Gates below.
 
@@ -63,6 +63,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added `GET /api/projects/[projectId]/configuration` returning the current Working Configuration version, so a caller that must pin an exact configuration reads it rather than guessing; a change that lands in between makes the photo request 409.
 - Made the Replicate adapter diagnosable. The capture now reaches the provider as a typed Blob, which the SDK uploads through its Files API and passes to the model by URL, instead of a base64 data URI that inflated a 1.5 MB capture to ~2 MB inside the prediction body. Failures no longer collapse to a bare `provider-error`: HTTP rejections map to stable, customer-safe codes (`provider-unauthorized`, `provider-billing`, `provider-rejected-input`, `provider-rate-limited`, `provider-error`, `provider-prediction-failed`, `provider-timeout`), the provider status and message are logged as operator detail that is never persisted or shown, and the prediction id is recorded as `providerReference` on failed jobs too. The generation timeout is now an `AbortSignal`, so a prediction that overruns is canceled at the provider rather than left spending; a hard bound still abandons a run the provider refuses to cancel. Covered by unit tests with an injected client (`lib/server/photo-jobs/replicate-adapter.test.ts`).
 - Repaired `.env.example`: five variables lacked their `=` and the kill switch read `PHOTO_GENERATION_ENABLED=false=`; the key set now matches `.env.local` exactly.
+- **Shipped the Quote Request vertical slice (ADR 0012)** — the design critique's P0. A Quote Request Module behind the Project seams (`features/quote-requests/`, `lib/server/db/quote-requests-postgres.ts`, `lib/server/quote-requests/`) checkpoints the Working Configuration into a `trigger = 'quote'` revision under expected-version concurrency and records contact, consent version, note and a server-computed Price Indication in the same transaction, plus a `quote-request.submitted` outbox intent for the notification that waits on ADR 0010. Idempotent on the creation key, owner-scoped, capped at ten per account and day, readable references such as `A-QB68 4BCF`. API: `POST`/`GET /api/projects/[projectId]/quote-requests`, `GET /api/quote-requests`, `GET /api/quote-requests/[id]`, all private and uncached. UI: `/anfrage` (signed-in Project → labelled form with consent and live outcomes → confirmation with reference and pinned configuration; guest → save-first; signed-out → sign-in and return), an "Anfragen" section in `/konto`, and the configurator's "Konfiguration anfragen" pointing there. The cart indicator, `/checkout` and the word "Checkout" are gone; `/checkout` redirects to `/anfrage`. Migration `20260902200000_create_quote_requests.sql` applied to the dev database.
 - **Generation works.** Three controlled paid runs on 2026-09-02 found and fixed the real cause of the opaque provider failures. Runs 1 and 2 (`k449ce4yphrmt0d0cc89v8msqw`, `500438hh8nrmr0d0ccaryy52mm`) failed in 2 s with `Invalid image format ''` whether the SDK uploaded an unnamed Blob or a named File: the SDK's Files API URL (`api.replicate.com/v1/files/<id>`) is a metadata endpoint that needs the account token, and this model hands its input URL to a downstream service that fetches without credentials, receives a JSON 401, and rejects the "image". Run 3 (`rpbj81t445rmw0d0ccc867s3nc`) succeeded in 17 s once the adapter received a short-lived presigned URL to the capture in the application's own storage — the same 300 s grant the module already reads the bytes through. `PhotoGenerationRequest` now carries that `captureUrl`; the File upload remains as fallback. Output was a 1024×576 PNG probed as an image. The run is reproducible by name via `tests/integration/replicate-live.test.ts` (`REPLICATE_LIVE_TEST=1` plus a capture path; it uploads to storage, presigns, generates, and cleans up) and skips otherwise. The old data-URI transport was never the cause; it was simply replaced on the way.
 - Gave the application surfaces one shared header (`AppHeader`) covering the configurator, account and checkout routes: the wordmark always goes home, one contextual action is labelled with its destination, and the account entry appears wherever it is not the current page. The sign-in screen previously had a single link — the wordmark — so reaching the configurator meant going via the homepage.
 - Made the configurator panel a fixed-height scroll region with a pinned foot. The panel carried `min-h-screen`, which is a floor rather than a ceiling, so it grew past the viewport and its `overflow-y-auto` never had a constrained height to scroll within. Measured before: 1.358 px of panel in a 900 px viewport with no scroll container, the Richtpreis at y=1070 and the primary action at y=1183 — both below the fold, and reaching them scrolled the 3D scene out of view. After: the page no longer overflows, the panel scrolls inside itself, and the price and primary action stay in view while finishes are compared. Mobile keeps the stacked sheet unchanged.
@@ -105,7 +106,13 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - The earlier configurator slice passed lint and build, rendered a nonblank 3D canvas on desktop and mobile, and showed that color and camera changes affect the imported GLB scene.
 - The shareable URL flow and fake checkout handoff preserved the configuration; mobile checkout overflow was fixed.
 
-## Current Slice Verified (module configurability, slices S1-S5)
+## Current Slice Verified (Quote Requests, 2026-09-02)
+
+- Contract tests against the real database (`tests/integration/quote-request-contract.test.ts`, 7): one-transaction checkpoint with `trigger = 'quote'` plus outbox intent; replay on the same key; refusal of the same key with different data; revision reuse for an unchanged configuration and version-drift conflict; owner scoping and refusal of archived projects; nothing written for an unsupported Product Definition; cursor pagination across the account and per project; the daily cap.
+- Browser, dev server, signed in as a throwaway test account: `/anfrage` signed-out shows sign-in and returns after the code; `/anfrage?c=…` as a signed-in guest offers "Als Projekt speichern", which created the project; `/anfrage?project=…` rendered the labelled form with the live summary (10.103 €); submit was disabled until consent; `POST` returned 201 and the confirmation showed `A-QB68 4BCF`, the lower-cased email and the pinned configuration; `/konto` listed the request with reference, date, "Eingegangen" and Richtpreis; `/checkout?c=abc` redirected to `/anfrage?c=abc`; the homepage header carries no cart; the project's configurator links "Konfiguration anfragen" to `/anfrage?project=…`.
+- Gates: `tsc --noEmit` clean, `pnpm lint` clean, `pnpm test` 64/64, `pnpm test:db` 47/47, production build green.
+
+## Previous Slice Verified (module configurability, slices S1-S5)
 
 - Geometric parity of the segmented module composition against the previous monolithic model: per-mesh world AABBs within 1e-6, close-up view pixel-identical.
 - The default v2 configuration reproduces the historical total of 10.103 € to the cent; every finish combination matches its v1 total (unit-tested); layout changes reprice exactly (verified by hand and in the browser: module removal 9.722 €, compact layout 5.899 €, big/device/device/big with large island 10.470 €).
@@ -218,8 +225,7 @@ Revisit when Project Archive/Trash/restore lands.
 - The configurator product data is local TypeScript, not fetched from Sanity.
 - The Sanity adapter is a contract boundary only; it is not connected to a real query.
 - No Studio page-builder block exists yet for dropping the configurator into a page.
-- No real product catalog, SKU model, pricing engine, cart, checkout, order, CRM, or payment integration exists yet.
-- The checkout page is a visual fake checkout only and performs no submission.
+- No real product catalog, SKU model, pricing engine, cart, order, CRM, or payment integration exists yet. Quote Requests are recorded and listed but nobody is notified: the `quote-request.submitted` outbox has no consumer until the email provider lands (ADR 0010). The "selected photo" named in CONTEXT.md is not yet captured on a Quote Request, and the account list shows the first ten without a load-more.
 - The configurator assets are still prototype-grade under ADR 0009. `kitchen-modules.glb` carries semantic roles as baked mesh-name conventions, not as an immutable, content-hashed Asset Manifest with explicit role-to-node mappings, checksums, budgets, approved cameras, and declared fallbacks. Missing required roles are not yet a release-blocking validation. This is the gap between the working prototype and the production 3D baseline.
 - The AI photo feature is application-owned (Photo Job Module, EU object storage, owner scoping, kill switch) but still calls the provider synchronously from `POST /api/photo-jobs/[jobId]/run`, so a job does not survive browser closure and holds the request open for the duration of generation. PLAN.md Phase 3 (predictions + webhook + reconciliation) and Phases 4–6 remain. No generation has yet been observed end to end with the flag on; the data-URI transport that was the leading suspect for provider rejections is gone, but the fix is unconfirmed until one controlled paid run.
 - No analytics/event tracking exists for configurator interactions.
@@ -256,11 +262,8 @@ Revisit when Project Archive/Trash/restore lands.
    Step 1 of the confirmed sequence is closed. `PHOTO_GENERATION_ENABLED` stays off in
    `.env.local` until the customer-facing path is wanted; turning it on is still a
    deliberate decision.
-3. **Act on the design critique** (`.impeccable/critique/2026-09-02T14-39-10Z__app-page-tsx.md`,
-   23/40): its P0 is the inert `/checkout` — a submit-looking endpoint with no submission,
-   reachable without a Project, labelled "Fake Checkout". Either gate it or build the quote
-   vertical slice (labelled fields, consent, validation, authenticated Project + immutable
-   revision, success and error states). Cheapest credibility win: drop the cart metaphor now.
+3. ~~Act on the design critique's P0~~ — done 2026-09-02 with the Quote Request slice
+   (ADR 0012). The remaining critique items are steps 3 and 4 of the confirmed sequence.
 
 ### Photo storage track (in progress)
 
@@ -292,14 +295,9 @@ sub-plan it references.
 
 1. ~~**Close the branch.**~~ Done 2026-09-02: Edit Session pass (one bug fixed) and a
    successful paid generation, both recorded under Done and Current Slice Verified.
-2. **Quote vertical slice (~2 weeks).** The critique's P0 and the only item that changes
-   what a customer can do. A Quote Request module behind the same seams as Projects; a
-   route that requires an authenticated Project plus an immutable Configuration Revision
-   (reusing the "Version speichern" checkpoint exactly as Photo Jobs do); labelled fields
-   with consent and validation; idempotent submission; a success state; request history in
-   `/konto`. The cart icon and "Fake Checkout" go on day one. ADR 0010 defers the email
-   provider, so v1 persists the request and shows it in the account; the business is
-   notified by email once a provider is chosen.
+2. ~~**Quote vertical slice.**~~ Done 2026-09-02 (ADR 0012, see Done). Left open by
+   design: the business notification (outbox consumer, waits on ADR 0010), the selected
+   photo on a request, and load-more in the account list.
 3. **Production 3D baseline, Track A (~1.5 weeks).** Retire the 27 MB `kitchen1.glb`,
    turn mesh-name conventions into a real Asset Manifest (ADR 0009), replace the Fan-Art
    Appartement2 scene and re-bake, then make the best environment the default (the
