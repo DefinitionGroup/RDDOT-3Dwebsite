@@ -49,7 +49,7 @@ describe("Replicate photo generation adapter", () => {
     vi.restoreAllMocks();
   });
 
-  it("hands the capture to the SDK as a typed Blob, not a data URI", async () => {
+  it("hands the capture to the SDK as a named, typed File, not a data URI", async () => {
     let received: unknown;
     const adapter = createReplicatePhotoGenerationAdapter(
       "token",
@@ -62,8 +62,10 @@ describe("Replicate photo generation adapter", () => {
 
     const outcome = await adapter.generate(REQUEST);
 
-    expect(received).toBeInstanceOf(Blob);
-    const blob = received as Blob;
+    expect(received).toBeInstanceOf(File);
+    const blob = received as File;
+    // The model reads the format off the extension of the uploaded file's URL.
+    expect(blob.name).toBe("capture.jpg");
     expect(blob.type).toBe("image/jpeg");
     expect(blob.size).toBe(REQUEST.capture.byteLength);
     expect(new Uint8Array(await blob.arrayBuffer())).toEqual(REQUEST.capture);

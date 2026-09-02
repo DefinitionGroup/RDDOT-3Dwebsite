@@ -63,6 +63,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added `GET /api/projects/[projectId]/configuration` returning the current Working Configuration version, so a caller that must pin an exact configuration reads it rather than guessing; a change that lands in between makes the photo request 409.
 - Made the Replicate adapter diagnosable. The capture now reaches the provider as a typed Blob, which the SDK uploads through its Files API and passes to the model by URL, instead of a base64 data URI that inflated a 1.5 MB capture to ~2 MB inside the prediction body. Failures no longer collapse to a bare `provider-error`: HTTP rejections map to stable, customer-safe codes (`provider-unauthorized`, `provider-billing`, `provider-rejected-input`, `provider-rate-limited`, `provider-error`, `provider-prediction-failed`, `provider-timeout`), the provider status and message are logged as operator detail that is never persisted or shown, and the prediction id is recorded as `providerReference` on failed jobs too. The generation timeout is now an `AbortSignal`, so a prediction that overruns is canceled at the provider rather than left spending; a hard bound still abandons a run the provider refuses to cancel. Covered by unit tests with an injected client (`lib/server/photo-jobs/replicate-adapter.test.ts`).
 - Repaired `.env.example`: five variables lacked their `=` and the kill switch read `PHOTO_GENERATION_ENABLED=false=`; the key set now matches `.env.local` exactly.
+- Ran the first controlled paid generation (2026-09-02, prediction `k449ce4yphrmt0d0cc89v8msqw`) through the adapter with a real 1280×720 Source Capture. It failed in 2 s with a now-precise reason: `Invalid image format ''` — the model infers the format from the uploaded file's URL extension, and the SDK names an unnamed Blob `blob_<timestamp>`. The adapter now sends a named `File` (`capture.jpg`/`capture.png`). Unconfirmed until the next paid run. The run is reproducible by name via `tests/integration/replicate-live.test.ts`, which is its own explicit switch (`REPLICATE_LIVE_TEST=1` plus a capture path) and skips otherwise.
 - Gave the application surfaces one shared header (`AppHeader`) covering the configurator, account and checkout routes: the wordmark always goes home, one contextual action is labelled with its destination, and the account entry appears wherever it is not the current page. The sign-in screen previously had a single link — the wordmark — so reaching the configurator meant going via the homepage.
 - Made the configurator panel a fixed-height scroll region with a pinned foot. The panel carried `min-h-screen`, which is a floor rather than a ceiling, so it grew past the viewport and its `overflow-y-auto` never had a constrained height to scroll within. Measured before: 1.358 px of panel in a 900 px viewport with no scroll container, the Richtpreis at y=1070 and the primary action at y=1183 — both below the fold, and reaching them scrolled the 3D scene out of view. After: the page no longer overflows, the panel scrolls inside itself, and the price and primary action stay in view while finishes are compared. Mobile keeps the stacked sheet unchanged.
 - Added color configuration for:
@@ -112,12 +113,17 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Appliance fronts render in device cabinet niches with the dedicated appliance role.
 - `pnpm test` 39/39, `pnpm test:db` 8/8 against the Neon test database, `pnpm lint` and production build green throughout; each slice committed separately.
 
-**Partially covered:** the scene bar as the Edit Session interface (`913b27d`) and
-drag-and-drop module reordering (`bf727e3`) were exercised in the production build with
-scripted pointer events (a drag across three slots committed the layout
-`device,small,big,small,small,small,device,big` into the URL and the geometry followed),
-but not by a human hand in a live pane, and the earlier arrow-button rearrangement they
-replaced is gone. A hands-on pass is still owed before merging to `redesign/devstart`.
+**Edit Session tail verified 2026-09-02** in the production build on `cc/devstart-002`:
+enter via Bearbeiten, add a module through the 3D ghost slot, drag the new slot from
+position 1 to position 3 in the strip (the wall geometry recomposed on the drop), Fertig
+committed `big,device,small,small,small,small,small,device,big` into the URL, and the bar
+morphed back to camera navigation. The pass found and fixed one real bug: a module added
+from the 3D ghost slot did not appear in the strip, which kept its own stale slot list
+(`features/configurator/ui/edit-slots.ts` now reconciles the strip against the draft;
+unit-tested). Caveat for anyone repeating this: the Browser pane throttles
+`requestAnimationFrame` to zero while hidden, so `motion` drags and bar transitions only
+progress when frames are pumped (screenshots do it). A human drag in a visible pane is
+still the friendlier check, but the flow is no longer unverified.
 
 ## Previous Slice Verified
 
@@ -243,13 +249,13 @@ Revisit when Project Archive/Trash/restore lands.
 
 ### Immediate (do these before starting any new track)
 
-1. **Hands-on verify the Edit Session tail** — scene bar interface and drag reorder — in a
-   live pane. Decided 2026-09-02: development continues on `cc/devstart-002` rather than
-   merging back into `redesign/devstart`.
-2. **One controlled paid generation** with `PHOTO_GENERATION_ENABLED=true` to confirm that
-   the Blob upload resolves the provider failures. Enabling the flag spends credits and is
-   an explicit decision; the adapter now records enough (reason code, prediction id, logged
-   provider detail) that a single run is diagnostic either way.
+1. ~~Verify the Edit Session tail~~ — done 2026-09-02 (see Current Slice Verified); one
+   bug found and fixed. Development continues on `cc/devstart-002` rather than merging back
+   into `redesign/devstart`.
+2. **One more controlled paid generation** to confirm the named-File upload. The first run
+   (see Done) turned the opaque failure into a one-line cause and the fix is in; a second
+   run is expected to succeed and closes step 1 of the confirmed sequence. Command:
+   `REPLICATE_LIVE_TEST=1 REPLICATE_LIVE_CAPTURE=<capture.jpg> pnpm exec vitest run tests/integration/replicate-live.test.ts`.
 3. **Act on the design critique** (`.impeccable/critique/2026-09-02T14-39-10Z__app-page-tsx.md`,
    23/40): its P0 is the inert `/checkout` — a submit-looking endpoint with no submission,
    reachable without a Project, labelled "Fake Checkout". Either gate it or build the quote
@@ -277,37 +283,39 @@ the galleries can ship:
    browser closure (gap G2), and `POST /api/photo-jobs/[jobId]/run` holds the request
    open for the duration of generation.
 
-### Then choose one track
+### Confirmed sequence (decided 2026-09-02)
 
-The repo currently carries two roadmaps that do not reference each other: the platform/
-content track below and PLAN.md's AI-photo Phases 1–6. They compete for the same time.
-**Recommended: finish the configurator/3D arc first** — momentum is there, the Edit
-Session just landed, and ADR 0009 already specifies what production assets must satisfy.
-Sanity is a large new surface (schema, client layer, localization routing, page-builder
-blocks) that will stall the configurator once opened. Note that AI-photo Phase 6 is
-calendar-driven (DPA and transfer-mechanism review), so the legal thread is worth
-starting in parallel with whichever engineering track wins — it costs no engineering time.
+The repo carried five overlapping plans (PLAN.md photo Phases 3–6, Track A, Track B, the
+Impeccable critique's priorities, and an external Sanity-first assessment). They are
+collapsed into one order below. This section is the roadmap; PLAN.md remains the photo
+sub-plan it references.
 
-**Track A — configurator to the ADR 0009 production baseline**
+1. **Close the branch (2–3 days).** Hands-on Edit Session pass, then one paid Replicate
+   generation to confirm the Blob-upload fix. Done when both are recorded here.
+2. **Quote vertical slice (~2 weeks).** The critique's P0 and the only item that changes
+   what a customer can do. A Quote Request module behind the same seams as Projects; a
+   route that requires an authenticated Project plus an immutable Configuration Revision
+   (reusing the "Version speichern" checkpoint exactly as Photo Jobs do); labelled fields
+   with consent and validation; idempotent submission; a success state; request history in
+   `/konto`. The cart icon and "Fake Checkout" go on day one. ADR 0010 defers the email
+   provider, so v1 persists the request and shows it in the account; the business is
+   notified by email once a provider is chosen.
+3. **Production 3D baseline, Track A (~1.5 weeks).** Retire the 27 MB `kitchen1.glb`,
+   turn mesh-name conventions into a real Asset Manifest (ADR 0009), replace the Fan-Art
+   Appartement2 scene and re-bake, then make the best environment the default (the
+   critique's first P1).
+4. **Configurator workbench restructure (~1 week).** Stage the work as material →
+   arrangement → review, per the critique's second P1. After the quote slice, because the
+   "review" stage is defined by what the quote needs.
+5. **PLAN.md Phase 3 (~4 days), then Phases 4–5.** Predictions plus webhook and
+   reconciliation — only after step 1 has proven that generation works at all.
 
-1. Replace mesh-name role conventions with a real Asset Manifest: explicit role-to-node
-   and material-slot mappings, content hashes, transfer/GPU/triangle/draw-call budgets,
-   approved cameras, declared fallbacks. Missing required roles must block release rather
-   than fall back heuristically.
-2. Add the Deterministic Visual Fallback path for unsupported or unstable sessions.
-3. Replace the Appartement2 placeholder asset (see Release Blockers) and re-bake.
-4. Add a Zod schema for product definitions and URL configuration state.
-5. Add performance budgets and capability-based Quality Profiles.
+**In parallel, off the engineering path:** Sanity for homepage and navigation only, and
+the Phase 6 legal thread (DPA, transfer mechanism). Both are decisions and procurement.
 
-**Track B — platform and content**
-
-1. Remaining Project lifecycle: Archive, Trash, restore, and the relevant UI.
-2. Locale route structure for `/`, `/en`, `/es`.
-3. Sanity schema set: site settings, page, localized slug, page-builder blocks, product
-   definition, configurator block.
-4. Sanity client layer and typed query boundary.
-5. Replace `lib/content.ts` homepage content with Sanity-ready data shapes.
-6. Add the configurator smart component as a page-builder block renderer.
+**Explicitly deferred:** the Sanity-first ordering, Track B's locale routing and page
+builder, and Product Definition Drafts in Sanity. They open a large new surface before the
+customer journey has an ending.
 
 ### Cross-cutting, currently unowned
 
