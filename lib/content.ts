@@ -27,6 +27,8 @@ export type Material = {
   alt: string;
   /** object-position for the crop; the walnut tile has a ledge near its top. */
   position?: string;
+  /** Scale the photo up so a seam at the tile's edge stays outside the card. */
+  zoom?: number;
   detail: string[];
   facts: string[];
 };
@@ -156,6 +158,7 @@ export const materials: Material[] = [
     image: "/images/material-walnut-memory-wn832.png",
     alt: "Nussbaum Memory Furnier mit ruhiger Maserung",
     position: "center bottom",
+    zoom: 1.4,
     detail: [
       "Echtholzfurnier mit durchlaufender Maserung: Die Zeichnung setzt sich von Front zu Front fort, kein Blatt gleicht dem anderen.",
       "Geölt statt lackiert — das Holz bleibt offenporig, fühlt sich warm an und darf mit den Jahren nachdunkeln. Kleine Spuren des Lebens lassen sich nachölen."

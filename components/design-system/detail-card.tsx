@@ -41,17 +41,19 @@ export function DetailTrigger({
   label: string;
   onOpen: () => void;
   open: boolean;
-  tone?: "quiet" | "glass";
+  tone?: "quiet" | "glass" | "dark";
 }) {
   return (
     <motion.button
       aria-expanded={open}
       aria-haspopup="dialog"
       aria-label={label}
-      className={`inline-flex size-9 shrink-0 items-center justify-center text-ink transition-[background-color,border-color] duration-state ease-signature ${
+      className={`inline-flex size-9 shrink-0 items-center justify-center transition-[background-color,border-color] duration-state ease-signature ${
         tone === "glass"
-          ? "glass hover:bg-ink/[.14]"
-          : "border border-hairline hover:border-ink"
+          ? "glass text-ink hover:bg-ink/[.14]"
+          : tone === "dark"
+            ? "bg-charcoal text-ink hover:bg-canvas"
+            : "border border-hairline text-ink hover:border-ink"
       }`}
       layoutId={`detail-${id}`}
       onClick={onOpen}

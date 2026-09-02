@@ -56,7 +56,7 @@ export function MaterialCards({ links }: { links: Record<string, MaterialLink> }
                       label={`Mehr zu ${material.name}`}
                       onOpen={() => setOpenId(material.id)}
                       open={openId === material.id}
-                      tone="glass"
+                      tone={material.color ? "dark" : "glass"}
                     />
                   }
                   alt={material.alt}
@@ -64,11 +64,12 @@ export function MaterialCards({ links }: { links: Record<string, MaterialLink> }
                   body={material.body}
                   color={material.color}
                   image={material.image}
+                  onLight={Boolean(material.color)}
                   position={material.position}
                   ratio="aspect-[4/5]"
-                  shade={material.color ? "frame" : "media"}
                   sizes="(min-width: 1280px) 23vw, (min-width: 768px) 45vw, 280px"
                   title={material.name}
+                  zoom={material.zoom}
                 />
               </Tilt>
             </Reveal>
