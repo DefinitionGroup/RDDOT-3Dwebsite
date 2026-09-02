@@ -4,6 +4,11 @@ import { ArrowLeft, ArrowRight, Check, Trash2, X } from "lucide-react";
 import { Reorder } from "motion/react";
 import { useState } from "react";
 import {
+  reconcileSlots,
+  slotsMatch,
+  type SlotItem
+} from "@/features/configurator/ui/edit-slots";
+import {
   findWallCatalogEntry,
   formatCurrency,
   getLocalizedLabel,
@@ -84,14 +89,6 @@ type SceneEditBarProps = {
 /**
  * The in-scene navigation bar becomes this editing interface for the
  * duration of an Edit Session, and reverts to camera navigation when the
- * session is applied or discarded.
- */
-type SlotItem = { id: number; key: WallModuleKey };
-
-
-/**
- * The in-scene navigation bar becomes this editing interface for the
- * duration of an Edit Session, and reverts to camera navigation when the
  * session is applied or discarded. Slots are drag-reorderable; the scene
  * geometry recomposes from the committed draft on every drop.
  */
@@ -112,12 +109,22 @@ export function SceneEditBar({
 
   // Reorder needs stable identities, but the draft carries only module types
   // (with duplicates). The bar owns those identities for the lifetime of the
-  // Edit Session: every mutation updates the slots and the draft together, so
-  // no prop-to-state synchronization is needed.
-  const [slots, setSlots] = useState<SlotItem[]>(() =>
+  // Edit Session. Mutations made here update slots and draft together; a
+  // draft change from elsewhere — a ghost slot clicked in the 3D scene — is
+  // reconciled during render so the strip never shows a stale line.
+  const [storedSlots, setSlots] = useState<SlotItem[]>(() =>
     draft.wallModules.map((key, index) => ({ id: index, key }))
   );
-  const [nextSlotId, setNextSlotId] = useState(draft.wallModules.length);
+  const [storedNextSlotId, setNextSlotId] = useState(draft.wallModules.length);
+  let slots = storedSlots;
+  let nextSlotId = storedNextSlotId;
+  if (!slotsMatch(storedSlots, draft.wallModules)) {
+    const reconciled = reconcileSlots(storedSlots, draft.wallModules, storedNextSlotId);
+    slots = reconciled.slots;
+    nextSlotId = reconciled.nextId;
+    setSlots(reconciled.slots);
+    setNextSlotId(reconciled.nextId);
+  }
 
   function applySlots(nextSlots: SlotItem[], nextSelected: EditTarget) {
     setSlots(nextSlots);
