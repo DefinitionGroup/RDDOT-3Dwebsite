@@ -63,7 +63,7 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Added `GET /api/projects/[projectId]/configuration` returning the current Working Configuration version, so a caller that must pin an exact configuration reads it rather than guessing; a change that lands in between makes the photo request 409.
 - Made the Replicate adapter diagnosable. The capture now reaches the provider as a typed Blob, which the SDK uploads through its Files API and passes to the model by URL, instead of a base64 data URI that inflated a 1.5 MB capture to ~2 MB inside the prediction body. Failures no longer collapse to a bare `provider-error`: HTTP rejections map to stable, customer-safe codes (`provider-unauthorized`, `provider-billing`, `provider-rejected-input`, `provider-rate-limited`, `provider-error`, `provider-prediction-failed`, `provider-timeout`), the provider status and message are logged as operator detail that is never persisted or shown, and the prediction id is recorded as `providerReference` on failed jobs too. The generation timeout is now an `AbortSignal`, so a prediction that overruns is canceled at the provider rather than left spending; a hard bound still abandons a run the provider refuses to cancel. Covered by unit tests with an injected client (`lib/server/photo-jobs/replicate-adapter.test.ts`).
 - Repaired `.env.example`: five variables lacked their `=` and the kill switch read `PHOTO_GENERATION_ENABLED=false=`; the key set now matches `.env.local` exactly.
-- Ran the first controlled paid generation (2026-09-02, prediction `k449ce4yphrmt0d0cc89v8msqw`) through the adapter with a real 1280×720 Source Capture. It failed in 2 s with a now-precise reason: `Invalid image format ''` — the model infers the format from the uploaded file's URL extension, and the SDK names an unnamed Blob `blob_<timestamp>`. The adapter now sends a named `File` (`capture.jpg`/`capture.png`). Unconfirmed until the next paid run. The run is reproducible by name via `tests/integration/replicate-live.test.ts`, which is its own explicit switch (`REPLICATE_LIVE_TEST=1` plus a capture path) and skips otherwise.
+- **Generation works.** Three controlled paid runs on 2026-09-02 found and fixed the real cause of the opaque provider failures. Runs 1 and 2 (`k449ce4yphrmt0d0cc89v8msqw`, `500438hh8nrmr0d0ccaryy52mm`) failed in 2 s with `Invalid image format ''` whether the SDK uploaded an unnamed Blob or a named File: the SDK's Files API URL (`api.replicate.com/v1/files/<id>`) is a metadata endpoint that needs the account token, and this model hands its input URL to a downstream service that fetches without credentials, receives a JSON 401, and rejects the "image". Run 3 (`rpbj81t445rmw0d0ccc867s3nc`) succeeded in 17 s once the adapter received a short-lived presigned URL to the capture in the application's own storage — the same 300 s grant the module already reads the bytes through. `PhotoGenerationRequest` now carries that `captureUrl`; the File upload remains as fallback. Output was a 1024×576 PNG probed as an image. The run is reproducible by name via `tests/integration/replicate-live.test.ts` (`REPLICATE_LIVE_TEST=1` plus a capture path; it uploads to storage, presigns, generates, and cleans up) and skips otherwise. The old data-URI transport was never the cause; it was simply replaced on the way.
 - Gave the application surfaces one shared header (`AppHeader`) covering the configurator, account and checkout routes: the wordmark always goes home, one contextual action is labelled with its destination, and the account entry appears wherever it is not the current page. The sign-in screen previously had a single link — the wordmark — so reaching the configurator meant going via the homepage.
 - Made the configurator panel a fixed-height scroll region with a pinned foot. The panel carried `min-h-screen`, which is a floor rather than a ceiling, so it grew past the viewport and its `overflow-y-auto` never had a constrained height to scroll within. Measured before: 1.358 px of panel in a 900 px viewport with no scroll container, the Richtpreis at y=1070 and the primary action at y=1183 — both below the fold, and reaching them scrolled the 3D scene out of view. After: the page no longer overflows, the panel scrolls inside itself, and the price and primary action stay in view while finishes are compared. Mobile keeps the stacked sheet unchanged.
 - Added color configuration for:
@@ -252,10 +252,10 @@ Revisit when Project Archive/Trash/restore lands.
 1. ~~Verify the Edit Session tail~~ — done 2026-09-02 (see Current Slice Verified); one
    bug found and fixed. Development continues on `cc/devstart-002` rather than merging back
    into `redesign/devstart`.
-2. **One more controlled paid generation** to confirm the named-File upload. The first run
-   (see Done) turned the opaque failure into a one-line cause and the fix is in; a second
-   run is expected to succeed and closes step 1 of the confirmed sequence. Command:
-   `REPLICATE_LIVE_TEST=1 REPLICATE_LIVE_CAPTURE=<capture.jpg> pnpm exec vitest run tests/integration/replicate-live.test.ts`.
+2. ~~Controlled paid generation~~ — done 2026-09-02, succeeded on the third run (see Done).
+   Step 1 of the confirmed sequence is closed. `PHOTO_GENERATION_ENABLED` stays off in
+   `.env.local` until the customer-facing path is wanted; turning it on is still a
+   deliberate decision.
 3. **Act on the design critique** (`.impeccable/critique/2026-09-02T14-39-10Z__app-page-tsx.md`,
    23/40): its P0 is the inert `/checkout` — a submit-looking endpoint with no submission,
    reachable without a Project, labelled "Fake Checkout". Either gate it or build the quote
@@ -290,8 +290,8 @@ Impeccable critique's priorities, and an external Sanity-first assessment). They
 collapsed into one order below. This section is the roadmap; PLAN.md remains the photo
 sub-plan it references.
 
-1. **Close the branch (2–3 days).** Hands-on Edit Session pass, then one paid Replicate
-   generation to confirm the Blob-upload fix. Done when both are recorded here.
+1. ~~**Close the branch.**~~ Done 2026-09-02: Edit Session pass (one bug fixed) and a
+   successful paid generation, both recorded under Done and Current Slice Verified.
 2. **Quote vertical slice (~2 weeks).** The critique's P0 and the only item that changes
    what a customer can do. A Quote Request module behind the same seams as Projects; a
    route that requires an authenticated Project plus an immutable Configuration Revision

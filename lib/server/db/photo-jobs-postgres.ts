@@ -516,6 +516,9 @@ export function createPostgresPhotoJobModule(
         const outcome = await adapter.generate({
           capture,
           captureContentType: row.captureContentType,
+          // The same grant the bytes were just read through; it outlives the
+          // provider timeout, so a provider that fetches inputs itself can use it.
+          captureUrl: captureUrl.url,
           prompt,
           aspectRatio: "16:9"
         });

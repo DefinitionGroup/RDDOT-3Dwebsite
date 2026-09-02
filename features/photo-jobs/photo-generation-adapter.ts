@@ -9,6 +9,14 @@ export type PhotoGenerationRequest = {
   /** The validated Source Capture, as bytes. */
   capture: Uint8Array;
   captureContentType: "image/jpeg" | "image/png";
+  /**
+   * A short-lived, read-only HTTPS URL to the same bytes in the application's
+   * own object storage, whose path ends in the capture's file extension. Some
+   * providers hand the input URL to a downstream service that fetches it
+   * itself, so it must be reachable without credentials for its lifetime.
+   * Null when no such grant exists; adapters then fall back to the bytes.
+   */
+  captureUrl: string | null;
   prompt: string;
   aspectRatio: "16:9";
 };

@@ -75,11 +75,13 @@ export function extractOutputUrl(output: unknown): string | null {
 }
 
 /**
- * The SDK uploads any File input through the provider's Files API and passes
- * the resulting URL to the model. A base64 data URI would inflate a 1.5 MB
- * capture to ~2 MB inside the prediction body. The filename matters: the model
- * infers the image format from the URL's extension, and an unnamed Blob was
- * rejected live with "Invalid image format ''" (prediction k449ce4yphrmt0d0cc89v8msqw).
+ * Fallback when no presigned capture URL is available: the SDK uploads a File
+ * through the provider's Files API and passes that URL to the model. Live runs
+ * showed this model cannot use such URLs — it hands them to a downstream
+ * service that fetches without credentials, receives the Files API's JSON 401,
+ * and fails with "Invalid image format ''" (predictions k449ce4yphrmt0d0cc89v8msqw,
+ * 500438hh8nrmr0d0ccaryy52mm). The presigned URL from the application's own
+ * storage is therefore the primary path; this keeps the seam usable without it.
  */
 function toFile(bytes: Uint8Array, type: "image/jpeg" | "image/png") {
   const copy = new Uint8Array(bytes.byteLength);
@@ -186,7 +188,9 @@ export function createReplicatePhotoGenerationAdapter(
             MODEL,
             {
               input: {
-                image: toFile(request.capture, request.captureContentType),
+                image:
+                  request.captureUrl ??
+                  toFile(request.capture, request.captureContentType),
                 prompt: request.prompt,
                 aspect_ratio: request.aspectRatio,
                 negative_prompt: "",

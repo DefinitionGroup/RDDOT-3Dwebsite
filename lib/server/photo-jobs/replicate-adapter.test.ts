@@ -11,6 +11,7 @@ type Progress = (prediction: { id: string; status: string }) => void;
 const REQUEST = {
   capture: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]),
   captureContentType: "image/jpeg" as const,
+  captureUrl: null,
   prompt: "A kitchen",
   aspectRatio: "16:9" as const
 };
@@ -49,7 +50,28 @@ describe("Replicate photo generation adapter", () => {
     vi.restoreAllMocks();
   });
 
-  it("hands the capture to the SDK as a named, typed File, not a data URI", async () => {
+  it("passes the presigned capture URL to the model when one is granted", async () => {
+    let received: unknown;
+    const adapter = createReplicatePhotoGenerationAdapter(
+      "token",
+      createDependencies(async (options) => {
+        received = options.input.image;
+        return ["https://replicate.delivery/out.png"];
+      })
+    );
+
+    const outcome = await adapter.generate({
+      ...REQUEST,
+      captureUrl: "https://storage.example/captures/abc.jpg?X-Amz-Signature=sig"
+    });
+
+    expect(received).toBe(
+      "https://storage.example/captures/abc.jpg?X-Amz-Signature=sig"
+    );
+    expect(outcome.kind).toBe("generated");
+  });
+
+  it("falls back to a named, typed File when no capture URL exists", async () => {
     let received: unknown;
     const adapter = createReplicatePhotoGenerationAdapter(
       "token",
