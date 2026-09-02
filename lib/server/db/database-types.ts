@@ -143,6 +143,25 @@ export type GeneratedPhotoTable = {
   createdAt: Timestamp;
 };
 
+export type QuoteRequestTable = {
+  id: string;
+  projectId: string;
+  configurationRevisionId: string;
+  reference: string;
+  state: "submitted" | "in-review" | "answered" | "withdrawn";
+  creationIdempotencyKey: string;
+  requestHash: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  note: string;
+  consentVersion: string;
+  consentAcceptedAt: Timestamp;
+  priceIndication: JsonValue;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
+
 export type Database = {
   customerAccount: CustomerAccountTable;
   authIdentity: AuthIdentityTable;
@@ -154,4 +173,5 @@ export type Database = {
   sourceCapture: SourceCaptureTable;
   photoJob: PhotoJobTable;
   generatedPhoto: GeneratedPhotoTable;
+  quoteRequest: QuoteRequestTable;
 };

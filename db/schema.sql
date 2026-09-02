@@ -204,6 +204,38 @@ CREATE TABLE app.project (
 
 
 --
+-- Name: quote_request; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.quote_request (
+    id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    configuration_revision_id uuid NOT NULL,
+    reference text NOT NULL,
+    state text DEFAULT 'submitted'::text NOT NULL,
+    creation_idempotency_key text NOT NULL,
+    request_hash character(64) NOT NULL,
+    contact_name text NOT NULL,
+    contact_email text NOT NULL,
+    contact_phone text,
+    note text DEFAULT ''::text NOT NULL,
+    consent_version text NOT NULL,
+    consent_accepted_at timestamp with time zone NOT NULL,
+    price_indication jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT quote_request_consent_version_check CHECK (((char_length(consent_version) >= 1) AND (char_length(consent_version) <= 64))),
+    CONSTRAINT quote_request_contact_email_check CHECK (((char_length(contact_email) >= 3) AND (char_length(contact_email) <= 254))),
+    CONSTRAINT quote_request_contact_name_check CHECK (((char_length(contact_name) >= 1) AND (char_length(contact_name) <= 120))),
+    CONSTRAINT quote_request_contact_phone_check CHECK (((contact_phone IS NULL) OR ((char_length(contact_phone) >= 3) AND (char_length(contact_phone) <= 40)))),
+    CONSTRAINT quote_request_note_check CHECK ((char_length(note) <= 2000)),
+    CONSTRAINT quote_request_price_indication_check CHECK ((jsonb_typeof(price_indication) = 'object'::text)),
+    CONSTRAINT quote_request_reference_check CHECK ((reference ~ '^A-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$'::text)),
+    CONSTRAINT quote_request_state_check CHECK ((state = ANY (ARRAY['submitted'::text, 'in-review'::text, 'answered'::text, 'withdrawn'::text])))
+);
+
+
+--
 -- Name: shared_revision_link; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -517,6 +549,30 @@ ALTER TABLE ONLY app.project
 
 
 --
+-- Name: quote_request quote_request_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.quote_request
+    ADD CONSTRAINT quote_request_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: quote_request quote_request_project_id_creation_idempotency_key_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.quote_request
+    ADD CONSTRAINT quote_request_project_id_creation_idempotency_key_key UNIQUE (project_id, creation_idempotency_key);
+
+
+--
+-- Name: quote_request quote_request_reference_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.quote_request
+    ADD CONSTRAINT quote_request_reference_key UNIQUE (reference);
+
+
+--
 -- Name: shared_revision_link shared_revision_link_pkey; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -708,6 +764,20 @@ CREATE INDEX project_owner_lifecycle_idx ON app.project USING btree (owner_id, l
 
 
 --
+-- Name: quote_request_project_created_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX quote_request_project_created_idx ON app.quote_request USING btree (project_id, created_at DESC);
+
+
+--
+-- Name: quote_request_revision_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX quote_request_revision_idx ON app.quote_request USING btree (configuration_revision_id);
+
+
+--
 -- Name: shared_revision_link_active_expiry_idx; Type: INDEX; Schema: app; Owner: -
 --
 
@@ -827,6 +897,14 @@ ALTER TABLE ONLY app.project
 
 
 --
+-- Name: quote_request quote_request_project_id_configuration_revision_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.quote_request
+    ADD CONSTRAINT quote_request_project_id_configuration_revision_id_fkey FOREIGN KEY (project_id, configuration_revision_id) REFERENCES app.configuration_revision(project_id, id) ON DELETE CASCADE;
+
+
+--
 -- Name: shared_revision_link shared_revision_link_project_id_configuration_revision_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -882,4 +960,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260813123000'),
     ('20260813230000'),
     ('20260814110000'),
-    ('20260901120000');
+    ('20260901120000'),
+    ('20260902200000');
