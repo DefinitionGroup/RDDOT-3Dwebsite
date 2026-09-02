@@ -38,7 +38,6 @@ import type {
   VisualizationMode
 } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
-import { ApartmentModel } from "@/features/configurator/engine/apartment-model";
 import { Appartement2Model } from "@/features/configurator/engine/appartement2-model";
 import {
   KitchenModel,
@@ -73,12 +72,6 @@ const mobileCameraPresets: Record<CameraView, CameraPreset> = {
   detail: [3.15, 1.7, 4.45, 0.75, -0.04, 0.04]
 };
 
-const apartmentCameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [6.2, 2.7, 5.2, 0, 1.12, 0],
-  front: [5.8, 1.95, 0, 0, 1.15, 0],
-  detail: [3.6, 1.8, 2.5, 0.2, 1.02, 0.45]
-};
-
 // Floor level in the baked scene is y = -1.369; eye heights are relative to it.
 const apartment2CameraPresets: Record<CameraView, CameraPreset> = {
   signature: [1.85, 0.55, 3.4, -3.0, -0.3, 0.1],
@@ -90,12 +83,6 @@ const mobileApartment2CameraPresets: Record<CameraView, CameraPreset> = {
   signature: [1.2, 0.6, 4.6, -2.6, -0.3, 0.3],
   front: [1.4, 0.25, 0.55, -2.63, -0.1, 0.55],
   detail: [0.2, 0.15, 2.7, -3.2, -0.3, 0.2]
-};
-
-const mobileApartmentCameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [7.2, 2.9, 6.2, 0, 1.05, 0],
-  front: [6.8, 2.1, 0.2, 0, 1.08, 0],
-  detail: [4.3, 2, 3.2, 0.15, 0.98, 0.4]
 };
 
 export function KitchenScene({
@@ -114,21 +101,16 @@ export function KitchenScene({
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, state.frontColorKey);
   const isCompactViewport = width < 720;
   const isApartment = visualization === "apartment";
-  const isApartment2 = visualization === "apartment2";
   const reflectionResolution = isCompactViewport ? 128 : 256;
 
   useEffect(() => {
-    const presets = isApartment2
+    const presets = isApartment
       ? isCompactViewport
         ? mobileApartment2CameraPresets
         : apartment2CameraPresets
-      : isApartment
-        ? isCompactViewport
-          ? mobileApartmentCameraPresets
-          : apartmentCameraPresets
-        : isCompactViewport
-          ? mobileCameraPresets
-          : cameraPresets;
+      : isCompactViewport
+        ? mobileCameraPresets
+        : cameraPresets;
     const preset = presets[cameraView];
     // A first switch into a visualization suspends on its assets, which can
     // swallow the initial setLookAt (the controls remount around it). Retry
@@ -140,7 +122,7 @@ export function KitchenScene({
       }, delay)
     );
     return () => retries.forEach((timer) => window.clearTimeout(timer));
-  }, [cameraView, isApartment, isApartment2, isCompactViewport, pathTracing]);
+  }, [cameraView, isApartment, isCompactViewport, pathTracing]);
 
   useEffect(() => {
     return () => {
@@ -157,63 +139,26 @@ export function KitchenScene({
         near={0.08}
         position={[4.2, 2.4, 5.6]}
       />
-      {!pathTracing && !isApartment2 && (
-        <fog
-          args={isApartment ? ["#bdc5c4", 14, 32] : ["#aeb7b3", 9.5, 21]}
-          attach="fog"
-        />
+      {!pathTracing && !isApartment && (
+        <fog args={["#aeb7b3", 9.5, 21]} attach="fog" />
       )}
-      {isApartment2 ? (
+      {isApartment ? (
         <Appartement2LightRig pathTracing={pathTracing} />
-      ) : isApartment ? (
-        <ApartmentLightRig pathTracing={pathTracing} />
       ) : (
         <StudioLightRig pathTracing={pathTracing} />
       )}
-      {isApartment2 ? (
+      {isApartment ? (
         <Environment
           environmentIntensity={pathTracing ? 1.1 : 1.2}
           files="/hdri/appartement2_pano.hdr"
-        />
-      ) : isApartment ? (
-        <Environment
-          background
-          backgroundBlurriness={0.055}
-          backgroundIntensity={0.42}
-          backgroundRotation={[0, -0.55, 0]}
-          environmentIntensity={pathTracing ? 1.05 : 0.68}
-          environmentRotation={[0, -0.55, 0]}
-          files="/hdri/qwantani_dusk_1k.hdr"
         />
       ) : (
         <StudioEnvironment compact={isCompactViewport} pathTracing={pathTracing} />
       )}
 
-      {isApartment2 ? (
+      {isApartment ? (
         <Suspense fallback={null}>
           <Appartement2Model
-            cabinetFinish={cabinetColor}
-            frontFinish={frontColor}
-            pathTracing={pathTracing}
-            reflectionProbe={!pathTracing}
-            reflectionResolution={reflectionResolution}
-            state={state}
-          />
-        </Suspense>
-      ) : isApartment ? (
-        <Suspense
-          fallback={
-            <StudioKitchen
-              cabinetFinish={cabinetColor}
-              floorTexture={floorTexture}
-              frontFinish={frontColor}
-              reflectionProbe={!pathTracing}
-              reflectionResolution={reflectionResolution}
-              state={state}
-            />
-          }
-        >
-          <ApartmentModel
             cabinetFinish={cabinetColor}
             frontFinish={frontColor}
             pathTracing={pathTracing}
@@ -234,7 +179,7 @@ export function KitchenScene({
         />
       )}
 
-      {!pathTracing && !isApartment && !isApartment2 && (
+      {!pathTracing && !isApartment && (
         <ContactShadows
           blur={3.2}
           color="#514b45"
@@ -246,14 +191,14 @@ export function KitchenScene({
       )}
       {!pathTracing && (
         <CinematicEffects
-          apartment={isApartment || isApartment2}
+          apartment={isApartment}
           compact={isCompactViewport}
         />
       )}
       <CameraControls
         dollySpeed={0.65}
         makeDefault
-        maxDistance={isApartment || isApartment2 ? 11 : isCompactViewport ? 13 : 8.4}
+        maxDistance={isApartment ? 11 : isCompactViewport ? 13 : 8.4}
         maxPolarAngle={Math.PI / 2.08}
         minDistance={2.2}
         minPolarAngle={Math.PI / 8}
@@ -380,57 +325,6 @@ function Appartement2LightRig({ pathTracing }: { pathTracing: boolean }) {
         color="#e6ecf2"
         intensity={pathTracing ? 0.9 : 0.4}
         position={[5.0, 3.0, 4.2]}
-      />
-    </>
-  );
-}
-
-function ApartmentLightRig({ pathTracing }: { pathTracing: boolean }) {
-  const warmFillRef = useRef<RectAreaLight | null>(null);
-  const coolFillRef = useRef<RectAreaLight | null>(null);
-
-  useEffect(() => {
-    warmFillRef.current?.lookAt(-0.4, 1, 0.2);
-    coolFillRef.current?.lookAt(0.6, 1.15, -0.2);
-  }, []);
-
-  return (
-    <>
-      <hemisphereLight args={["#d8e5eb", "#71675d", 0.52]} />
-      <ambientLight color="#c7cdca" intensity={0.14} />
-      <directionalLight
-        castShadow
-        color="#fff0dc"
-        intensity={pathTracing ? 1.6 : 0.92}
-        position={[4.6, 6.8, -3.6]}
-        shadow-bias={-0.0002}
-        shadow-blurSamples={24}
-        shadow-mapSize={[3072, 3072]}
-        shadow-normalBias={0.025}
-        shadow-radius={9}
-      />
-      <rectAreaLight
-        color="#ffd2a6"
-        height={1.8}
-        intensity={pathTracing ? 14 : 2.7}
-        position={[1.8, 3.8, -3.2]}
-        ref={warmFillRef}
-        width={3.8}
-      />
-      <rectAreaLight
-        color="#a9d4ef"
-        height={2.4}
-        intensity={pathTracing ? 8 : 1.8}
-        position={[-3.8, 2.8, 2.8]}
-        ref={coolFillRef}
-        width={2.6}
-      />
-      <spotLight
-        angle={0.52}
-        color="#ffc998"
-        intensity={pathTracing ? 4 : 0.76}
-        penumbra={0.9}
-        position={[-2.8, 4.5, -0.8]}
       />
     </>
   );

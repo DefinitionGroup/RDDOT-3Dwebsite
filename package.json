@@ -12,8 +12,7 @@
     "test:db": "vitest run tests/integration",
     "db:migrate": "node scripts/dbmate.mjs up",
     "db:rollback": "node scripts/dbmate.mjs rollback",
-    "db:schema": "node scripts/dbmate.mjs dump",
-    "optimize:apartment": "node scripts/optimize-apartment-model.mjs"
+    "db:schema": "node scripts/dbmate.mjs dump"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1123.0",

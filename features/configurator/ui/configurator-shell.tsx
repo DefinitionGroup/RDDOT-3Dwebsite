@@ -15,7 +15,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { AppHeader } from "@/components/design-system/app-header";
-import { preloadApartmentModel } from "@/features/configurator/engine/apartment-model";
 import { preloadAppartement2Model } from "@/features/configurator/engine/appartement2-model";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import {
@@ -133,12 +132,10 @@ export function ConfiguratorShell({
   }, [encodedConfig, project, sharedView]);
 
   useEffect(() => {
-    const apartmentTimer = window.setTimeout(preloadApartmentModel, 450);
-    const apartment2Timer = window.setTimeout(preloadAppartement2Model, 1200);
+    const apartmentTimer = window.setTimeout(preloadAppartement2Model, 1200);
 
     return () => {
       window.clearTimeout(apartmentTimer);
-      window.clearTimeout(apartment2Timer);
     };
   }, []);
 
@@ -976,8 +973,7 @@ function VisualizationTabs({
 }) {
   const options: { key: VisualizationMode; label: string }[] = [
     { key: "studio", label: "Studio" },
-    { key: "apartment", label: "Appartement" },
-    { key: "apartment2", label: "Appartement2" }
+    { key: "apartment", label: "Appartement" }
   ];
 
   return (
