@@ -42,6 +42,7 @@ import type {
 } from "@/features/configurator/types";
 import {
   canAddModule,
+  MODULE_SHORT_LABEL,
   SceneEditBar,
   type EditDraft
 } from "@/features/configurator/ui/module-editor";
@@ -68,6 +69,18 @@ type ConfiguratorShellProps = {
   };
 };
 
+/**
+ * The three decisions a customer makes, in the order they are usually made.
+ * One is visible at a time; the scene stays persistent across all three.
+ */
+type PlanningStage = "material" | "layout" | "review";
+
+const planningStages: { key: PlanningStage; label: string }[] = [
+  { key: "material", label: "Material" },
+  { key: "layout", label: "Aufbau" },
+  { key: "review", label: "Prüfen" }
+];
+
 const cameraViews: { key: CameraView; label: string }[] = [
   { key: "signature", label: "Raum" },
   { key: "front", label: "Front" },
@@ -85,6 +98,7 @@ export function ConfiguratorShell({
   const [copied, setCopied] = useState(false);
   const [isConfigPanelOpen, setConfigPanelOpen] = useState(true);
   const [visualization, setVisualization] = useState<VisualizationMode>("studio");
+  const [stage, setStage] = useState<PlanningStage>("material");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const [isPhotoOpen, setPhotoOpen] = useState(false);
@@ -163,6 +177,7 @@ export function ConfiguratorShell({
     setPhotoOpen(false);
     setVisualization("studio");
     setCameraView("front");
+    setStage("layout");
     setEditSession({
       draft: {
         wallModules: [...config.wallModules],
@@ -500,7 +515,7 @@ export function ConfiguratorShell({
             >
               {/* The scrolling middle. `min-h-0` is required for a flex child
                   to shrink below its content and actually scroll. */}
-              <div className="p-6 md:p-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+              <div className="p-6 pb-36 md:p-8 md:pb-36 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-8">
               <motion.div
                 animate="show"
                 initial="hidden"
@@ -544,7 +559,7 @@ export function ConfiguratorShell({
                   </p>
                 </motion.div>
 
-                <VisualizationTabs
+                <ViewControl
                   active={visualization}
                   onRender={togglePathTracing}
                   onSelect={selectVisualization}
@@ -561,115 +576,117 @@ export function ConfiguratorShell({
                   />
                 ) : (
                   <>
-                    <motion.div
-                      className="mt-8 flex items-baseline justify-between gap-4 border-t border-hairline pt-6"
-                      variants={{
-                        hidden: { opacity: 0, y: 12 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-                      }}
-                    >
-                      <p className="text-body text-graphite">Layout</p>
-                      <p className="text-body text-ink">
-                        {effectiveConfig.wallModules.length} Module ·{" "}
-                        {effectiveConfig.islandSize > 0 ? "mit Insel" : "ohne Insel"}
-                      </p>
-                    </motion.div>
+                    <StageTabs active={stage} onSelect={setStage} />
 
-                    <ControlGroup title="Korpus">
-                      <FinishPicker
-                        activeKey={cabinetColor.key}
-                        locale={locale}
-                        onSelect={(key) => updateConfig({ cabinetColorKey: key })}
-                        options={RDTD_KITCHEN_PRODUCT_V2.cabinetColors}
-                      />
-                    </ControlGroup>
+                    <AnimatePresence initial={false} mode="wait">
+                      <motion.div
+                        animate={{ opacity: 1, y: 0 }}
+                        aria-labelledby={`stage-tab-${stage}`}
+                        exit={{ opacity: 0, y: -4 }}
+                        id={`stage-panel-${stage}`}
+                        initial={{ opacity: 0, y: 4 }}
+                        key={stage}
+                        role="tabpanel"
+                        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        {stage === "material" && (
+                          <>
+                            <ControlGroup title="Korpus">
+                              <FinishPicker
+                                activeKey={cabinetColor.key}
+                                locale={locale}
+                                onSelect={(key) => updateConfig({ cabinetColorKey: key })}
+                                options={RDTD_KITCHEN_PRODUCT_V2.cabinetColors}
+                              />
+                            </ControlGroup>
 
-                    <ControlGroup title="Front">
-                      <FinishPicker
-                        activeKey={frontColor.key}
-                        locale={locale}
-                        onSelect={(key) => updateConfig({ frontColorKey: key })}
-                        options={RDTD_KITCHEN_PRODUCT_V2.frontColors}
-                      />
-                    </ControlGroup>
+                            <ControlGroup title="Front">
+                              <FinishPicker
+                                activeKey={frontColor.key}
+                                locale={locale}
+                                onSelect={(key) => updateConfig({ frontColorKey: key })}
+                                options={RDTD_KITCHEN_PRODUCT_V2.frontColors}
+                              />
+                            </ControlGroup>
+                          </>
+                        )}
+
+                        {stage === "layout" && (
+                          <LayoutStage
+                            editing={Boolean(editSession)}
+                            islandSize={effectiveConfig.islandSize}
+                            onEdit={enterEditSession}
+                            wallModules={effectiveConfig.wallModules}
+                          />
+                        )}
+
+                        {stage === "review" && (
+                          <div className="mt-8 space-y-5 border-t border-hairline pt-6">
+                            <PriceBreakdown defaultOpen locale={locale} quote={quote} />
+
+                            {project && (
+                              <ProjectSaveControls
+                                configurationCode={encodedConfig}
+                                onSaveAsNew={saveConfigurationAsProject}
+                                onRestore={restoreProjectDraft}
+                                project={project}
+                              />
+                            )}
+
+                            <div
+                              className={`grid gap-2 ${
+                                project ? "grid-cols-1" : "grid-cols-[1fr_auto_auto]"
+                              }`}
+                            >
+                              {!project && (
+                                <a
+                                  className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
+                                  href={quoteRequestHref}
+                                >
+                                  Konfiguration anfragen
+                                </a>
+                              )}
+                              {!project && (
+                                <button
+                                  aria-label="Share URL kopieren"
+                                  className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
+                                  onClick={copyShareUrl}
+                                  title="Share URL kopieren"
+                                  type="button"
+                                >
+                                  {copied ? (
+                                    <Check aria-hidden="true" size={16} strokeWidth={1.5} />
+                                  ) : (
+                                    <Copy aria-hidden="true" size={16} strokeWidth={1.5} />
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                aria-label="Konfiguration zurücksetzen"
+                                className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
+                                onClick={resetConfiguration}
+                                title="Konfiguration zurücksetzen"
+                                type="button"
+                              >
+                                <RotateCcw aria-hidden="true" size={16} strokeWidth={1.5} />
+                              </button>
+                            </div>
+
+                            <p className="min-h-5 text-body text-ash">
+                              {isPending
+                                ? "Aktualisiere Szene …"
+                                : copied
+                                  ? "Share-Link kopiert."
+                                  : project
+                                    ? "Sichere Links bleiben auf einen festen Stand begrenzt."
+                                    : "Ihre Konfiguration wird in der URL gespeichert."}
+                            </p>
+                          </div>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                   </>
                 )}
-
-                <motion.div
-                  className="mt-8 space-y-5 border-t border-hairline pt-6"
-                  variants={{
-                    hidden: { opacity: 0, y: 12 },
-                    show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-                  }}
-                >
-                  {!sharedView && <PriceBreakdown locale={locale} quote={quote} />}
-
-                  {!sharedView && project && (
-                    <ProjectSaveControls
-                      configurationCode={encodedConfig}
-                      onSaveAsNew={saveConfigurationAsProject}
-                      onRestore={restoreProjectDraft}
-                      project={project}
-                    />
-                  )}
-
-                  <div
-                    className={`grid gap-2 ${
-                      sharedView
-                        ? "hidden"
-                        : project
-                          ? "grid-cols-1"
-                          : "grid-cols-[1fr_auto_auto]"
-                    }`}
-                  >
-                    {!project && !sharedView && (
-                      <a
-                        className="inline-flex min-h-11 items-center justify-center border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink"
-                        href={quoteRequestHref}
-                      >
-                        Konfiguration anfragen
-                      </a>
-                    )}
-                    {!project && !sharedView && (
-                      <button
-                        aria-label="Share URL kopieren"
-                        className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
-                        onClick={copyShareUrl}
-                        title="Share URL kopieren"
-                        type="button"
-                      >
-                        {copied ? (
-                          <Check aria-hidden="true" size={16} strokeWidth={1.5} />
-                        ) : (
-                          <Copy aria-hidden="true" size={16} strokeWidth={1.5} />
-                        )}
-                      </button>
-                    )}
-                    {!sharedView && (
-                      <button
-                        aria-label="Konfiguration zurücksetzen"
-                        className="grid size-11 place-items-center border border-hairline text-graphite transition-colors hover:border-ink hover:text-ink"
-                        onClick={resetConfiguration}
-                        title="Konfiguration zurücksetzen"
-                        type="button"
-                      >
-                        <RotateCcw aria-hidden="true" size={16} strokeWidth={1.5} />
-                      </button>
-                    )}
-                  </div>
-
-                  <p className="min-h-5 text-body text-ash">
-                    {sharedView
-                      ? "Der Link zeigt genau den freigegebenen Stand."
-                      : isPending
-                      ? "Aktualisiere Szene …"
-                      : copied
-                        ? "Share-Link kopiert."
-                        : project
-                          ? "Sichere Links bleiben auf einen festen Stand begrenzt."
-                          : "Ihre Konfiguration wird in der URL gespeichert."}
-                  </p>
-                </motion.div>
               </motion.div>
               </div>
 
@@ -677,7 +694,12 @@ export function ConfiguratorShell({
                   sat at y=1070 — below the fold on a 900px laptop — while the
                   primary action sat lower still. Both stay in view now, so a
                   finish can be compared against its price without scrolling. */}
-              <div className="shrink-0 border-t border-hairline bg-canvas px-6 pb-6 pt-5 md:px-8 md:pb-8">
+              {/* Below the desktop breakpoint the panel is part of the page flow and
+                  `main` clips overflow, which would make a sticky foot stick to the
+                  page instead of the viewport. Fixed keeps price and primary action
+                  in reach while the finishes are compared; the scroll area pads
+                  its bottom so nothing hides behind it. */}
+              <div className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-canvas px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 md:px-8 lg:static lg:z-auto lg:shrink-0 lg:pb-8 lg:pt-5">
                 <div className="flex items-baseline justify-between gap-4">
                   <p className="text-body text-graphite">Richtpreis</p>
                   <p className="text-lead text-ink">
@@ -960,7 +982,12 @@ function VisualizationPreloader({ active }: { active: boolean }) {
   );
 }
 
-function VisualizationTabs({
+/**
+ * One labelled control for how the scene is shown: which environment, and
+ * whether it is being rendered photorealistically. Render was a separate
+ * toggle before, which read as a mode without saying what it did.
+ */
+function ViewControl({
   active,
   onRender,
   onSelect,
@@ -971,7 +998,7 @@ function VisualizationTabs({
   onSelect: (mode: VisualizationMode) => void;
   renderActive: boolean;
 }) {
-  const options: { key: VisualizationMode; label: string }[] = [
+  const environments: { key: VisualizationMode; label: string }[] = [
     { key: "studio", label: "Studio" },
     { key: "apartment", label: "Appartement" }
   ];
@@ -984,45 +1011,160 @@ function VisualizationTabs({
         show: { opacity: 1, y: 0, transition: { duration: 0.5 } }
       }}
     >
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <p className="text-body text-graphite">Visualisierung</p>
+      <p className="mb-4 text-body text-graphite" id="view-control-label">
+        Ansicht
+      </p>
+      <div
+        aria-labelledby="view-control-label"
+        className="grid grid-cols-3 divide-x divide-hairline border border-hairline"
+        role="group"
+      >
+        {environments.map((environment) => {
+          const isCurrent = active === environment.key;
+          const isSelected = isCurrent && !renderActive;
+          return (
+            <button
+              aria-pressed={isSelected}
+              className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-body transition-colors ${
+                isSelected ? "bg-ink text-paper" : "text-graphite hover:text-ink"
+              }`}
+              key={environment.key}
+              onClick={() => onSelect(environment.key)}
+              type="button"
+            >
+              {isCurrent && renderActive && (
+                <span aria-hidden="true" className="size-1.5 rounded-full bg-signature" />
+              )}
+              {environment.label}
+            </button>
+          );
+        })}
         <button
           aria-pressed={renderActive}
-          className={`inline-flex items-center gap-2 text-body transition-colors ${
-            renderActive ? "text-signature" : "text-graphite hover:text-ink"
+          className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-body transition-colors ${
+            renderActive ? "bg-ink text-paper" : "text-graphite hover:text-ink"
           }`}
           onClick={onRender}
           type="button"
         >
           <ScanLine aria-hidden="true" size={13} strokeWidth={1.5} />
-          {renderActive ? "Render beenden" : "Render"}
+          Render
         </button>
       </div>
-      <div
-        aria-label="Visualisierung"
-        className="grid grid-cols-3 divide-x divide-hairline border border-hairline"
-        role="tablist"
-      >
-        {options.map((option) => {
-          const isActive = active === option.key;
-
-          return (
-            <button
-              aria-selected={isActive}
-              className={`min-h-11 px-4 text-body transition-colors ${
-                isActive ? "bg-ink text-paper" : "text-graphite hover:text-ink"
-              }`}
-              key={option.key}
-              onClick={() => onSelect(option.key)}
-              role="tab"
-              type="button"
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      <p className="mt-3 min-h-5 text-sm leading-6 text-graphite">
+        {renderActive
+          ? "Fotorealistische Berechnung der aktuellen Ansicht. Zum Weiterplanen beenden."
+          : active === "apartment"
+            ? "Die Küche in einem Raum. Studio zeigt Material und Maße neutral."
+            : "Neutrale Ansicht für Material und Maße. Appartement setzt die Küche in einen Raum."}
+      </p>
     </motion.div>
+  );
+}
+
+function StageTabs({
+  active,
+  onSelect
+}: {
+  active: PlanningStage;
+  onSelect: (stage: PlanningStage) => void;
+}) {
+  return (
+    <div
+      aria-label="Planungsschritte"
+      className="mt-8 grid grid-cols-3 divide-x divide-hairline border border-ink"
+      role="tablist"
+    >
+      {planningStages.map((planningStage, index) => {
+        const isActive = active === planningStage.key;
+        return (
+          <button
+            aria-controls={`stage-panel-${planningStage.key}`}
+            aria-selected={isActive}
+            className={`min-h-11 px-3 text-body transition-colors ${
+              isActive ? "bg-ink text-paper" : "text-graphite hover:text-ink"
+            }`}
+            id={`stage-tab-${planningStage.key}`}
+            key={planningStage.key}
+            onClick={() => onSelect(planningStage.key)}
+            onKeyDown={(event) => {
+              const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+              if (!delta) return;
+              event.preventDefault();
+              const next = planningStages[(index + delta + planningStages.length) % planningStages.length];
+              onSelect(next.key);
+              (event.currentTarget.parentElement?.querySelector(
+                `#stage-tab-${next.key}`
+              ) as HTMLElement | null)?.focus();
+            }}
+            role="tab"
+            tabIndex={isActive ? 0 : -1}
+            type="button"
+          >
+            {planningStage.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const ISLAND_LABEL: Record<number, string> = {
+  0: "ohne Insel",
+  2: "Insel klein",
+  4: "Insel standard",
+  6: "Insel groß"
+};
+
+/**
+ * The arrangement decision. Editing itself happens in the scene bar, where
+ * the modules are; the panel states what is there and opens the Edit Session.
+ */
+function LayoutStage({
+  editing,
+  islandSize,
+  onEdit,
+  wallModules
+}: {
+  editing: boolean;
+  islandSize: number;
+  onEdit: () => void;
+  wallModules: ConfiguratorState["wallModules"];
+}) {
+  return (
+    <div className="mt-8 border-t border-hairline pt-6">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="text-body text-ink">Aufbau</h2>
+        <p className="text-body text-graphite">
+          {wallModules.length} Module · {ISLAND_LABEL[islandSize] ?? "Insel"}
+        </p>
+      </div>
+      <ol aria-label="Küchenzeile von links nach rechts" className="mt-4 flex gap-1">
+        {wallModules.map((moduleKey, index) => (
+          <li
+            className={`grid min-h-10 place-items-center border border-hairline text-sm text-graphite ${
+              moduleKey === "small" ? "flex-[0.3]" : moduleKey === "device" ? "flex-[0.64]" : "flex-[0.62]"
+            }`}
+            key={`${moduleKey}-${index}`}
+          >
+            {MODULE_SHORT_LABEL[moduleKey]}
+          </li>
+        ))}
+      </ol>
+      <button
+        className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 border border-ink bg-ink px-5 text-body leading-none text-paper transition-colors hover:bg-transparent hover:text-ink disabled:cursor-default disabled:border-hairline disabled:bg-transparent disabled:text-graphite"
+        disabled={editing}
+        onClick={onEdit}
+        type="button"
+      >
+        <Pencil aria-hidden="true" size={15} strokeWidth={1.5} />
+        {editing ? "Wird in der Szene bearbeitet" : "Module bearbeiten"}
+      </button>
+      <p className="mt-3 text-sm leading-6 text-graphite">
+        Schränke in der Szene verschieben, ergänzen oder tauschen. Der Richtpreis
+        folgt jeder Änderung; übernommen wird erst mit „Fertig“.
+      </p>
+    </div>
   );
 }
 
@@ -1096,7 +1238,7 @@ function CameraControlOverlay({
             animate={{ opacity: 1, y: 0 }}
             className={`grid divide-x divide-hairline border border-hairline bg-canvas ${
               showActions
-                ? "grid-cols-[repeat(3,minmax(0,1fr))_3.25rem_3.25rem] sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto]"
+                ? "grid-cols-5 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto_auto]"
                 : "grid-cols-3"
             }`}
             exit={{ opacity: 0, y: 8 }}
@@ -1116,24 +1258,20 @@ function CameraControlOverlay({
             {showActions && (
               <>
                 <button
-                  aria-label="Module bearbeiten"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 bg-graphite px-3 text-body leading-none text-paper transition-colors hover:bg-signature"
+                  className="inline-flex min-h-12 flex-col items-center justify-center gap-1 bg-graphite px-1 text-[0.7rem] leading-none text-paper transition-colors hover:bg-signature sm:min-h-11 sm:flex-row sm:gap-2 sm:px-3 sm:text-body"
                   onClick={onEdit}
-                  title="Module bearbeiten"
                   type="button"
                 >
                   <Pencil aria-hidden="true" size={15} strokeWidth={1.5} />
-                  <span className="hidden sm:inline">Bearbeiten</span>
+                  Bearbeiten
                 </button>
                 <button
-                  aria-label="AI Foto"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 bg-ink px-3 text-body leading-none text-paper transition-colors hover:bg-graphite"
+                  className="inline-flex min-h-12 flex-col items-center justify-center gap-1 bg-ink px-1 text-[0.7rem] leading-none text-paper transition-colors hover:bg-graphite sm:min-h-11 sm:flex-row sm:gap-2 sm:px-3 sm:text-body"
                   onClick={onPhoto}
-                  title="AI Foto"
                   type="button"
                 >
                   <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
-                  <span className="hidden sm:inline">Foto</span>
+                  Foto
                 </button>
               </>
             )}
@@ -1158,7 +1296,7 @@ function CameraViewButton({
   return (
     <button
       aria-pressed={active}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 px-3 text-body leading-none transition-colors ${
+      className={`inline-flex min-h-12 items-center justify-center gap-2 px-1 text-sm leading-none transition-colors sm:min-h-11 sm:px-3 sm:text-body ${
         active ? "text-ink" : "text-graphite hover:text-ink"
       }`}
       onClick={onClick}

@@ -9,6 +9,7 @@ import {
 import type { ConfiguratorQuote, LocaleCode } from "@/features/configurator/types";
 
 type PriceBreakdownProps = {
+  defaultOpen?: boolean;
   locale: LocaleCode;
   quote: ConfiguratorQuote;
 };
@@ -20,8 +21,8 @@ function formatQuantity(key: string, quantity: number) {
   return `${quantity} ×`;
 }
 
-export function PriceBreakdown({ locale, quote }: PriceBreakdownProps) {
-  const [open, setOpen] = useState(false);
+export function PriceBreakdown({ defaultOpen = false, locale, quote }: PriceBreakdownProps) {
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div>

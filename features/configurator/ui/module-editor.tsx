@@ -27,7 +27,7 @@ export type EditDraft = {
   islandSize: IslandSize;
 };
 
-const MODULE_SHORT_LABEL: Record<WallModuleKey, string> = {
+export const MODULE_SHORT_LABEL: Record<WallModuleKey, string> = {
   big: "H",
   device: "G",
   small: "30"
