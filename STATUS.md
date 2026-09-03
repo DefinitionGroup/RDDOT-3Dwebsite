@@ -43,6 +43,17 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   via `lib/use-media.ts`), `material-overlay.tsx` (live choice, cancel restores),
   `project-save-controls.tsx` (autosave for the life of the configurator; decision
   states as a card over the scene). Studio stage darkened in `kitchen-scene.tsx`.
+- Studio rendering pass (2026-09-03): temporal supersampling (`accumulation-pass.ts`,
+  `temporal-accumulation.tsx`: Halton-jittered camera, 32 frames blended while still; the
+  composer's multisampling is off because its depth resolve is refused on some GPUs),
+  an authored soft-studio HDRI and surface tiles from `scripts/generate-studio-assets.py`
+  (`public/hdri/studio-soft.hdr`, `public/textures/*`), AccumulativeShadows on a
+  MeshReflector floor, a rim light, AgX at exposure 1.12, world-scaled planar UVs so grain
+  runs across fronts, a quartz worktop. The cube-camera probe left the studio (it only saw
+  the black stage). Checked: a bevel pass is pointless — the prefabs already carry rounded
+  edges (max face angle 20.6°). Still open: the finish scans are 325–512 px; 2k tiles of
+  Nussbaum Memory and the two Fenix decors from the manufacturer would be the next visible
+  step, and a real studio HDRI (e.g. Poly Haven, CC0) could replace the authored one.
 - Drag-to-place and three islands (2026-09-03): in an Edit Session the Datenblatt's Aufbau
   section shows an element palette (`element-palette.tsx`); dragging a tile into the scene
   shows the real prefab as a red, glowing wireframe ghost at the line end the pointer is
