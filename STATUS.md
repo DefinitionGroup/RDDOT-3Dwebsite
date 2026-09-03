@@ -43,6 +43,14 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   via `lib/use-media.ts`), `material-overlay.tsx` (live choice, cancel restores),
   `project-save-controls.tsx` (autosave for the life of the configurator; decision
   states as a card over the scene). Studio stage darkened in `kitchen-scene.tsx`.
+- Drag-to-place and three islands (2026-09-03): in an Edit Session the Datenblatt's Aufbau
+  section shows an element palette (`element-palette.tsx`); dragging a tile into the scene
+  shows the real prefab as a red, glowing wireframe ghost at the line end the pointer is
+  nearer (probe in `kitchen-model.tsx`, `KitchenEditProps.drag`), letting go adds it there;
+  tapping adds on the right. Islands: Ohne (0), Insel (4), Große Insel (5 — one more front
+  unit; the back row `["90","60","60","90","60"]` stretches evenly to close on the right end
+  panel, `getIslandBackStretchM`, `ModulePlacement.scaleX`). Sizes 2 and 6 stay valid for
+  stored configurations but are no longer offered.
 - Photo first (2026-09-03): a signed-in person without a Project takes a photo straight
   away — the photo card asks for a Project name, `POST /api/projects` (now accepts `name`
   and returns version/updatedAt) creates it, the shell switches to it without a reload and

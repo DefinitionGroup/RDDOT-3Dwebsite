@@ -5,9 +5,11 @@ import {
   resolveSemanticRole,
   type SemanticSceneRole
 } from "@/features/configurator/modules/asset-manifest";
-import type { ThreeEvent } from "@react-three/fiber";
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
+  AdditiveBlending,
+  BackSide,
   Box3,
   BoxGeometry,
   BufferAttribute,
@@ -19,6 +21,7 @@ import {
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   Object3D,
+  Plane,
   RGBAFormat,
   RepeatWrapping,
   SRGBColorSpace,
@@ -37,17 +40,38 @@ import {
   DEFAULT_CONFIGURATOR_STATE,
   RDTD_KITCHEN_PRODUCT_V2
 } from "@/features/configurator/product-definition";
-import type { ConfiguratorState, FinishOption } from "@/features/configurator/types";
+import type {
+  ConfiguratorState,
+  FinishOption,
+  WallModuleKey
+} from "@/features/configurator/types";
 
 export type EditTarget = number | "island" | null;
+
+export type LineEnd = "start" | "end";
 
 export type KitchenEditProps = {
   selected: EditTarget;
   canAddStart: boolean;
   canAddEnd: boolean;
   onSelect: (target: EditTarget) => void;
-  onAddSlot: (end: "start" | "end") => void;
+  onAddSlot: (end: LineEnd) => void;
+  /** An element being dragged from the panel; `over` while the pointer is on the canvas. */
+  drag?: { key: WallModuleKey; over: boolean } | null;
+  /** The line end the dragged element would join, as last reported. */
+  dragTarget?: LineEnd | null;
+  onDragTarget?: (end: LineEnd | null) => void;
 };
+
+/** The prefab that stands in for a dragged element type. */
+const GHOST_PREFAB: Record<WallModuleKey, string> = {
+  big: "wall-big-L",
+  device: "wall-device-A",
+  small: "wall-small-1"
+};
+
+/** Local z of the wall line's ghost slots; the probe plane sits there. */
+const SLOT_Z = -5.02;
 
 type KitchenModelProps = {
   cabinetFinish: FinishOption;
@@ -96,6 +120,8 @@ export function KitchenModel({
   const editSelected = edit?.selected ?? null;
   const editCanAddStart = edit?.canAddStart ?? false;
   const editCanAddEnd = edit?.canAddEnd ?? false;
+  const dragKey = edit?.drag?.key ?? null;
+  const dragTarget = edit?.drag && edit.dragTarget ? edit.dragTarget : null;
 
   const texturesByUrl = useMemo(() => {
     const entries = FINISH_TEXTURE_URLS.map((url, index) => {
@@ -195,7 +221,7 @@ export function KitchenModel({
     });
 
     const editResources = edit
-      ? applyEditTreatment(preparedModel.scene, preparedModel.layout, edit)
+      ? applyEditTreatment(preparedModel.scene, preparedModel.layout, edit, gltf.scene)
       : null;
 
     return { ...preparedModel, materials, editResources };
@@ -211,8 +237,49 @@ export function KitchenModel({
     editActive,
     editSelected,
     editCanAddStart,
-    editCanAddEnd
+    editCanAddEnd,
+    dragKey,
+    dragTarget
   ]);
+
+  // While an element is dragged over the canvas, find which end of the line
+  // the pointer is nearer: a ray from the pointer meets the plane of the
+  // ghost slots, and its x is compared with the line's centre. Reported
+  // only when it changes, so the ghost rebuilds once per side, not per frame.
+  const getState = useThree((rootState) => rootState.get);
+  const reportedEnd = useRef<LineEnd | null>(null);
+  const probe = useMemo(
+    () => ({ plane: new Plane(), point: new Vector3(), local: new Vector3() }),
+    []
+  );
+  useFrame(() => {
+    const report = edit?.onDragTarget;
+    if (!report) return;
+    let next: LineEnd | null = null;
+    if (edit.drag?.over) {
+      const walls = model.layout.modules.filter((placement) =>
+        placement.prefab.startsWith("module__wall-")
+      );
+      if (walls.length > 0) {
+        const first = walls[0];
+        const last = walls[walls.length - 1];
+        const lastWidth =
+          getModuleManifest().find((entry) => `module__${entry.key}` === last.prefab)?.width ??
+          0.62;
+        const centreLocal = (first.x + last.x + lastWidth) / 2;
+        const centre = model.scene.localToWorld(probe.local.set(centreLocal, 0, SLOT_Z));
+        probe.plane.setFromNormalAndCoplanarPoint(probe.local.set(0, 0, 1), centre);
+        const { camera, pointer, raycaster } = getState();
+        raycaster.setFromCamera(pointer, camera);
+        const hit = raycaster.ray.intersectPlane(probe.plane, probe.point);
+        if (hit) next = hit.x < centre.x ? "start" : "end";
+      }
+    }
+    if (next !== reportedEnd.current) {
+      reportedEnd.current = next;
+      report(next);
+    }
+  });
 
   useLayoutEffect(() => {
     return () => {
@@ -361,6 +428,7 @@ function composeKitchenScene(sourceScene: Object3D, layout: KitchenLayout) {
   for (const placement of layout.modules) {
     const instance = requirePrefab(placement.prefab).clone(true);
     instance.position.x = placement.x;
+    if (placement.scaleX) instance.scale.x = placement.scaleX;
     if (placement.prefab.startsWith("module__wall-")) {
       instance.userData.wallIndex = wallIndex;
       wallIndex += 1;
@@ -477,7 +545,8 @@ function prepareKitchenModel(sourceScene: Object3D, state: ConfiguratorState) {
 function applyEditTreatment(
   scene: Group,
   layout: KitchenLayout,
-  edit: KitchenEditProps
+  edit: KitchenEditProps,
+  sourceScene: Object3D
 ) {
   const disposables: Array<{ dispose: () => void }> = [];
   const own = <T extends { dispose: () => void }>(resource: T): T => {
@@ -559,7 +628,7 @@ function applyEditTreatment(
       (entry) => `module__${entry.key}` === last.prefab
     );
     const slotWidth = 0.3;
-    const slotSpecs: Array<{ end: "start" | "end"; x: number; enabled: boolean }> = [
+    const slotSpecs: Array<{ end: LineEnd; x: number; enabled: boolean }> = [
       { end: "start", x: first.x - slotWidth - 0.02, enabled: edit.canAddStart },
       {
         end: "end",
@@ -567,8 +636,78 @@ function applyEditTreatment(
         enabled: edit.canAddEnd
       }
     ];
+
+    // A dragged element shows at its end as a red, glowing wireframe ghost
+    // of the real prefab, in place of the generic slot there.
+    const ghostEnd = edit.drag && edit.dragTarget ? edit.dragTarget : null;
+    if (edit.drag && ghostEnd) {
+      const prefabName = `module__${GHOST_PREFAB[edit.drag.key]}`;
+      const source = sourceScene.children.find((child) => child.name === prefabName);
+      if (source) {
+        const ghostWire = own(
+          new MeshBasicMaterial({
+            color: "#ff2a3c",
+            depthTest: false,
+            opacity: 0.95,
+            toneMapped: false,
+            transparent: true,
+            wireframe: true
+          })
+        );
+        const ghostFill = own(
+          new MeshBasicMaterial({
+            color: "#e2001a",
+            depthWrite: false,
+            opacity: 0.14,
+            toneMapped: false,
+            transparent: true
+          })
+        );
+        // Colour beyond 1.0 pushes the shell past the bloom threshold: the glow.
+        const ghostGlow = own(
+          new MeshBasicMaterial({
+            blending: AdditiveBlending,
+            color: new Color("#e2001a").multiplyScalar(2.6),
+            depthWrite: false,
+            opacity: 0.22,
+            side: BackSide,
+            toneMapped: false,
+            transparent: true
+          })
+        );
+        const ghostWidth =
+          getModuleManifest().find((entry) => `module__${entry.key}` === prefabName)?.width ??
+          slotWidth;
+        const ghost = source.clone(true);
+        ghost.name = "drag-ghost";
+        ghost.position.x =
+          ghostEnd === "start"
+            ? first.x - ghostWidth - 0.02
+            : last.x + (lastEntry?.width ?? 0.62) + 0.02;
+        ghost.traverse((object) => {
+          if (!(object instanceof Mesh)) return;
+          object.userData.holoOverlay = true;
+          object.raycast = () => undefined;
+          object.castShadow = false;
+          object.receiveShadow = false;
+          object.material = ghostFill;
+          const wire = new Mesh(object.geometry, ghostWire);
+          wire.userData.holoOverlay = true;
+          wire.raycast = () => undefined;
+          wire.renderOrder = 2;
+          object.add(wire);
+          const glow = new Mesh(object.geometry, ghostGlow);
+          glow.userData.holoOverlay = true;
+          glow.raycast = () => undefined;
+          glow.scale.setScalar(1.035);
+          object.add(glow);
+        });
+        scene.add(ghost);
+      }
+    }
+
     for (const spec of slotSpecs) {
-      if (!spec.enabled) continue;
+      if (!spec.enabled || spec.end === ghostEnd) continue;
       const geometry = own(new BoxGeometry(slotWidth, 2.47, 0.58));
       const slot = new Mesh(geometry, slotFill);
       slot.name = "ghost-slot";

@@ -210,7 +210,7 @@ export const stages: Stage[] = [
     id: "layout",
     label: "Aufbau",
     title: "Zeile und Insel setzen",
-    body: "Module in der Zeile, die Insel in drei Größen. Der Richtpreis folgt jeder Änderung."
+    body: "Module in die Zeile ziehen, die Insel ohne, normal oder groß. Der Richtpreis folgt jeder Änderung."
   },
   {
     id: "review",
@@ -230,7 +230,7 @@ export const steps: Step[] = [
   {
     label: "Aufbau",
     title: "Zeile und Insel setzen",
-    body: "Schränke verschieben, ergänzen oder tauschen; die Insel in drei Größen. Der Richtpreis folgt jeder Änderung."
+    body: "Schränke in die Szene ziehen, verschieben oder tauschen; die Insel ohne, normal oder groß. Der Richtpreis folgt jeder Änderung."
   },
   {
     label: "Prüfen",

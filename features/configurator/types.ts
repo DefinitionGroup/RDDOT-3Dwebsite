@@ -27,8 +27,12 @@ export type PriceBookV2 = Omit<PriceBook, "basePriceCents">;
 /** Customer-selectable wall module types on the 0.30m slot grid. */
 export type WallModuleKey = "big" | "device" | "small";
 
-/** Island size as front-unit count; only sizes both rows can tile cleanly. */
-export type IslandSize = 0 | 2 | 4 | 6;
+/**
+ * Island size as front-unit count. 2, 4 and 6 tile cleanly in both rows;
+ * 5 — the large island offered in the configurator — carries one more front
+ * unit than the standard one, and its back row stretches to match.
+ */
+export type IslandSize = 0 | 2 | 4 | 5 | 6;
 
 export type WallModuleCatalogEntry = {
   key: WallModuleKey;

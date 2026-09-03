@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpRight, ChevronRight, Pencil } from "lucide-react";
-import type { ReactNode } from "react";
+import type { PointerEvent, ReactNode } from "react";
 import { Accordion, AccordionItem } from "@/components/design-system/accordion";
 import { Label } from "@/components/design-system/label";
 import { Pill, RoundButton } from "@/components/design-system/pill";
@@ -14,8 +14,10 @@ import type {
   ConfiguratorQuote,
   ConfiguratorState,
   FinishOption,
-  LocaleCode
+  LocaleCode,
+  WallModuleKey
 } from "@/features/configurator/types";
+import { ElementPalette } from "@/features/configurator/ui/element-palette";
 import {
   FINISH_MATERIAL_LABEL,
   finishSurfaceStyle
@@ -28,7 +30,8 @@ export type DatasheetSection = "material" | "layout" | "pricing" | "project";
 export const ISLAND_LABEL: Record<number, string> = {
   0: "Ohne",
   2: "Klein",
-  4: "Standard",
+  4: "Insel",
+  5: "Große Insel",
   6: "Groß"
 };
 
@@ -61,6 +64,12 @@ type DatasheetPanelProps = {
     onOpenMaterials: () => void;
     editing: boolean;
     onEdit: () => void;
+    /** While editing: the elements that can be dragged into the scene. */
+    elements: {
+      canAdd: (key: WallModuleKey) => boolean;
+      onAdd: (key: WallModuleKey) => void;
+      onDragStart: (key: WallModuleKey, event: PointerEvent<HTMLButtonElement>) => void;
+    };
     project: { title: string; summary: string; content: ReactNode };
   };
 };
@@ -333,19 +342,35 @@ export function DatasheetPanel({
               summary={state.wallModules.map((key) => MODULE_SHORT_LABEL[key]).join(" ")}
               title="Aufbau"
             >
-              <p className="m-0 text-caption text-graphite">
-                Schränke in der Szene verschieben, ergänzen oder tauschen. Der Richtpreis folgt
-                jeder Änderung; übernommen wird erst mit „Fertig“.
-              </p>
-              <Pill
-                className="mt-4 w-full"
-                disabled={sections.editing}
-                leading={<Pencil aria-hidden="true" size={14} strokeWidth={1.5} />}
-                onClick={sections.onEdit}
-                variant="secondary"
-              >
-                {sections.editing ? "Wird in der Szene bearbeitet" : "Module bearbeiten"}
-              </Pill>
+              {sections.editing ? (
+                <>
+                  <ElementPalette
+                    canAdd={sections.elements.canAdd}
+                    locale={locale}
+                    onAdd={sections.elements.onAdd}
+                    onDragStart={sections.elements.onDragStart}
+                  />
+                  <p className="m-0 mt-4 text-caption text-graphite">
+                    Ziehen zum Umsortieren, antippen für Typ oder Entfernen — in der Leiste
+                    unter der Szene. Übernommen wird erst mit „Fertig“.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="m-0 text-caption text-graphite">
+                    Schränke in der Szene verschieben, ergänzen oder tauschen. Der Richtpreis
+                    folgt jeder Änderung; übernommen wird erst mit „Fertig“.
+                  </p>
+                  <Pill
+                    className="mt-4 w-full"
+                    leading={<Pencil aria-hidden="true" size={14} strokeWidth={1.5} />}
+                    onClick={sections.onEdit}
+                    variant="secondary"
+                  >
+                    Module bearbeiten
+                  </Pill>
+                </>
+              )}
             </AccordionItem>
 
             <AccordionItem

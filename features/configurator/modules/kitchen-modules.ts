@@ -1,5 +1,8 @@
 import { KITCHEN_ASSET_MANIFEST } from "@/features/configurator/modules/asset-manifest";
-import { getIslandBackComposition } from "@/features/configurator/product-definition";
+import {
+  getIslandBackComposition,
+  getIslandBackStretchM
+} from "@/features/configurator/product-definition";
 import type { ConfiguratorState, WallModuleKey } from "@/features/configurator/types";
 
 export type ModuleType =
@@ -32,6 +35,8 @@ export type ModulePlacement = {
   key: string;
   prefab: string;
   x: number;
+  /** X scale from the prefab's left edge; only the large island's back row carries one. */
+  scaleX?: number;
 };
 
 // Placements come from the validated Asset Manifest (ADR 0009), never from
@@ -250,14 +255,24 @@ export function computeKitchenLayout(state: ConfiguratorState): KitchenLayout {
       frontCursor += moduleEntry(prefab).width;
     });
 
+    // The large island's back row is nominally short of its five fronts;
+    // its units stretch evenly so the row closes on the right end panel.
+    // Sizes that tile cleanly keep their as-authored widths untouched.
+    const backManifestWidth = backPrefabs.reduce(
+      (sum, prefab) => sum + moduleEntry(prefab).width,
+      0
+    );
+    const backScale =
+      getIslandBackStretchM(state.islandSize) > 0 ? frontWidth / backManifestWidth : 1;
     let backCursor = islandLeft + endWidth;
     backPrefabs.forEach((prefab, index) => {
       modules.push({
         key: `${prefab}#${index}`,
         prefab: `module__${prefab}`,
-        x: backCursor
+        x: backCursor,
+        ...(backScale !== 1 ? { scaleX: backScale } : {})
       });
-      backCursor += moduleEntry(prefab).width;
+      backCursor += moduleEntry(prefab).width * backScale;
     });
 
     // Island continuous elements. The as-authored worktop carries sink

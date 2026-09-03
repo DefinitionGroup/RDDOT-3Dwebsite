@@ -34,11 +34,11 @@ export const MODULE_SHORT_LABEL: Record<WallModuleKey, string> = {
   small: "30"
 };
 
-const ISLAND_OPTIONS: Array<{ size: IslandSize; label: string }> = [
+/** The three islands on offer; 2 and 6 stay valid for stored configurations. */
+export const ISLAND_OPTIONS: Array<{ size: IslandSize; label: string }> = [
   { size: 0, label: "Ohne" },
-  { size: 2, label: "Klein" },
-  { size: 4, label: "Standard" },
-  { size: 6, label: "Groß" }
+  { size: 4, label: "Insel" },
+  { size: 5, label: "Große Insel" }
 ];
 
 export function lineWidthM(modules: WallModuleKey[]) {
@@ -50,6 +50,15 @@ export function lineWidthM(modules: WallModuleKey[]) {
 
 function deviceCount(modules: WallModuleKey[]) {
   return modules.filter((key) => key === "device").length;
+}
+
+/** Whether one more module of this type fits the line and its per-type cap. */
+export function canAddModuleOfType(modules: WallModuleKey[], key: WallModuleKey) {
+  const entry = findWallCatalogEntry(RDTD_KITCHEN_PRODUCT_V2, key);
+  if (entry.maxCount !== undefined && modules.filter((item) => item === key).length >= entry.maxCount) {
+    return false;
+  }
+  return lineWidthM(modules) + entry.widthM <= RDTD_KITCHEN_PRODUCT_V2.wallConstraints.maxLineWidthM;
 }
 
 export function canAddModule(modules: WallModuleKey[]) {

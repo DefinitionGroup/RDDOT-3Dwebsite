@@ -1,16 +1,17 @@
 "use client";
 
 import { useProgress } from "@react-three/drei";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useMotionValue } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState, useTransition } from "react";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import { preloadAppartement2Model } from "@/features/configurator/engine/appartement2-model";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import type {
   EditTarget,
-  KitchenEditProps
+  KitchenEditProps,
+  LineEnd
 } from "@/features/configurator/engine/kitchen-model";
 import { PHOTO_PRESETS } from "@/features/configurator/photo/photo-presets";
 import { PhotoPopover, type PhotoStatus } from "@/features/configurator/photo/photo-popover";
@@ -32,7 +33,8 @@ import type {
   CameraView,
   ConfiguratorState,
   LocaleCode,
-  VisualizationMode
+  VisualizationMode,
+  WallModuleKey
 } from "@/features/configurator/types";
 import {
   CameraSegments,
@@ -52,9 +54,11 @@ import {
 import { MaterialOverlay } from "@/features/configurator/ui/material-overlay";
 import {
   canAddModule,
+  canAddModuleOfType,
   SceneEditBar,
   type EditDraft
 } from "@/features/configurator/ui/module-editor";
+import { findWallCatalogEntry, RDTD_KITCHEN_PRODUCT_V2 as PRODUCT } from "@/features/configurator/product-definition";
 import {
   describeAutosave,
   ProjectAutosave
@@ -176,6 +180,13 @@ export function ConfiguratorShell({
   const [autosaveStatus, setAutosaveStatus] = useState<ProjectAutosaveStatus | null>(null);
   const { captureRef, capturePhoto } = useSceneCapture();
   const isDesktop = useIsDesktop();
+  // An element dragged from the Datenblatt into the scene.
+  const [drag, setDrag] = useState<{ key: WallModuleKey } | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [dragTarget, setDragTarget] = useState<LineEnd | null>(null);
+  const dragTargetRef = useRef<LineEnd | null>(null);
+  const chipX = useMotionValue(0);
+  const chipY = useMotionValue(0);
 
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, config.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, config.frontColorKey);
@@ -294,6 +305,85 @@ export function ConfiguratorShell({
       selected: null
     });
   }
+
+  /** Adds one element of a type at a line end, respecting width and per-type caps. */
+  function addModuleAt(key: WallModuleKey, end: LineEnd) {
+    setEditSession((session) => {
+      if (!session || !canAddModuleOfType(session.draft.wallModules, key)) return session;
+      const wallModules =
+        end === "start"
+          ? ([key, ...session.draft.wallModules] as EditDraft["wallModules"])
+          : ([...session.draft.wallModules, key] as EditDraft["wallModules"]);
+      return {
+        draft: { ...session.draft, wallModules },
+        selected: end === "start" ? 0 : wallModules.length - 1
+      };
+    });
+  }
+
+  function startElementDrag(key: WallModuleKey, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!editSession) return;
+    chipX.set(event.clientX + 14);
+    chipY.set(event.clientY + 14);
+    dragTargetRef.current = null;
+    setDragTarget(null);
+    setDragOver(false);
+    setDrag({ key });
+  }
+
+  // The drag lives on the window: the pointer is free to leave the tile,
+  // cross the panel and reach the canvas, where the scene's probe reports
+  // which end the element would join. Letting go there adds it.
+  useEffect(() => {
+    if (!drag) return;
+    const { key } = drag;
+    let over = false;
+    const { userSelect } = document.body.style;
+    document.body.style.userSelect = "none";
+
+    const finish = (end: LineEnd | null) => {
+      if (end) addModuleAt(key, end);
+      setDrag(null);
+      setDragOver(false);
+      setDragTarget(null);
+      dragTargetRef.current = null;
+    };
+    const fallbackEnd = (clientX: number): LineEnd => {
+      const canvas = document.querySelector("main canvas");
+      const rect = canvas?.getBoundingClientRect();
+      return rect && clientX < rect.left + rect.width / 2 ? "start" : "end";
+    };
+    const onMove = (event: PointerEvent) => {
+      chipX.set(event.clientX + 14);
+      chipY.set(event.clientY + 14);
+      const nowOver =
+        document.elementFromPoint(event.clientX, event.clientY) instanceof HTMLCanvasElement;
+      if (nowOver !== over) {
+        over = nowOver;
+        setDragOver(nowOver);
+      }
+    };
+    const onUp = (event: PointerEvent) => {
+      finish(over ? dragTargetRef.current ?? fallbackEnd(event.clientX) : null);
+    };
+    const onCancel = () => finish(null);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") finish(null);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("keydown", onKey);
+      document.body.style.userSelect = userSelect;
+    };
+    // addModuleAt only touches state setters; the drag key is captured above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag]);
 
   function commitEditSession() {
     if (!editSession) return;
@@ -632,6 +722,12 @@ export function ConfiguratorShell({
           selected: editSession.selected,
           canAddStart: canAddModule(editSession.draft.wallModules),
           canAddEnd: canAddModule(editSession.draft.wallModules),
+          drag: drag ? { key: drag.key, over: dragOver } : null,
+          dragTarget,
+          onDragTarget: (end) => {
+            dragTargetRef.current = end;
+            setDragTarget(end);
+          },
           onSelect: (target) =>
             setEditSession((session) =>
               session ? { ...session, selected: target } : session
@@ -775,6 +871,12 @@ export function ConfiguratorShell({
         onOpenMaterials: openMaterials,
         editing,
         onEdit: enterEditSession,
+        elements: {
+          canAdd: (key: WallModuleKey) =>
+            editSession ? canAddModuleOfType(editSession.draft.wallModules, key) : false,
+          onAdd: (key: WallModuleKey) => addModuleAt(key, "end"),
+          onDragStart: startElementDrag
+        },
         project: projectSection
       };
 
@@ -1014,6 +1116,22 @@ export function ConfiguratorShell({
         >
           {panel("sheet")}
         </div>
+      )}
+
+      {/* The dragged element follows the pointer as a frosted chip. */}
+      {drag && (
+        <motion.div
+          aria-hidden="true"
+          className="glass pointer-events-none fixed left-0 top-0 z-[70] inline-flex h-9 items-center gap-2 rounded-pill px-3.5 text-caption font-label text-ink"
+          style={{ x: chipX, y: chipY }}
+        >
+          <span className="size-1.5 rounded-pill bg-signature" />
+          {dragTarget === "start"
+            ? "Links anfügen"
+            : dragTarget === "end"
+              ? "Rechts anfügen"
+              : getLocalizedLabel(findWallCatalogEntry(PRODUCT, drag.key).label, locale)}
+        </motion.div>
       )}
 
       <p aria-live="polite" className="sr-only">

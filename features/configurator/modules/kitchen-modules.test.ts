@@ -101,6 +101,37 @@ describe("kitchen module manifest", () => {
     expect(layout.islandWidth).toBeCloseTo(2 * 0.75 + 2 * 0.019, 1);
   });
 
+  it("stretches the large island's back row across its five front units", () => {
+    const layout = computeKitchenLayout({ ...DEFAULT_CONFIGURATOR_STATE, islandSize: 5 });
+    const manifest = getModuleManifest();
+    const widthOf = (prefab: string) =>
+      manifest.find((entry) => entry.prefab === prefab)?.width ?? NaN;
+    const fronts = layout.modules.filter((placement) => placement.prefab.includes("island-front"));
+    const backs = layout.modules.filter((placement) => placement.prefab.includes("island-back"));
+    expect(fronts).toHaveLength(5);
+    expect(backs).toHaveLength(5);
+
+    const frontWidth = fronts.reduce((sum, placement) => sum + widthOf(placement.prefab), 0);
+    const backWidth = backs.reduce(
+      (sum, placement) => sum + widthOf(placement.prefab) * (placement.scaleX ?? 1),
+      0
+    );
+    expect(backWidth).toBeCloseTo(frontWidth, 6);
+    expect(backs.every((placement) => (placement.scaleX ?? 1) > 1 && (placement.scaleX ?? 1) < 1.1)).toBe(true);
+
+    // The right end panel moves out with the fronts and the worktop follows.
+    const endL = layout.modules.find((placement) => placement.key === "island-end-L");
+    const endR = layout.modules.find((placement) => placement.key === "island-end-R");
+    expect((endR?.x ?? 0) - (endL?.x ?? 0)).toBeCloseTo(frontWidth + 0.019, 6);
+    const worktop = layout.generated.find((box) => box.key === "island-countertop");
+    expect(worktop).toBeDefined();
+    expect((worktop?.max[0] ?? 0) - (worktop?.min[0] ?? 0)).toBeCloseTo(layout.islandWidth, 6);
+
+    // The standard island keeps its as-authored back row untouched.
+    const standard = computeKitchenLayout(DEFAULT_CONFIGURATOR_STATE);
+    expect(standard.modules.every((placement) => placement.scaleX === undefined)).toBe(true);
+  });
+
   it("places no island prefabs when the island is removed", () => {
     const layout = computeKitchenLayout({
       ...DEFAULT_CONFIGURATOR_STATE,

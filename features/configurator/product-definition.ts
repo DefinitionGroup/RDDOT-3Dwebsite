@@ -192,7 +192,7 @@ export const RDTD_KITCHEN_PRODUCT_V2: ConfiguratorProductDefinitionV2 = {
       priceCents: 19600,
       finishWeight: 0.7
     },
-    sizes: [0, 2, 4, 6],
+    sizes: [0, 2, 4, 5, 6],
     worktopLabel: { de: "Arbeitsplatte", en: "Worktop", es: "Encimera" },
     worktopPricePerMeterCents: 18000,
     worktopOverhangM: 0.1
@@ -260,7 +260,12 @@ export function findWallCatalogEntry(
   return entry;
 }
 
-/** Back-row tiling for each legal island size (front width = back width). */
+/**
+ * Back-row tiling for each legal island size. For 2, 4 and 6 the back row
+ * equals the front width exactly; for 5 it comes up short by the amount
+ * `getIslandBackStretchM` reports, and the scene stretches the back units
+ * evenly to close it.
+ */
 export function getIslandBackComposition(size: IslandSize): Array<"90" | "60"> {
   switch (size) {
     case 0:
@@ -269,9 +274,20 @@ export function getIslandBackComposition(size: IslandSize): Array<"90" | "60"> {
       return ["90", "60"];
     case 4:
       return ["90", "60", "60", "90"];
+    case 5:
+      return ["90", "60", "60", "90", "60"];
     case 6:
       return ["90", "90", "90", "90", "90"];
   }
+}
+
+/** How far the nominal back row falls short of the front row, in meters. */
+export function getIslandBackStretchM(size: IslandSize) {
+  const back = getIslandBackComposition(size).reduce(
+    (sum, unit) => sum + (unit === "90" ? 0.9 : 0.6),
+    0
+  );
+  return Math.max(0, size * 0.75 - back);
 }
 
 export function getWorktopLengthM(

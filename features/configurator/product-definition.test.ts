@@ -3,6 +3,7 @@ import {
   DEFAULT_CONFIGURATOR_STATE,
   getConfiguratorQuote,
   getIslandBackComposition,
+  getIslandBackStretchM,
   getWorktopLengthM,
   normalizeConfiguratorState,
   RDTD_KITCHEN_PRODUCT,
@@ -70,14 +71,17 @@ describe("v2 sum-of-parts quote", () => {
     ).toBe(false);
   });
 
-  it("keeps every legal island size tileable by the back row", () => {
+  it("keeps every legal island size covered by its back row", () => {
     for (const size of RDTD_KITCHEN_PRODUCT_V2.island.sizes) {
       const back = getIslandBackComposition(size);
       const backWidth = back.reduce(
         (sum, unit) => sum + (unit === "90" ? 0.9 : 0.6),
         0
       );
-      expect(backWidth).toBeCloseTo(size * 0.75, 10);
+      // The back row tiles the front exactly, or falls short by at most one
+      // small stretch that the scene spreads over its units (the large island).
+      expect(backWidth + getIslandBackStretchM(size)).toBeCloseTo(size * 0.75, 10);
+      expect(getIslandBackStretchM(size)).toBeLessThanOrEqual(0.15);
       if (size > 0) {
         expect(getWorktopLengthM(RDTD_KITCHEN_PRODUCT_V2, size)).toBeCloseTo(
           size * 0.75 + 0.1,
