@@ -79,8 +79,11 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   by the persistence contract test). Gates: `pnpm test:db` 62/62 (+1 skipped).
 - Account, sign-in, Anfrage, shared-link states restyled with `components/design-system/field.tsx`
   (the one underline input) and the pill/card primitives.
-- Homepage sections (`components/sections`): `SignatureHero` (the rotpunkt film, muted loop,
-  fade from black, still for reduced motion, "Den Film ansehen" goes fullscreen; headline
+- Homepage sections (`components/sections`): `SignatureHero` (the supplied hero film, a
+  15-second silent loop transcoded with ffmpeg into `public/video/hero-1080.mp4` (8 MB,
+  ≥768 px) and `hero-720.mp4` (2 MB, phones), poster `public/images/hero-poster.jpg` from
+  the same film; fade from black, still for reduced motion, "Den Film ansehen" goes
+  fullscreen; headline
   "Küchen, auf den Punkt." rescued from the first site), `Manifest` ("Eine
   Küche ist kein Möbel…" rescued; the one scroll-linked sequence: words light up on scroll),
   `SignaturePromises` (each promise opens a detail card that morphs out of its "+" trigger

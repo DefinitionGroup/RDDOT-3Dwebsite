@@ -316,8 +316,15 @@ export const footerColumns: FooterColumn[] = [
   }
 ];
 
-/** The rotpunkt film: close-up hands, 1920 × 1080, a silent loop. */
+/**
+ * The hero film: a 15-second silent loop, served in two sizes from
+ * public/video. Transcoded from the supplied master with ffmpeg (H.264,
+ * faststart, no audio); the poster is a frame from the same film.
+ */
 export const heroFilm = {
-  src: "https://www.rotpunktkuechen.de/fileadmin/01_Startseite/Video/6740233_Closeup_Hands_1920x1080_loop_3.5mbs.mp4",
-  poster: "/images/signature-hero.jpg"
+  sources: [
+    { src: "/video/hero-1080.mp4", media: "(min-width: 768px)" },
+    { src: "/video/hero-720.mp4", media: undefined }
+  ],
+  poster: "/images/hero-poster.jpg"
 };

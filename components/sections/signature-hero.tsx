@@ -72,8 +72,11 @@ export function SignatureHero() {
         poster={heroFilm.poster}
         preload="metadata"
         ref={videoRef}
-        src={heroFilm.src}
-      />
+      >
+        {heroFilm.sources.map((source) => (
+          <source key={source.src} media={source.media} src={source.src} type="video/mp4" />
+        ))}
+      </video>
       <div aria-hidden="true" className="hero-shade absolute inset-0" />
       <motion.div
         animate={{ opacity: ready ? 0 : 1 }}
