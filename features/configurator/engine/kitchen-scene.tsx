@@ -420,18 +420,18 @@ function AtmosphericStage({ compact, floorTexture, pathTracing }: AtmosphericSta
             blur={[320, 90]}
             bumpMap={floorTexture}
             bumpScale={0.003}
-            color="#090909"
+            color="#040404"
             depthScale={1.1}
             depthToBlurRatioBias={0.25}
-            envMapIntensity={0.18}
+            envMapIntensity={0.12}
             maxDepthThreshold={1.6}
             metalness={0.05}
             minDepthThreshold={0.5}
-            mirror={compact ? 0.25 : 0.38}
+            mirror={compact ? 0.28 : 0.45}
             mixBlur={1}
             mixStrength={compact ? 0.6 : 0.85}
             resolution={compact ? 512 : 1024}
-            roughness={0.8}
+            roughness={0.86}
           />
         )}
       </mesh>
