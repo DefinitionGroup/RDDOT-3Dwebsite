@@ -1,6 +1,6 @@
 "use client";
 
-import { CubeCamera, useGLTF } from "@react-three/drei";
+import { AccumulativeShadows, CubeCamera, RandomizedLight, useGLTF } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
 import {
   Mesh,
@@ -12,6 +12,7 @@ import {
   type Texture
 } from "three";
 import { KitchenModel } from "@/features/configurator/engine/kitchen-model";
+import { useWoodFloorMaps, WOOD_FLOOR_TILE_M } from "@/features/configurator/engine/wood-floor";
 import type { ConfiguratorState, FinishOption } from "@/features/configurator/types";
 
 type Appartement2ModelProps = {
@@ -43,6 +44,15 @@ const REFLECTION_PROBE_Y = 1.25;
 // room dividers standing across the room center.
 const REMOVED_OBJECTS = new Set(["Cube021", "Cube022", "Cube.021", "Cube.022"]);
 
+// The room shell (walls, ceiling and the baked floor) must not cast onto the
+// new floor: its ceiling would shade the whole room.
+const SHELL_OBJECTS = new Set(["Cube.017", "Cube017", "face"]);
+
+// The room's footprint (measured on the baked mesh): x −4.4…2.09, z −5.94…5.11.
+const FLOOR_Y = -1.369;
+const FLOOR_CENTER: [number, number, number] = [-1.16, FLOOR_Y + 0.003, -0.42];
+const FLOOR_SIZE: [number, number] = [6.42, 10.98];
+
 export function Appartement2Model({
   cabinetFinish,
   frontFinish,
@@ -66,6 +76,35 @@ export function Appartement2Model({
   return (
     <group>
       <primitive object={environment.scene} />
+      <WoodFloor pathTracing={pathTracing} />
+      {!pathTracing && (
+        // Soft accumulated shadows of the kitchen and the furniture on the
+        // new floor; rebuilt when the line or island changes.
+        <AccumulativeShadows
+          alphaTest={0.68}
+          color="#1a1410"
+          colorBlend={1.4}
+          frames={100}
+          key={`${state?.wallModules.join(",") ?? ""}|${state?.islandSize ?? ""}`}
+          opacity={0.9}
+          position={[FLOOR_CENTER[0], FLOOR_Y + 0.006, FLOOR_CENTER[2]]}
+          scale={13}
+          temporal
+        >
+          {/* Six lights at most: each carries a shadow map that every lit material
+              samples, and a front with map, normal, roughness and environment
+              already holds five of the sixteen units a GPU guarantees. */}
+          <RandomizedLight
+            amount={6}
+            ambient={0.62}
+            bias={0.001}
+            intensity={Math.PI}
+            position={[1.5, 6, 2.5]}
+            radius={7}
+            size={14}
+          />
+        </AccumulativeShadows>
+      )}
       <group position={KITCHEN_POSITION} rotation={KITCHEN_ROTATION}>
         {reflectionProbe ? (
           <CubeCamera
@@ -94,6 +133,33 @@ export function Appartement2Model({
         )}
       </group>
     </group>
+  );
+}
+
+/**
+ * The baked floor stays under a fresh, lit wooden floor the shadows can land
+ * on. Tiles run along the room's long side.
+ */
+function WoodFloor({ pathTracing }: { pathTracing: boolean }) {
+  const wood = useWoodFloorMaps(
+    FLOOR_SIZE[0] / WOOD_FLOOR_TILE_M,
+    FLOOR_SIZE[1] / WOOD_FLOOR_TILE_M
+  );
+  return (
+    <mesh position={FLOOR_CENTER} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+      <planeGeometry args={FLOOR_SIZE} />
+      <meshPhysicalMaterial
+        clearcoat={pathTracing ? 0.35 : 0.25}
+        clearcoatRoughness={0.3}
+        color="#ffffff"
+        envMapIntensity={0.7}
+        map={wood.map}
+        metalness={0}
+        normalMap={wood.normalMap}
+        roughness={1}
+        roughnessMap={wood.roughnessMap}
+      />
+    </mesh>
   );
 }
 
@@ -136,8 +202,8 @@ function prepareEnvironment(sourceScene: Object3D, pathTracing: boolean) {
       ownedMaterials.push(converted);
     }
     object.material = converted;
-    object.castShadow = false;
-    // Receives only the kitchen's contact shadow via the light rig.
+    // Furniture casts onto the wooden floor; the shell would shade the room.
+    object.castShadow = !SHELL_OBJECTS.has(object.name);
     object.receiveShadow = true;
   });
 

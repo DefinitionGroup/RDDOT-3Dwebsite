@@ -46,10 +46,16 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Studio rendering pass (2026-09-03): temporal supersampling (`accumulation-pass.ts`,
   `temporal-accumulation.tsx`: Halton-jittered camera, 32 frames blended while still; the
   composer's multisampling is off because its depth resolve is refused on some GPUs),
-  Poly Haven's "Studio Small 09" HDRI (CC0, fetched 2026-09-03, downsampled to 1k as
-  `public/hdri/studio-small-09.hdr`; an authored fallback stays in
-  `scripts/generate-studio-assets.py --with-hdri`), surface tiles from the same script
-  (`public/textures/*`), AccumulativeShadows on a
+  Poly Haven's "Brown Photostudio 02" HDRI (CC0, supplied 2026-09-03, downsampled to 1k as
+  `public/hdri/brown-photostudio-02.hdr`) lighting both the studio and the kitchen in the
+  Appartement (the baked `appartement2_pano.hdr` is retired; the bake script can regenerate
+  it); Poly Haven's "Wooden Floor 01" (CC0, 2k diffuse/normal, 1k roughness in
+  `public/textures/wood-floor-*.jpg`) as the studio's reflective floor and as a lit floor
+  plane over the Appartement's baked one, with AccumulativeShadows in both scenes (the
+  furniture casts too). Constraint learned the hard way: every RandomizedLight adds a shadow
+  sampler to every lit material; a front with map, normal, roughness and environment holds
+  five of the sixteen guaranteed units, so keep `amount` at six. Surface tiles from
+  `scripts/generate-studio-assets.py` (`public/textures/*`), AccumulativeShadows on a
   MeshReflector floor, a rim light, AgX at exposure 1.12, world-scaled planar UVs so grain
   runs across fronts, a quartz worktop. The cube-camera probe left the studio (it only saw
   the black stage; the void wall is unlit). Finish scans wrap mirrored so their tile edges

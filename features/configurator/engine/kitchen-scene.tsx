@@ -21,16 +21,8 @@ import {
   SMAAPreset,
   ToneMappingMode
 } from "postprocessing";
-import { Suspense, useEffect, useMemo, useRef, type ElementRef } from "react";
-import {
-  DataTexture,
-  LinearFilter,
-  LinearMipmapLinearFilter,
-  RectAreaLight,
-  RGBAFormat,
-  SRGBColorSpace,
-  type Texture
-} from "three";
+import { Suspense, useEffect, useRef, type ElementRef } from "react";
+import { RectAreaLight } from "three";
 import type {
   CameraView,
   ConfiguratorState,
@@ -45,6 +37,14 @@ import {
 } from "@/features/configurator/engine/kitchen-model";
 import { getStudioCameraPresets } from "@/features/configurator/modules/asset-manifest";
 import { TemporalAccumulation } from "@/features/configurator/engine/temporal-accumulation";
+import { useWoodFloorMaps, WOOD_FLOOR_TILE_M } from "@/features/configurator/engine/wood-floor";
+
+/**
+ * Poly Haven "Brown Photostudio 02" (CC0), downsampled to 1k. Lights both
+ * the studio and the kitchen inside the Appartement.
+ */
+const STUDIO_HDRI = "/hdri/brown-photostudio-02.hdr";
+const STUDIO_FLOOR_SIZE = 40;
 
 type KitchenSceneProps = {
   cameraView: CameraView;
@@ -85,7 +85,6 @@ export function KitchenScene({
   const controlsRef = useRef<ElementRef<typeof CameraControls> | null>(null);
   const width = useThree((rootState) => rootState.size.width);
 
-  const floorTexture = useMemo(() => createTexturedFloorTexture(), []);
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, state.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, state.frontColorKey);
   const isCompactViewport = width < 720;
@@ -119,11 +118,6 @@ export function KitchenScene({
     return () => retries.forEach((timer) => window.clearTimeout(timer));
   }, [cameraView, isApartment, isCompactViewport, pathTracing]);
 
-  useEffect(() => {
-    return () => {
-      floorTexture.dispose();
-    };
-  }, [floorTexture]);
 
   return (
     <>
@@ -143,10 +137,7 @@ export function KitchenScene({
         <StudioLightRig pathTracing={pathTracing} />
       )}
       {isApartment ? (
-        <Environment
-          environmentIntensity={pathTracing ? 1.1 : 1.2}
-          files="/hdri/appartement2_pano.hdr"
-        />
+        <Environment environmentIntensity={pathTracing ? 1.0 : 0.9} files={STUDIO_HDRI} />
       ) : (
         <StudioEnvironment pathTracing={pathTracing} />
       )}
@@ -167,7 +158,6 @@ export function KitchenScene({
           cabinetFinish={cabinetColor}
           compact={isCompactViewport}
           edit={edit}
-          floorTexture={floorTexture}
           frontFinish={frontColor}
           pathTracing={pathTracing}
           state={state}
@@ -178,24 +168,24 @@ export function KitchenScene({
         // Soft, converged ground shadows: many jittered lights averaged over
         // frames, rebuilt whenever the line or island changes.
         <AccumulativeShadows
-          alphaTest={0.72}
-          color="#000000"
-          colorBlend={1}
-          frames={isCompactViewport ? 40 : 100}
+          alphaTest={0.68}
+          color="#1a1410"
+          colorBlend={1.4}
+          frames={isCompactViewport ? 40 : 120}
           key={layoutKey}
-          opacity={0.85}
+          opacity={0.92}
           position={[0, STUDIO_FLOOR_Y + 0.004, 0]}
-          scale={16}
+          scale={18}
           temporal
         >
           <RandomizedLight
-            amount={8}
-            ambient={0.55}
+            amount={6}
+            ambient={0.62}
             bias={0.001}
             intensity={Math.PI}
-            position={[4.5, 6.5, 5]}
-            radius={5}
-            size={12}
+            position={[4, 7, 4.5]}
+            radius={7}
+            size={14}
           />
         </AccumulativeShadows>
       )}
@@ -265,18 +255,12 @@ function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
   );
 }
 
-/**
- * The studio's light: Poly Haven's "Studio Small 09" (CC0), a photographed
- * softbox studio, downsampled to 1k for the web. Lacquer and veneer reflect
- * something real and continuous; the stage itself stays black to the eye.
- */
-const STUDIO_HDRI = "/hdri/studio-small-09.hdr";
-
+/** The studio: the photographed studio's light, a black stage to the eye. */
 function StudioEnvironment({ pathTracing }: { pathTracing: boolean }) {
   return (
     <>
       <color args={["#000000"]} attach="background" />
-      <Environment environmentIntensity={pathTracing ? 1.0 : 0.85} files={STUDIO_HDRI} />
+      <Environment environmentIntensity={pathTracing ? 1.0 : 0.9} files={STUDIO_HDRI} />
     </>
   );
 }
@@ -284,10 +268,10 @@ function StudioEnvironment({ pathTracing }: { pathTracing: boolean }) {
 function Appartement2LightRig({ pathTracing }: { pathTracing: boolean }) {
   return (
     <>
-      <hemisphereLight args={["#e8ecef", "#6d6862", 0.6]} />
-      <ambientLight color="#d9dce0" intensity={0.22} />
+      <hemisphereLight args={["#e8ecef", "#6d6862", 0.45]} />
+      <ambientLight color="#d9dce0" intensity={0.16} />
       <directionalLight
-        castShadow
+        castShadow={pathTracing}
         color="#fff2e2"
         intensity={pathTracing ? 1.8 : 1.55}
         position={[0.8, 4.6, -8.5]}
@@ -310,7 +294,6 @@ type StudioKitchenProps = {
   cabinetFinish: FinishOption;
   compact: boolean;
   edit?: KitchenEditProps;
-  floorTexture: Texture;
   frontFinish: FinishOption;
   pathTracing: boolean;
   state: ConfiguratorState;
@@ -325,14 +308,13 @@ function StudioKitchen({
   cabinetFinish,
   compact,
   edit,
-  floorTexture,
   frontFinish,
   pathTracing,
   state
 }: StudioKitchenProps) {
   return (
     <group position={[0, STUDIO_STAGE_Y, 0]}>
-      <AtmosphericStage compact={compact} floorTexture={floorTexture} pathTracing={pathTracing} />
+      <AtmosphericStage compact={compact} pathTracing={pathTracing} />
       <group position={[0, STUDIO_FLOOR_OFFSET, 0]}>
         <KitchenModel
           cabinetFinish={cabinetFinish}
@@ -385,16 +367,17 @@ function CinematicEffects({
 
 type AtmosphericStageProps = {
   compact: boolean;
-  floorTexture: Texture;
   pathTracing: boolean;
 };
 
 /**
- * A dark floor that faintly mirrors the kitchen — blurred, fading with
- * distance — is what makes a black stage read as a room rather than a
- * void. The path tracer gets a plain physical floor it can integrate.
+ * A varnished wooden floor that faintly mirrors the kitchen — blurred,
+ * fading with distance — under a black stage. The path tracer gets a plain
+ * physical version of the same floor it can integrate.
  */
-function AtmosphericStage({ compact, floorTexture, pathTracing }: AtmosphericStageProps) {
+function AtmosphericStage({ compact, pathTracing }: AtmosphericStageProps) {
+  const repeat = STUDIO_FLOOR_SIZE / WOOD_FLOOR_TILE_M;
+  const wood = useWoodFloorMaps(repeat, repeat);
   return (
     <>
       <mesh
@@ -402,35 +385,36 @@ function AtmosphericStage({ compact, floorTexture, pathTracing }: AtmosphericSta
         receiveShadow
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <planeGeometry args={[40, 40]} />
+        <planeGeometry args={[STUDIO_FLOOR_SIZE, STUDIO_FLOOR_SIZE]} />
         {pathTracing ? (
           <meshPhysicalMaterial
-            bumpMap={floorTexture}
-            bumpScale={0.004}
-            clearcoat={0.18}
-            clearcoatRoughness={0.35}
-            color="#121212"
-            map={floorTexture}
+            clearcoat={0.35}
+            clearcoatRoughness={0.3}
+            color="#ffffff"
+            map={wood.map}
             metalness={0}
-            roughness={0.5}
+            normalMap={wood.normalMap}
+            roughness={1}
+            roughnessMap={wood.roughnessMap}
           />
         ) : (
           <MeshReflectorMaterial
-            blur={[320, 90]}
-            bumpMap={floorTexture}
-            bumpScale={0.003}
-            color="#000000"
-            depthScale={1.1}
-            depthToBlurRatioBias={0.25}
-            envMapIntensity={0.08}
-            maxDepthThreshold={1.6}
-            metalness={0.05}
-            minDepthThreshold={0.5}
-            mirror={compact ? 0.28 : 0.45}
-            mixBlur={1}
-            mixStrength={compact ? 0.6 : 0.85}
+            blur={[420, 140]}
+            color="#ffffff"
+            depthScale={1.2}
+            depthToBlurRatioBias={0.3}
+            envMapIntensity={0.6}
+            map={wood.map}
+            maxDepthThreshold={1.8}
+            metalness={0}
+            minDepthThreshold={0.6}
+            mirror={compact ? 0.18 : 0.28}
+            mixBlur={1.2}
+            mixStrength={compact ? 0.45 : 0.6}
+            normalMap={wood.normalMap}
             resolution={compact ? 512 : 1024}
-            roughness={0.86}
+            roughness={1}
+            roughnessMap={wood.roughnessMap}
           />
         )}
       </mesh>
@@ -441,79 +425,4 @@ function AtmosphericStage({ compact, floorTexture, pathTracing }: AtmosphericSta
       </mesh>
     </>
   );
-}
-
-function createTexturedFloorTexture() {
-  const size = 512;
-  const data = new Uint8Array(size * size * 4);
-
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const offset = (y * size + x) * 4;
-      const broadVariation = fractalNoise(x, y) * 18 - 9;
-      const mineralCloud = Math.sin(x * 0.018 + y * 0.011 + broadVariation * 0.08) * 2.4;
-      const fineGrain = (hashNoise(x, y) - 0.5) * 2.2;
-      const base = 148 + broadVariation + mineralCloud + fineGrain;
-
-      data[offset] = clampByte(base + 5);
-      data[offset + 1] = clampByte(base + 3);
-      data[offset + 2] = clampByte(base);
-      data[offset + 3] = 255;
-    }
-  }
-
-  const texture = new DataTexture(data, size, size, RGBAFormat);
-  texture.anisotropy = 8;
-  texture.colorSpace = SRGBColorSpace;
-  texture.generateMipmaps = true;
-  texture.magFilter = LinearFilter;
-  texture.minFilter = LinearMipmapLinearFilter;
-  texture.needsUpdate = true;
-
-  return texture;
-}
-
-function clampByte(value: number) {
-  return Math.max(0, Math.min(255, Math.round(value)));
-}
-
-function fractalNoise(x: number, y: number) {
-  let amplitude = 0.5;
-  let frequency = 1 / 96;
-  let total = 0;
-  let weight = 0;
-
-  for (let octave = 0; octave < 4; octave += 1) {
-    total += smoothNoise(x * frequency, y * frequency) * amplitude;
-    weight += amplitude;
-    amplitude *= 0.5;
-    frequency *= 2;
-  }
-
-  return total / weight;
-}
-
-function smoothNoise(x: number, y: number) {
-  const x0 = Math.floor(x);
-  const y0 = Math.floor(y);
-  const tx = smoothStep(x - x0);
-  const ty = smoothStep(y - y0);
-  const top = mix(hashNoise(x0, y0), hashNoise(x0 + 1, y0), tx);
-  const bottom = mix(hashNoise(x0, y0 + 1), hashNoise(x0 + 1, y0 + 1), tx);
-
-  return mix(top, bottom, ty);
-}
-
-function hashNoise(x: number, y: number) {
-  const value = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
-
-  return value - Math.floor(value);
-}
-
-function smoothStep(value: number) {
-  return value * value * (3 - 2 * value);
-}
-
-function mix(start: number, end: number, amount: number) {
-  return start + (end - start) * amount;
 }
