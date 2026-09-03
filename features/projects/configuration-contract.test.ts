@@ -4,6 +4,7 @@ import {
   hashConfiguration,
   parseConfiguration
 } from "@/features/projects/configuration-contract";
+import { RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
 
 const V1_CONFIGURATION = {
   schemaVersion: 1,
@@ -38,6 +39,19 @@ describe("configuration contract", () => {
     expect(() =>
       parseConfiguration({ ...V2_CONFIGURATION, islandSize: 3 })
     ).toThrow();
+  });
+
+  it("accepts every island size the Product Definition offers, and nothing else", () => {
+    // The contract guards persistence; if the definition grows a size the
+    // contract does not know, autosave fails on the server. Keep them equal.
+    for (const size of RDTD_KITCHEN_PRODUCT_V2.island.sizes) {
+      expect(parseConfiguration({ ...V2_CONFIGURATION, islandSize: size })).toMatchObject({
+        islandSize: size
+      });
+    }
+    for (const size of [1, 3, 7, 8]) {
+      expect(() => parseConfiguration({ ...V2_CONFIGURATION, islandSize: size })).toThrow();
+    }
   });
 
   it("keeps v1 hashes byte-compatible with the stored dedup hashes", () => {

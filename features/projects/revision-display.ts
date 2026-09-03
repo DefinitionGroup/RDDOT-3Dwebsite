@@ -46,8 +46,10 @@ function describeIslandSize(islandSize: ConfiguratorStateV2["islandSize"]) {
       return "Insel klein";
     case 4:
       return "Insel standard";
-    case 6:
+    case 5:
       return "Insel groß";
+    case 6:
+      return "Insel extra groß";
   }
 }
 

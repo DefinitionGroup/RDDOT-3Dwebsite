@@ -19,7 +19,15 @@ const configuratorStateV2Schema = z
     cabinetColorKey: z.string().min(1),
     frontColorKey: z.string().min(1),
     wallModules: z.array(z.enum(["big", "device", "small"])).min(1).max(24),
-    islandSize: z.union([z.literal(0), z.literal(2), z.literal(4), z.literal(6)])
+    // Every size the Product Definition knows, including the large island (5)
+    // whose back row stretches; the contract test keeps the two lists equal.
+    islandSize: z.union([
+      z.literal(0),
+      z.literal(2),
+      z.literal(4),
+      z.literal(5),
+      z.literal(6)
+    ])
   })
   .strict();
 
