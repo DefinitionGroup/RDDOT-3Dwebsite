@@ -684,8 +684,13 @@ function applyEditTreatment(
           ghostEnd === "start"
             ? first.x - ghostWidth - 0.02
             : last.x + (lastEntry?.width ?? 0.62) + 0.02;
+        // Collect first, decorate after: traverse walks children live, and a
+        // wire added mid-walk would be visited and decorated in turn, forever.
+        const ghostMeshes: Mesh[] = [];
         ghost.traverse((object) => {
-          if (!(object instanceof Mesh)) return;
+          if (object instanceof Mesh) ghostMeshes.push(object);
+        });
+        for (const object of ghostMeshes) {
           object.userData.holoOverlay = true;
           object.raycast = () => undefined;
           object.castShadow = false;
@@ -701,7 +706,7 @@ function applyEditTreatment(
           glow.raycast = () => undefined;
           glow.scale.setScalar(1.035);
           object.add(glow);
-        });
+        }
         scene.add(ghost);
       }
     }
