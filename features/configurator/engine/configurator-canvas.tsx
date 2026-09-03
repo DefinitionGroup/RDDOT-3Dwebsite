@@ -115,7 +115,9 @@ function SceneCanvas({
         antialias: true,
         powerPreference: "high-performance",
         // Keeps the composited frame readable for the photo capture.
-        preserveDrawingBuffer: true
+        preserveDrawingBuffer: true,
+        // Read by the tone-mapping effect when the composer initialises.
+        toneMappingExposure: 1.12
       }}
       shadows="variance"
     >

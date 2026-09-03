@@ -1,12 +1,12 @@
 "use client";
 
 import {
+  AccumulativeShadows,
   CameraControls,
-  ContactShadows,
-  CubeCamera,
   Environment,
-  Lightformer,
-  PerspectiveCamera
+  MeshReflectorMaterial,
+  PerspectiveCamera,
+  RandomizedLight
 } from "@react-three/drei";
 import {
   Bloom,
@@ -44,6 +44,7 @@ import {
   type KitchenEditProps
 } from "@/features/configurator/engine/kitchen-model";
 import { getStudioCameraPresets } from "@/features/configurator/modules/asset-manifest";
+import { TemporalAccumulation } from "@/features/configurator/engine/temporal-accumulation";
 
 type KitchenSceneProps = {
   cameraView: CameraView;
@@ -59,7 +60,6 @@ type CameraPreset = [number, number, number, number, number, number];
 const STUDIO_STAGE_Y = -0.7;
 const STUDIO_FLOOR_OFFSET = -0.04;
 const STUDIO_FLOOR_Y = STUDIO_STAGE_Y + STUDIO_FLOOR_OFFSET;
-const STUDIO_REFLECTION_PROBE_Y = 1.15;
 
 // Floor level in the baked scene is y = -1.369; eye heights are relative to it.
 const apartment2CameraPresets: Record<CameraView, CameraPreset> = {
@@ -91,6 +91,14 @@ export function KitchenScene({
   const isCompactViewport = width < 720;
   const isApartment = visualization === "apartment";
   const reflectionResolution = isCompactViewport ? 128 : 256;
+  const layoutKey = `${state.wallModules.join(",")}|${state.islandSize}`;
+  const accumulationKey = [
+    layoutKey,
+    state.cabinetColorKey,
+    state.frontColorKey,
+    visualization,
+    edit ? `edit:${String(edit.selected)}:${edit.drag?.key ?? ""}:${edit.dragTarget ?? ""}` : ""
+  ].join("|");
 
   useEffect(() => {
     const presets = isApartment
@@ -140,7 +148,7 @@ export function KitchenScene({
           files="/hdri/appartement2_pano.hdr"
         />
       ) : (
-        <StudioEnvironment compact={isCompactViewport} pathTracing={pathTracing} />
+        <StudioEnvironment pathTracing={pathTracing} />
       )}
 
       {isApartment ? (
@@ -157,27 +165,43 @@ export function KitchenScene({
       ) : (
         <StudioKitchen
           cabinetFinish={cabinetColor}
+          compact={isCompactViewport}
           edit={edit}
           floorTexture={floorTexture}
           frontFinish={frontColor}
-          reflectionProbe={!pathTracing}
-          reflectionResolution={reflectionResolution}
+          pathTracing={pathTracing}
           state={state}
         />
       )}
 
       {!pathTracing && !isApartment && (
-        <ContactShadows
-          blur={3.2}
+        // Soft, converged ground shadows: many jittered lights averaged over
+        // frames, rebuilt whenever the line or island changes.
+        <AccumulativeShadows
+          alphaTest={0.72}
           color="#000000"
-          far={4.2}
-          opacity={0.55}
-          position={[0, STUDIO_FLOOR_Y + 0.002, 0]}
-          scale={9}
-        />
+          colorBlend={1}
+          frames={isCompactViewport ? 40 : 100}
+          key={layoutKey}
+          opacity={0.85}
+          position={[0, STUDIO_FLOOR_Y + 0.004, 0]}
+          scale={16}
+          temporal
+        >
+          <RandomizedLight
+            amount={8}
+            ambient={0.55}
+            bias={0.001}
+            intensity={Math.PI}
+            position={[4.5, 6.5, 5]}
+            radius={5}
+            size={12}
+          />
+        </AccumulativeShadows>
       )}
       {!pathTracing && (
         <CinematicEffects
+          accumulationKey={accumulationKey}
           apartment={isApartment}
           compact={isCompactViewport}
         />
@@ -209,23 +233,22 @@ function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
 
   return (
     <>
-      <hemisphereLight args={["#fff4e6", "#000000", 0.14]} />
-      <ambientLight intensity={0.025} />
+      <hemisphereLight args={["#fff4e6", "#000000", 0.06]} />
       <directionalLight
-        castShadow
+        castShadow={pathTracing}
         color="#fff4e6"
-        intensity={pathTracing ? 2.2 : 1.15}
+        intensity={pathTracing ? 2.2 : 0.75}
         position={[4.8, 6.8, 4.6]}
         shadow-bias={-0.0002}
-        shadow-blurSamples={24}
-        shadow-mapSize={[3072, 3072]}
+        shadow-mapSize={[2048, 2048]}
         shadow-normalBias={0.025}
-        shadow-radius={7}
       />
+      {/* Rim from behind and above: separates the line from the void. */}
+      <directionalLight color="#cfe0ff" intensity={pathTracing ? 1.4 : 0.9} position={[-2.5, 6, -9]} />
       <rectAreaLight
         color="#fff1df"
         height={4.2}
-        intensity={pathTracing ? 16 : 5.2}
+        intensity={pathTracing ? 16 : 3.2}
         position={[4.3, 4.6, 4.8]}
         ref={keyRef}
         width={3.4}
@@ -233,7 +256,7 @@ function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
       <rectAreaLight
         color="#bcd8dc"
         height={3.4}
-        intensity={pathTracing ? 8 : 2.4}
+        intensity={pathTracing ? 8 : 1.4}
         position={[-4.4, 2.7, 1.1]}
         ref={edgeRef}
         width={1.4}
@@ -242,52 +265,19 @@ function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
   );
 }
 
-function StudioEnvironment({
-  compact,
-  pathTracing
-}: {
-  compact: boolean;
-  pathTracing: boolean;
-}) {
+/**
+ * The studio's light: an authored soft-studio HDRI (scripts/generate-studio-assets.py)
+ * — three softboxes and a rim panel over a graded cyclorama — so lacquer
+ * reflects something continuous. The stage stays black to the eye.
+ */
+function StudioEnvironment({ pathTracing }: { pathTracing: boolean }) {
   return (
     <>
       <color args={["#000000"]} attach="background" />
       <Environment
-        environmentIntensity={pathTracing ? 1.15 : 0.82}
-        resolution={compact ? 256 : 512}
-      >
-        <Lightformer
-          color="#fff6e8"
-          form="rect"
-          intensity={4.5}
-          position={[0, 5, -4]}
-          rotation={[Math.PI / 2, 0, 0]}
-          scale={[8, 3, 1]}
-        />
-        <Lightformer
-          color="#d8eef0"
-          form="rect"
-          intensity={3.2}
-          position={[-4.5, 1.8, 1.5]}
-          rotation={[0, Math.PI / 2, 0]}
-          scale={[4, 2.2, 1]}
-        />
-        <Lightformer
-          color="#fff0dc"
-          form="rect"
-          intensity={2.8}
-          position={[4.5, 2.5, 2.4]}
-          rotation={[0, -Math.PI / 2.5, 0]}
-          scale={[2.4, 5, 1]}
-        />
-        <Lightformer
-          color="#3a3a3a"
-          form="ring"
-          intensity={0.8}
-          position={[0, 1, -5]}
-          scale={8}
-        />
-      </Environment>
+        environmentIntensity={pathTracing ? 1.15 : 1.0}
+        files="/hdri/studio-soft.hdr"
+      />
     </>
   );
 }
@@ -319,69 +309,68 @@ function Appartement2LightRig({ pathTracing }: { pathTracing: boolean }) {
 
 type StudioKitchenProps = {
   cabinetFinish: FinishOption;
+  compact: boolean;
   edit?: KitchenEditProps;
   floorTexture: Texture;
   frontFinish: FinishOption;
-  reflectionProbe: boolean;
-  reflectionResolution: number;
+  pathTracing: boolean;
   state: ConfiguratorState;
 };
 
+/**
+ * The kitchen reflects the studio HDRI through the scene environment; the
+ * former cube-camera probe only ever saw the black stage, which is why the
+ * fronts read flat. The reflection probe remains for the Appartement.
+ */
 function StudioKitchen({
   cabinetFinish,
+  compact,
   edit,
   floorTexture,
   frontFinish,
-  reflectionProbe,
-  reflectionResolution,
+  pathTracing,
   state
 }: StudioKitchenProps) {
   return (
     <group position={[0, STUDIO_STAGE_Y, 0]}>
-      <AtmosphericStage floorTexture={floorTexture} />
+      <AtmosphericStage compact={compact} floorTexture={floorTexture} pathTracing={pathTracing} />
       <group position={[0, STUDIO_FLOOR_OFFSET, 0]}>
-        {reflectionProbe ? (
-          <CubeCamera
-            frames={1}
-            position={[0, STUDIO_REFLECTION_PROBE_Y, 0]}
-            resolution={reflectionResolution}
-          >
-            {(environmentMap) => (
-              // CubeCamera moves its children with the probe; cancel that lift for the model.
-              <group position={[0, -STUDIO_REFLECTION_PROBE_Y, 0]}>
-                <KitchenModel
-                  cabinetFinish={cabinetFinish}
-                  edit={edit}
-                  environmentMap={environmentMap}
-                  frontFinish={frontFinish}
-                  state={state}
-                />
-              </group>
-            )}
-          </CubeCamera>
-        ) : (
-          <KitchenModel
-            cabinetFinish={cabinetFinish}
-            edit={edit}
-            frontFinish={frontFinish}
-            state={state}
-          />
-        )}
+        <KitchenModel
+          cabinetFinish={cabinetFinish}
+          edit={edit}
+          frontFinish={frontFinish}
+          state={state}
+        />
       </group>
     </group>
   );
 }
 
-function CinematicEffects({ apartment, compact }: { apartment: boolean; compact: boolean }) {
+/**
+ * The effects chain. No multisampling: its depth resolve is refused on
+ * some GPUs and silently leaves SMAA alone. Instead the frame is
+ * supersampled over time — ambient occlusion first so its noise converges
+ * too — then bloom, AgX tone mapping and SMAA for the frames in motion.
+ */
+function CinematicEffects({
+  accumulationKey,
+  apartment,
+  compact
+}: {
+  accumulationKey: string;
+  apartment: boolean;
+  compact: boolean;
+}) {
   return (
-    <EffectComposer multisampling={compact ? 0 : 4}>
+    <EffectComposer multisampling={0}>
       <N8AO
         aoRadius={apartment ? 0.4 : 0.28}
         color={apartment ? "#4d4945" : "#000000"}
         distanceFalloff={0.82}
-        intensity={apartment ? 1.18 : 0.92}
+        intensity={apartment ? 1.18 : 0.8}
         quality={compact ? "medium" : "high"}
       />
+      <TemporalAccumulation resetKey={accumulationKey} samples={compact ? 16 : 32} />
       <Bloom
         blendFunction={BlendFunction.ADD}
         intensity={0.035}
@@ -389,17 +378,24 @@ function CinematicEffects({ apartment, compact }: { apartment: boolean; compact:
         luminanceThreshold={1.02}
         mipmapBlur
       />
-      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      <ToneMapping mode={ToneMappingMode.AGX} />
       <SMAA preset={SMAAPreset.HIGH} />
     </EffectComposer>
   );
 }
 
 type AtmosphericStageProps = {
+  compact: boolean;
   floorTexture: Texture;
+  pathTracing: boolean;
 };
 
-function AtmosphericStage({ floorTexture }: AtmosphericStageProps) {
+/**
+ * A dark floor that faintly mirrors the kitchen — blurred, fading with
+ * distance — is what makes a black stage read as a room rather than a
+ * void. The path tracer gets a plain physical floor it can integrate.
+ */
+function AtmosphericStage({ compact, floorTexture, pathTracing }: AtmosphericStageProps) {
   return (
     <>
       <mesh
@@ -408,16 +404,36 @@ function AtmosphericStage({ floorTexture }: AtmosphericStageProps) {
         rotation={[-Math.PI / 2, 0, 0]}
       >
         <planeGeometry args={[40, 40]} />
-        <meshPhysicalMaterial
-          bumpMap={floorTexture}
-          bumpScale={0.004}
-          clearcoat={0.18}
-          clearcoatRoughness={0.35}
-          color="#121212"
-          map={floorTexture}
-          metalness={0}
-          roughness={0.5}
-        />
+        {pathTracing ? (
+          <meshPhysicalMaterial
+            bumpMap={floorTexture}
+            bumpScale={0.004}
+            clearcoat={0.18}
+            clearcoatRoughness={0.35}
+            color="#121212"
+            map={floorTexture}
+            metalness={0}
+            roughness={0.5}
+          />
+        ) : (
+          <MeshReflectorMaterial
+            blur={[320, 90]}
+            bumpMap={floorTexture}
+            bumpScale={0.003}
+            color="#090909"
+            depthScale={1.1}
+            depthToBlurRatioBias={0.25}
+            envMapIntensity={0.18}
+            maxDepthThreshold={1.6}
+            metalness={0.05}
+            minDepthThreshold={0.5}
+            mirror={compact ? 0.25 : 0.38}
+            mixBlur={1}
+            mixStrength={compact ? 0.6 : 0.85}
+            resolution={compact ? 512 : 1024}
+            roughness={0.8}
+          />
+        )}
       </mesh>
       <mesh position={[0, 3.46, -3.35]} receiveShadow>
         <planeGeometry args={[40, 7]} />

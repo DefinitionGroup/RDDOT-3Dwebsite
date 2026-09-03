@@ -14,15 +14,13 @@ import {
   BoxGeometry,
   BufferAttribute,
   Color,
-  DataTexture,
   Group,
-  LinearFilter,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   Object3D,
   Plane,
-  RGBAFormat,
   RepeatWrapping,
   SRGBColorSpace,
   Vector2,
@@ -89,10 +87,18 @@ const ALL_FINISHES = [
   ...RDTD_KITCHEN_PRODUCT_V2.frontColors
 ];
 
-// Albedo maps are sRGB photos; normal/roughness maps stay linear.
-const SRGB_TEXTURE_URLS = new Set(
-  ALL_FINISHES.flatMap((finish) => (finish.textureUrl ? [finish.textureUrl] : []))
-);
+/** Authored surface tiles (scripts/generate-studio-assets.py). */
+const SURFACE_TEXTURES = {
+  micro: "/textures/micro-surface.png",
+  quartz: "/textures/worktop-quartz.jpg",
+  quartzRoughness: "/textures/worktop-quartz-rough.png"
+} as const;
+
+// Albedo maps are sRGB photos; normal/roughness/bump maps stay linear.
+const SRGB_TEXTURE_URLS = new Set([
+  ...ALL_FINISHES.flatMap((finish) => (finish.textureUrl ? [finish.textureUrl] : [])),
+  SURFACE_TEXTURES.quartz
+]);
 
 const FINISH_TEXTURE_URLS = [
   ...new Set(
@@ -101,8 +107,20 @@ const FINISH_TEXTURE_URLS = [
         (url): url is string => Boolean(url)
       )
     )
-  )
+  ),
+  ...Object.values(SURFACE_TEXTURES)
 ];
+
+/**
+ * Physical size of one texture tile, in the composed scene's units (the
+ * model is scaled by MODEL_SCALE afterwards). Fronts and cabinets share
+ * one projection so grain runs across neighbouring panels; the worktop
+ * tiles larger so its veins read as stone, not print.
+ */
+const TILE_M = {
+  finish: { u: 0.6 / MODEL_SCALE, v: 0.78 / MODEL_SCALE },
+  countertop: { u: 1.4 / MODEL_SCALE, v: 1.4 / MODEL_SCALE }
+} as const;
 
 export function KitchenModel({
   cabinetFinish,
@@ -113,7 +131,6 @@ export function KitchenModel({
 }: KitchenModelProps) {
   const gltf = useGLTF(KITCHEN_MODEL_PATH);
   const finishTextures = useTexture(FINISH_TEXTURE_URLS);
-  const microSurfaceTexture = useMemo(() => createMicroSurfaceTexture(), []);
 
   const layoutKey = `${state.wallModules.join(",")}|${state.islandSize}`;
   const editActive = Boolean(edit);
@@ -132,6 +149,8 @@ export function KitchenModel({
       texture.wrapS = RepeatWrapping;
       texture.wrapT = RepeatWrapping;
       texture.anisotropy = 8;
+      // The micro-surface tiles twice per finish tile: about 30 cm of grain.
+      if (url === SURFACE_TEXTURES.micro) texture.repeat.set(2, 2);
       texture.needsUpdate = true;
       return [url, texture] as const;
     });
@@ -142,12 +161,12 @@ export function KitchenModel({
   useEffect(() => {
     return () => {
       texturesByUrl.forEach((texture) => texture.dispose());
-      microSurfaceTexture.dispose();
     };
-  }, [microSurfaceTexture, texturesByUrl]);
+  }, [texturesByUrl]);
 
   const model = useMemo(() => {
     const preparedModel = prepareKitchenModel(gltf.scene, state);
+    const microSurfaceTexture = texturesByUrl.get(SURFACE_TEXTURES.micro) ?? null;
     const materials = {
       cabinet: createFinishMaterial(
         cabinetFinish,
@@ -181,15 +200,17 @@ export function KitchenModel({
       }),
       countertop: new MeshPhysicalMaterial({
         bumpMap: microSurfaceTexture,
-        bumpScale: 0.0018,
-        clearcoat: 0.16,
-        clearcoatRoughness: 0.32,
-        color: "#b8b3aa",
+        bumpScale: 0.0012,
+        clearcoat: 0.22,
+        clearcoatRoughness: 0.28,
+        color: "#ffffff",
         envMap: environmentMap ?? null,
-        envMapIntensity: 1.05,
+        envMapIntensity: 1.0,
+        map: texturesByUrl.get(SURFACE_TEXTURES.quartz) ?? null,
         metalness: 0,
-        roughness: 0.36,
-        specularIntensity: 0.72
+        roughness: 1,
+        roughnessMap: texturesByUrl.get(SURFACE_TEXTURES.quartzRoughness) ?? null,
+        specularIntensity: 0.7
       }),
       plinth: new MeshPhysicalMaterial({
         color: "#24221f",
@@ -232,7 +253,6 @@ export function KitchenModel({
     frontFinish,
     gltf.scene,
     layoutKey,
-    microSurfaceTexture,
     texturesByUrl,
     editActive,
     editSelected,
@@ -330,7 +350,7 @@ function createFinishMaterial(
   texturesByUrl: Map<string, Texture>,
   surface: "cabinet" | "front",
   environmentMap: Texture | undefined,
-  microSurfaceTexture: Texture
+  microSurfaceTexture: Texture | null
 ) {
   const map = finish.textureUrl ? texturesByUrl.get(finish.textureUrl) ?? null : null;
   const normalMap = finish.normalMapUrl
@@ -522,7 +542,11 @@ function prepareKitchenModel(sourceScene: Object3D, state: ConfiguratorState) {
     // Model nodes resolve through the Asset Manifest; an unmapped node throws
     // rather than being guessed from its shape (ADR 0009).
     object.userData.configuratorRole ??= resolveSemanticRole(object.name);
-    ensurePlanarUVs(object.geometry);
+    applyWorldPlanarUVs(
+      object.geometry,
+      object.matrixWorld,
+      object.userData.configuratorRole === "countertop" ? TILE_M.countertop : TILE_M.finish
+    );
     normalizeMaterialGroups(object.geometry);
   });
 
@@ -747,42 +771,49 @@ function normalizeMaterialGroups(geometry: BufferGeometry) {
 }
 
 /**
- * The source GLB ships without texture coordinates, so finish textures would
- * sample a single texel. Projects each mesh onto its two largest local axes,
- * mapping the full 0..1 texture across every panel face.
+ * The source GLB ships without texture coordinates. Each mesh is projected
+ * onto its two largest world axes, in meters divided by the tile size, so
+ * every panel shows grain at the same physical scale and the pattern runs
+ * on across neighbouring fronts instead of restarting at each door. Runs
+ * on the composed instance, hence the world matrix.
  */
-function ensurePlanarUVs(geometry: BufferGeometry) {
-  if (geometry.getAttribute("uv")) {
-    return;
-  }
+const uvPoint = new Vector3();
 
-  geometry.computeBoundingBox();
-  const bounds = geometry.boundingBox;
+function applyWorldPlanarUVs(
+  geometry: BufferGeometry,
+  matrixWorld: Matrix4,
+  tile: { u: number; v: number }
+) {
   const position = geometry.getAttribute("position");
+  if (!position) return;
 
-  if (!bounds || !position) {
-    return;
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  const world = new Float32Array(position.count * 3);
+  for (let index = 0; index < position.count; index += 1) {
+    uvPoint.fromBufferAttribute(position, index).applyMatrix4(matrixWorld);
+    world[index * 3] = uvPoint.x;
+    world[index * 3 + 1] = uvPoint.y;
+    world[index * 3 + 2] = uvPoint.z;
+    for (let axis = 0; axis < 3; axis += 1) {
+      const value = uvPoint.getComponent(axis);
+      if (value < min[axis]) min[axis] = value;
+      if (value > max[axis]) max[axis] = value;
+    }
   }
 
-  const min = [bounds.min.x, bounds.min.y, bounds.min.z];
-  const size = [
-    bounds.max.x - bounds.min.x,
-    bounds.max.y - bounds.min.y,
-    bounds.max.z - bounds.min.z
-  ];
+  const size = [max[0] - min[0], max[1] - min[1], max[2] - min[2]];
   const normalAxis = size.indexOf(Math.min(...size));
   const remaining = [0, 1, 2].filter((axis) => axis !== normalAxis);
+  // Grain runs vertically wherever a panel stands; on lying panels along x.
   const vAxis = remaining.includes(1) ? 1 : remaining[1];
   const uAxis = remaining.find((axis) => axis !== vAxis) ?? remaining[0];
 
   const uv = new Float32Array(position.count * 2);
-
   for (let index = 0; index < position.count; index += 1) {
-    const point = [position.getX(index), position.getY(index), position.getZ(index)];
-    uv[index * 2] = (point[uAxis] - min[uAxis]) / (size[uAxis] || 1);
-    uv[index * 2 + 1] = (point[vAxis] - min[vAxis]) / (size[vAxis] || 1);
+    uv[index * 2] = world[index * 3 + uAxis] / tile.u;
+    uv[index * 2 + 1] = world[index * 3 + vAxis] / tile.v;
   }
-
   geometry.setAttribute("uv", new BufferAttribute(uv, 2));
 }
 
@@ -801,33 +832,6 @@ function isModelRole(role: unknown): role is ModelRole {
     role === "handle" ||
     role === "plinth"
   );
-}
-
-function createMicroSurfaceTexture() {
-  const size = 128;
-  const data = new Uint8Array(size * size * 4);
-
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const offset = (y * size + x) * 4;
-      const grain = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-      const value = 118 + (grain - Math.floor(grain)) * 20;
-
-      data[offset] = value;
-      data[offset + 1] = value;
-      data[offset + 2] = value;
-      data[offset + 3] = 255;
-    }
-  }
-
-  const texture = new DataTexture(data, size, size, RGBAFormat);
-  texture.magFilter = LinearFilter;
-  texture.minFilter = LinearFilter;
-  texture.repeat.set(14, 14);
-  texture.wrapS = RepeatWrapping;
-  texture.wrapT = RepeatWrapping;
-  texture.needsUpdate = true;
-  return texture;
 }
 
 useGLTF.preload(KITCHEN_MODEL_PATH);
