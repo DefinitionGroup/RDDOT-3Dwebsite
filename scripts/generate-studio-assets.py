@@ -148,14 +148,20 @@ def quartz(size: int = 1024) -> tuple[Image.Image, Image.Image]:
 
 
 def main() -> None:
-    HDRI.parent.mkdir(parents=True, exist_ok=True)
+    import sys
+
     TEXTURES.mkdir(parents=True, exist_ok=True)
-    write_rgbe(HDRI, studio_hdri())
+    outputs = []
+    if "--with-hdri" in sys.argv:
+        HDRI.parent.mkdir(parents=True, exist_ok=True)
+        write_rgbe(HDRI, studio_hdri())
+        outputs.append(HDRI)
     micro_surface().save(TEXTURES / "micro-surface.png", optimize=True)
     albedo, roughness = quartz()
     albedo.save(TEXTURES / "worktop-quartz.jpg", quality=88, optimize=True, progressive=True)
     roughness.resize((512, 512), Image.LANCZOS).save(TEXTURES / "worktop-quartz-rough.png", optimize=True)
-    for path in (HDRI, TEXTURES / "micro-surface.png", TEXTURES / "worktop-quartz.jpg", TEXTURES / "worktop-quartz-rough.png"):
+    outputs += [TEXTURES / "micro-surface.png", TEXTURES / "worktop-quartz.jpg", TEXTURES / "worktop-quartz-rough.png"]
+    for path in outputs:
         print(f"{path.relative_to(ROOT)}  {path.stat().st_size / 1024:.0f} KB")
 
 

@@ -233,7 +233,7 @@ function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
 
   return (
     <>
-      <hemisphereLight args={["#fff4e6", "#000000", 0.06]} />
+      <hemisphereLight args={["#fff4e6", "#000000", 0.03]} />
       <directionalLight
         castShadow={pathTracing}
         color="#fff4e6"
@@ -266,18 +266,17 @@ function StudioLightRig({ pathTracing }: { pathTracing: boolean }) {
 }
 
 /**
- * The studio's light: an authored soft-studio HDRI (scripts/generate-studio-assets.py)
- * — three softboxes and a rim panel over a graded cyclorama — so lacquer
- * reflects something continuous. The stage stays black to the eye.
+ * The studio's light: Poly Haven's "Studio Small 09" (CC0), a photographed
+ * softbox studio, downsampled to 1k for the web. Lacquer and veneer reflect
+ * something real and continuous; the stage itself stays black to the eye.
  */
+const STUDIO_HDRI = "/hdri/studio-small-09.hdr";
+
 function StudioEnvironment({ pathTracing }: { pathTracing: boolean }) {
   return (
     <>
       <color args={["#000000"]} attach="background" />
-      <Environment
-        environmentIntensity={pathTracing ? 1.15 : 1.0}
-        files="/hdri/studio-soft.hdr"
-      />
+      <Environment environmentIntensity={pathTracing ? 1.0 : 0.85} files={STUDIO_HDRI} />
     </>
   );
 }
@@ -420,10 +419,10 @@ function AtmosphericStage({ compact, floorTexture, pathTracing }: AtmosphericSta
             blur={[320, 90]}
             bumpMap={floorTexture}
             bumpScale={0.003}
-            color="#040404"
+            color="#000000"
             depthScale={1.1}
             depthToBlurRatioBias={0.25}
-            envMapIntensity={0.12}
+            envMapIntensity={0.08}
             maxDepthThreshold={1.6}
             metalness={0.05}
             minDepthThreshold={0.5}
@@ -435,9 +434,10 @@ function AtmosphericStage({ compact, floorTexture, pathTracing }: AtmosphericSta
           />
         )}
       </mesh>
-      <mesh position={[0, 3.46, -3.35]} receiveShadow>
+      {/* The void wall: unlit, so no light ever turns it grey. */}
+      <mesh position={[0, 3.46, -3.35]}>
         <planeGeometry args={[40, 7]} />
-        <meshStandardMaterial color="#070707" metalness={0} roughness={0.95} />
+        <meshBasicMaterial color="#030303" />
       </mesh>
     </>
   );

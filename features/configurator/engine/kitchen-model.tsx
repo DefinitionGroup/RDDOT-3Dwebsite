@@ -20,6 +20,7 @@ import {
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   Object3D,
+  MirroredRepeatWrapping,
   Plane,
   RepeatWrapping,
   SRGBColorSpace,
@@ -118,7 +119,7 @@ const FINISH_TEXTURE_URLS = [
  * tiles larger so its veins read as stone, not print.
  */
 const TILE_M = {
-  finish: { u: 0.6 / MODEL_SCALE, v: 0.78 / MODEL_SCALE },
+  finish: { u: 0.78 / MODEL_SCALE, v: 1.02 / MODEL_SCALE },
   countertop: { u: 1.4 / MODEL_SCALE, v: 1.4 / MODEL_SCALE }
 } as const;
 
@@ -146,10 +147,13 @@ export function KitchenModel({
       if (SRGB_TEXTURE_URLS.has(url)) {
         texture.colorSpace = SRGBColorSpace;
       }
-      texture.wrapS = RepeatWrapping;
-      texture.wrapT = RepeatWrapping;
-      texture.anisotropy = 8;
-      // The micro-surface tiles twice per finish tile: about 30 cm of grain.
+      // Finish scans are not seamless: mirroring hides the tile edges that
+      // otherwise draw lines across a tall front. The authored tiles wrap.
+      const surface = (Object.values(SURFACE_TEXTURES) as string[]).includes(url);
+      texture.wrapS = surface ? RepeatWrapping : MirroredRepeatWrapping;
+      texture.wrapT = surface ? RepeatWrapping : MirroredRepeatWrapping;
+      texture.anisotropy = 16;
+      // The micro-surface tiles twice per finish tile: about 40 cm of grain.
       if (url === SURFACE_TEXTURES.micro) texture.repeat.set(2, 2);
       texture.needsUpdate = true;
       return [url, texture] as const;
