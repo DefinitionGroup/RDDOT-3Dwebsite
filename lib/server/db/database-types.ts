@@ -210,6 +210,13 @@ export type QuoteRequestTable = {
   updatedAt: Timestamp;
 };
 
+export type DevelopmentEmailCaptureTable = {
+  id: string;
+  recipient: string;
+  message: JsonValue;
+  capturedAt: Timestamp;
+};
+
 export type Database = {
   customerAccount: CustomerAccountTable;
   authIdentity: AuthIdentityTable;
@@ -225,4 +232,5 @@ export type Database = {
   promptTemplateRelease: PromptTemplateReleaseTable;
   modelRelease: ModelReleaseTable;
   quoteRequest: QuoteRequestTable;
+  developmentEmailCapture: DevelopmentEmailCaptureTable;
 };

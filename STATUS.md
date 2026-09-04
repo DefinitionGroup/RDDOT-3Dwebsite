@@ -228,6 +228,14 @@ in production"), which fails page-data collection. Unsetting the variable select
 fail-closed `unavailableDelivery`, which builds. A plain `pnpm build` therefore fails —
 by design, per ADR 0010, but it surprises anyone who has not read this note.
 
+Since 2026-09-04 a test deployment (Vercel preview or a QA project) can keep the capture
+adapter in a production build by also setting
+`ALLOW_DEVELOPMENT_EMAIL_CAPTURE_IN_PRODUCTION=true`. Login then shows the six-digit code
+on screen and no mail is sent. Captures live in `app.development_email_capture`
+(migration `20260904120000`), because Vercel serves the send and the read-back from
+different function instances; the database used by that deployment must have the
+migration applied. The flag must never be set on the customer-facing production project.
+
 ## Open Working Tree
 
 None beyond this reconciliation itself. The development-only loopback `trustedOrigins`

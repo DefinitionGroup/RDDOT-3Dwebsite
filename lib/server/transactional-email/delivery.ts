@@ -2,6 +2,8 @@ import "server-only";
 
 import { createDevelopmentCaptureEmailDelivery } from "@/features/transactional-email/adapters/development-capture";
 import type { TransactionalEmailDelivery } from "@/features/transactional-email/transactional-email";
+import { getDatabase } from "@/lib/server/db/database";
+import { createPostgresDevelopmentEmailCaptureStore } from "@/lib/server/db/development-email-capture-postgres";
 
 function unavailableDelivery(reason: string): TransactionalEmailDelivery {
   return {
@@ -21,7 +23,15 @@ export function createTransactionalEmailDeliveryFromEnvironment(): Transactional
   }
 
   if (provider === "development-capture") {
-    return createDevelopmentCaptureEmailDelivery();
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "[transactional-email] Development email capture is active in a production build. Authentication codes are shown on screen and no mail is sent. This must be a test deployment (ADR 0010)."
+      );
+    }
+
+    return createDevelopmentCaptureEmailDelivery(
+      createPostgresDevelopmentEmailCaptureStore(getDatabase())
+    );
   }
 
   throw new Error(`Unsupported transactional email provider: ${provider}`);

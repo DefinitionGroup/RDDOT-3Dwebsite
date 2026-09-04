@@ -10,6 +10,7 @@ import {
   getLocalizedLabel
 } from "@/features/configurator/product-definition";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
+import { isDevelopmentEmailCaptureActive } from "@/features/transactional-email/adapters/development-capture";
 import {
   createRevisionDisplaySnapshot,
   UnsupportedProductDefinitionVersionError
@@ -60,7 +61,12 @@ export default async function QuoteRequestPage({ searchParams }: QuoteRequestPag
       : guestCode
         ? `/anfrage?c=${encodeURIComponent(guestCode)}`
         : "/anfrage";
-    content = <AccountAccess returnTo={returnTo} />;
+    content = (
+      <AccountAccess
+        developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
+        returnTo={returnTo}
+      />
+    );
   } else if (!projectId) {
     content = <SaveFirst guestCode={guestCode} />;
   } else {

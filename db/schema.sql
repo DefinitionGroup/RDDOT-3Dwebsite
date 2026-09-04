@@ -114,6 +114,20 @@ CREATE TABLE app.customer_account (
 
 
 --
+-- Name: development_email_capture; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.development_email_capture (
+    id uuid NOT NULL,
+    recipient text NOT NULL,
+    message jsonb NOT NULL,
+    captured_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT development_email_capture_message_check CHECK ((jsonb_typeof(message) = 'object'::text)),
+    CONSTRAINT development_email_capture_recipient_check CHECK (((char_length(recipient) >= 3) AND (char_length(recipient) <= 254)))
+);
+
+
+--
 -- Name: generated_photo; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -548,6 +562,14 @@ ALTER TABLE ONLY app.customer_account
 
 
 --
+-- Name: development_email_capture development_email_capture_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.development_email_capture
+    ADD CONSTRAINT development_email_capture_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: generated_photo generated_photo_photo_job_id_key; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -831,6 +853,13 @@ CREATE INDEX auth_identity_customer_account_idx ON app.auth_identity USING btree
 --
 
 CREATE INDEX configuration_revision_project_created_idx ON app.configuration_revision USING btree (project_id, created_at DESC);
+
+
+--
+-- Name: development_email_capture_recipient_captured_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX development_email_capture_recipient_captured_idx ON app.development_email_capture USING btree (recipient, captured_at DESC);
 
 
 --
@@ -1141,4 +1170,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260901120000'),
     ('20260902200000'),
     ('20260902230000'),
-    ('20260903100000');
+    ('20260903100000'),
+    ('20260904120000');

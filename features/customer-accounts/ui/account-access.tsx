@@ -30,7 +30,14 @@ const step = {
   transition: { duration: DURATION.overlay, ease: SIGNATURE_EASE }
 };
 
-export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
+export function AccountAccess({
+  returnTo = "/konto",
+  developmentCaptureEnabled = false
+}: {
+  returnTo?: string;
+  /** Server-decided: the deployment keeps authentication mails and shows the code here. */
+  developmentCaptureEnabled?: boolean;
+}) {
   const router = useRouter();
   const emailId = useId();
   const codeId = useId();
@@ -43,7 +50,7 @@ export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
   const [message, setMessage] = useState<string | null>(null);
 
   async function loadDevelopmentCapture(address: string) {
-    if (process.env.NODE_ENV === "production") return;
+    if (!developmentCaptureEnabled) return;
 
     const response = await fetch(
       `/api/dev/authentication-email?email=${encodeURIComponent(address)}`,
@@ -178,7 +185,7 @@ export function AccountAccess({ returnTo = "/konto" }: { returnTo?: string }) {
             {developmentCapture && (
               <div className="mt-8 rounded-card border border-hairline p-4">
                 <p className="m-0 font-label text-label uppercase tracking-label text-graphite">
-                  Nur in der lokalen Entwicklung
+                  Nur in Entwicklungs- und Testumgebungen
                 </p>
                 <button
                   className="tnum mt-2 inline-flex min-h-11 items-center text-left text-title text-ink transition-colors duration-state ease-signature hover:text-porcelain"

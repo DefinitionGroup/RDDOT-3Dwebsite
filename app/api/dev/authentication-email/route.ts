@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { findLatestDevelopmentEmailCapture } from "@/features/transactional-email/adapters/development-capture";
+import {
+  extractOneTimeCode,
+  isDevelopmentEmailCaptureActive
+} from "@/features/transactional-email/adapters/development-capture";
+import { getDatabase } from "@/lib/server/db/database";
+import { createPostgresDevelopmentEmailCaptureStore } from "@/lib/server/db/development-email-capture-postgres";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,10 +17,7 @@ function unavailable() {
 }
 
 export async function GET(request: Request) {
-  if (
-    process.env.NODE_ENV === "production" ||
-    process.env.TRANSACTIONAL_EMAIL_PROVIDER !== "development-capture"
-  ) {
+  if (!isDevelopmentEmailCaptureActive()) {
     return unavailable();
   }
 
@@ -29,8 +31,10 @@ export async function GET(request: Request) {
     );
   }
 
-  const capture = findLatestDevelopmentEmailCapture(email.data);
-  const code = capture?.message.text.match(/\b\d{6}\b/)?.[0];
+  const capture = await createPostgresDevelopmentEmailCaptureStore(
+    getDatabase()
+  ).findLatest(email.data);
+  const code = capture ? extractOneTimeCode(capture) : null;
   if (!capture || !code) return unavailable();
 
   return NextResponse.json(

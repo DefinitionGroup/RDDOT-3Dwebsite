@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/design-system/app-header";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
 import { AccountWorkspace } from "@/features/customer-accounts/ui/account-workspace";
+import { isDevelopmentEmailCaptureActive } from "@/features/transactional-email/adapters/development-capture";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
@@ -96,6 +97,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             />
           ) : (
             <AccountAccess
+              developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
               returnTo={
                 typeof params.next === "string" &&
                 (params.next.startsWith("/configure?project=") ||
