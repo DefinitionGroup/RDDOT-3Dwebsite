@@ -26,6 +26,38 @@ function getAuthPool() {
   return globalThis.__rddotAuthPool;
 }
 
+// Vercel exposes the deployment's own hostnames. A preview deployment has no
+// stable BETTER_AUTH_URL of its own, so without an explicit value the base URL
+// follows the deployment: the production domain in production, the branch
+// alias (or the unique deployment URL) in previews. Locally it stays localhost.
+function vercelHosts() {
+  return [
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_URL
+  ].filter((host): host is string => Boolean(host));
+}
+
+function resolveBaseUrl() {
+  const configured = process.env.BETTER_AUTH_URL?.trim();
+  if (configured) return configured;
+
+  const preferredHost =
+    process.env.VERCEL_ENV === "production"
+      ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+      : (process.env.VERCEL_BRANCH_URL ?? process.env.VERCEL_URL);
+  if (preferredHost) return `https://${preferredHost}`;
+
+  return "http://localhost:3000";
+}
+
+// Every hostname Vercel serves this deployment on is a legitimate origin for
+// its own auth requests: the unique deployment URL, the branch alias, and the
+// production domain.
+function vercelOrigins() {
+  return vercelHosts().map((host) => `https://${host}`);
+}
+
 // Next.js falls back to 3001+ when the configured port is taken, which makes
 // the browser origin drift away from BETTER_AUTH_URL and trips better-auth's
 // origin check with a 403. In development, echo back any loopback origin so a
@@ -49,8 +81,11 @@ function developmentLoopbackOrigins(request?: Request) {
 export const auth = createAuth({
   database: getAuthPool(),
   secret: requiredEnvironment("BETTER_AUTH_SECRET"),
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-  trustedOrigins: developmentLoopbackOrigins,
+  baseURL: resolveBaseUrl(),
+  trustedOrigins: (request) => [
+    ...vercelOrigins(),
+    ...developmentLoopbackOrigins(request)
+  ],
   sendAuthenticationOtp: createAuthenticationOtpSender(
     createTransactionalEmailDeliveryFromEnvironment()
   )
