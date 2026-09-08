@@ -37,10 +37,17 @@ export async function GET(
   }
 
   // A read of an in-flight job asks the provider (throttled), so a lost
-  // webhook is recovered by the next poll rather than by the next sweep.
-  const current = isInFlightState(job.state)
-    ? await photoJobs.reconcileJob({ ownerId: resolved.ownerId!, jobId })
-    : null;
+  // webhook is recovered by the next poll rather than by the next sweep. A
+  // reconciliation that throws must not turn the poll into a 500: the last
+  // known state goes back and the next poll or the sweep tries again.
+  let current: Awaited<ReturnType<typeof photoJobs.reconcileJob>> | null = null;
+  if (isInFlightState(job.state)) {
+    try {
+      current = await photoJobs.reconcileJob({ ownerId: resolved.ownerId!, jobId });
+    } catch (error) {
+      console.error("Photo job reconciliation failed", { jobId, error });
+    }
+  }
   const latest = current && current.kind !== "unavailable" ? current.job : job;
 
   return NextResponse.json(

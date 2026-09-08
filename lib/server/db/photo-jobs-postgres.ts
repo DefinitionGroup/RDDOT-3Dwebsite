@@ -390,6 +390,17 @@ export function createPostgresPhotoJobModule(
     if (!row.providerReference) return "unchanged";
     await markState(row.id, row.state, { providerCheckedAt: now });
     const outcome = await adapter.inspect(row.providerReference);
+    if (!outcome || typeof outcome.kind !== "string") {
+      // Defence in depth: a broken adapter build once resolved to undefined
+      // here and turned every poll into a 500. Leave the job for the next
+      // poll or the sweep instead.
+      console.error("Photo job inspection returned no outcome", {
+        jobId: row.id,
+        providerReference: row.providerReference,
+        outcome
+      });
+      return "unchanged";
+    }
     if (row.state === "canceling" && outcome.kind === "pending") {
       // The provider has not acknowledged the cancel yet; ask again and move on.
       await adapter.cancel(row.providerReference);

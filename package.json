@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/verify-server-bundle.mjs",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run features lib",

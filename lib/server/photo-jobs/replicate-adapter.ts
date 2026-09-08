@@ -179,6 +179,53 @@ export function createReplicatePhotoGenerationAdapter(
     return { kind: "failed", reason, retryable, providerReference, detail };
   }
 
+  /** A finished prediction: its output is fetched now, before the delivery URL expires. */
+  async function readSucceeded(
+    prediction: Awaited<ReturnType<ReplicateClient["predictions"]["get"]>>,
+    providerReference: string
+  ): Promise<InspectPhotoGenerationOutcome> {
+    const outputUrl = extractOutputUrl(prediction.output);
+    if (!outputUrl) {
+      return failed(
+        "provider-no-output",
+        true,
+        "Prediction succeeded without an output URL",
+        providerReference
+      );
+    }
+
+    // Provider delivery URLs expire within the hour, so the bytes are pulled
+    // now and handed to the module for validation and EU persistence. The
+    // URL itself never leaves this adapter.
+    const response = await withTimeout(
+      fetchImpl(outputUrl),
+      downloadTimeoutMs,
+      "Output download"
+    );
+    if (!response.ok) {
+      return failed(
+        "provider-output-unreachable",
+        true,
+        `HTTP ${response.status} while fetching the output`,
+        providerReference
+      );
+    }
+
+    const predictTime = prediction.metrics?.predict_time;
+    return {
+      kind: "generated",
+      bytes: new Uint8Array(await response.arrayBuffer()),
+      declaredContentType:
+        response.headers.get("content-type") ?? "application/octet-stream",
+      modelIdentifier: prediction.model,
+      providerReference,
+      durationMs:
+        typeof predictTime === "number" && Number.isFinite(predictTime)
+          ? Math.round(predictTime * 1000)
+          : null
+    };
+  }
+
   return {
     async submit(request: PhotoGenerationRequest): Promise<SubmitPhotoGenerationOutcome> {
       const image =
@@ -223,65 +270,22 @@ export function createReplicatePhotoGenerationAdapter(
     async inspect(providerReference: string): Promise<InspectPhotoGenerationOutcome> {
       try {
         const prediction = await client.predictions.get(providerReference);
-        switch (prediction.status) {
-          case "starting":
-            return { kind: "pending", started: false };
-          case "processing":
-            return { kind: "pending", started: true };
-          case "canceled":
-            return { kind: "canceled" };
-          case "failed": {
-            const failure = classifyProviderError(
-              new Error(`Prediction failed: ${String(prediction.error ?? "unknown")}`)
-            );
-            return failed(failure.reason, failure.retryable, failure.detail, providerReference);
-          }
-          case "succeeded":
-            break;
-          default:
-            return { kind: "pending", started: false };
+        // Deliberately not a switch that falls out on "succeeded": the
+        // production minifier (SWC via Turbopack) treated the code after such
+        // a switch as unreachable and dropped the whole success path, so
+        // `inspect` resolved to undefined for every finished prediction.
+        if (prediction.status === "succeeded") {
+          return await readSucceeded(prediction, providerReference);
         }
-
-        const outputUrl = extractOutputUrl(prediction.output);
-        if (!outputUrl) {
-          return failed(
-            "provider-no-output",
-            true,
-            "Prediction succeeded without an output URL",
-            providerReference
+        if (prediction.status === "processing") return { kind: "pending", started: true };
+        if (prediction.status === "canceled") return { kind: "canceled" };
+        if (prediction.status === "failed") {
+          const failure = classifyProviderError(
+            new Error(`Prediction failed: ${String(prediction.error ?? "unknown")}`)
           );
+          return failed(failure.reason, failure.retryable, failure.detail, providerReference);
         }
-
-        // Provider delivery URLs expire within the hour, so the bytes are pulled
-        // now and handed to the module for validation and EU persistence. The
-        // URL itself never leaves this adapter.
-        const response = await withTimeout(
-          fetchImpl(outputUrl),
-          downloadTimeoutMs,
-          "Output download"
-        );
-        if (!response.ok) {
-          return failed(
-            "provider-output-unreachable",
-            true,
-            `HTTP ${response.status} while fetching the output`,
-            providerReference
-          );
-        }
-
-        const predictTime = prediction.metrics?.predict_time;
-        return {
-          kind: "generated",
-          bytes: new Uint8Array(await response.arrayBuffer()),
-          declaredContentType:
-            response.headers.get("content-type") ?? "application/octet-stream",
-          modelIdentifier: prediction.model,
-          providerReference,
-          durationMs:
-            typeof predictTime === "number" && Number.isFinite(predictTime)
-              ? Math.round(predictTime * 1000)
-              : null
-        };
+        return { kind: "pending", started: false };
       } catch (error) {
         if (isApiError(error) && error.response.status === 404) {
           return { kind: "unknown" };
@@ -290,7 +294,6 @@ export function createReplicatePhotoGenerationAdapter(
         return failed(failure.reason, failure.retryable, failure.detail, providerReference);
       }
     },
-
     async cancel(providerReference: string) {
       try {
         await client.predictions.cancel(providerReference);

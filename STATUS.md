@@ -236,6 +236,15 @@ on screen and no mail is sent. Captures live in `app.development_email_capture`
 different function instances; the database used by that deployment must have the
 migration applied. The flag must never be set on the customer-facing production project.
 
+Production-build defect found 2026-09-08 on the Vercel preview: every poll of a finished
+photo job returned 500. The minifier (SWC via Turbopack) dropped the code after the
+`switch` in the Replicate adapter's `inspect` — the download-and-return success path —
+because every other case returned; dev builds run the source unminified and never showed
+it. `inspect` now reaches the success path through a plain call (`readSucceeded`), the
+reconcile path treats a missing outcome as "unchanged" instead of throwing, the poll route
+answers with the last known state when reconciliation throws, and `postbuild`
+(`scripts/verify-server-bundle.mjs`) fails any build whose server bundle lacks that path.
+
 ## Open Working Tree
 
 None beyond this reconciliation itself. The development-only loopback `trustedOrigins`
