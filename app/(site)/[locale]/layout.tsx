@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Manrope } from "next/font/google";
+import { notFound } from "next/navigation";
 import { MotionProvider } from "@/components/design-system/motion-provider";
-import "./globals.css";
+import { isLaunchedLocale, LAUNCHED_LOCALES } from "@/lib/i18n";
+import "../../globals.css";
 
 // One family plus one serif face, self-hosted through next/font at build time.
 const sans = Manrope({
@@ -37,16 +39,22 @@ export const viewport: Viewport = {
   colorScheme: "dark"
 };
 
-export default function RootLayout({
-  children
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+// The proxy already turns unlaunched locales into a 404; the check below is
+// the backstop. `dynamicParams = false` is not an option here: it is inherited
+// by every child segment and breaks their own notFound() handling.
+export function generateStaticParams() {
+  return LAUNCHED_LOCALES.map((locale) => ({ locale }));
+}
+
+export default async function RootLayout({ children, params }: LayoutProps<"/[locale]">) {
+  const { locale } = await params;
+  if (!isLaunchedLocale(locale)) notFound();
+
   return (
     <html
       className={`${sans.variable} ${serif.variable}`}
       data-scroll-behavior="smooth"
-      lang="de"
+      lang={locale}
     >
       <body>
         <MotionProvider>{children}</MotionProvider>
