@@ -165,6 +165,15 @@ keep 404s inside the site layout (German, site styles, `noindex`).
 `@sanity/image-url`, `@sanity/document-internationalization`,
 `sanity-plugin-internationalized-array`), `sanity.config.ts`, env gate, embedded Studio,
 client, live, loaders. *Exit:* app runs with no Sanity env; `/studio` shows a setup notice.
+*Done 2026-10-01* (sanity 6.17, next-sanity 13.3.4). The i18n plugins, the image helper
+and the loaders move to Phase 3, where they first have schema types and queries to serve.
+Studio has its own root layout without the site's CSS, so Tailwind's preflight cannot
+reach Sanity UI. With project `06g3ozu4` baked in, the Studio mounts and stops at
+"Add CORS origin" for `http://localhost:3000`. `.env.local` gets no Sanity entries until
+Phase 7 seeds the dataset, because a configured but empty dataset 404s every page.
+Open: `@portabletext/editor` asks for React ≥ 19.2.8 (repo resolves 19.2.7) — harmless so
+far, revisit if the rich-text input misbehaves. The Sanity CLI on this machine is logged
+in as the 1SP account, so CLI work on `06g3ozu4` needs Martin's login or a project token.
 
 **Phase 3 — Schema skeleton and first blocks.** `page`, `navigation`, `siteSettings`, `seo`,
 image and video objects, `richText`; block registry, types, `PageBuilder`; port `heroFilm`,
