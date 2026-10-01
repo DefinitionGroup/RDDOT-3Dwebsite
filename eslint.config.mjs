@@ -5,7 +5,7 @@ import nextTypescript from "eslint-config-next/typescript";
 const eslintConfig = [
   ...nextVitals,
   ...nextTypescript,
-  globalIgnores([".next/**", "out/**", "next-env.d.ts", "public/draco/**"])
+  globalIgnores([".next/**", "out/**", "next-env.d.ts", "public/draco/**", "sanity.types.ts"])
 ];
 
 export default eslintConfig;

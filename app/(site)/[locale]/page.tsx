@@ -1,12 +1,12 @@
+import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/design-system/site-footer";
 import { SiteHeader } from "@/components/design-system/site-header";
+import { PageBuilder } from "@/components/page-builder/page-builder";
 import { ClosingStatement } from "@/components/sections/closing-statement";
 import { CollectionLines } from "@/components/sections/collection-lines";
 import { ConfiguratorTeaser } from "@/components/sections/configurator-teaser";
-import { Manifest } from "@/components/sections/manifest";
 import { MaterialCards, type MaterialLink } from "@/components/sections/material-cards";
 import { RoomStory } from "@/components/sections/room-story";
-import { SignatureHero } from "@/components/sections/signature-hero";
 import { SignaturePromises } from "@/components/sections/signature-promises";
 import {
   DEFAULT_CONFIGURATOR_STATE,
@@ -16,8 +16,15 @@ import {
 } from "@/features/configurator/product-definition";
 import { CONFIG_QUERY_PARAM, encodeConfiguration } from "@/features/configurator/state-codec";
 import { materials } from "@/lib/content";
+import { isLaunchedLocale } from "@/lib/i18n";
+import { loadPage } from "@/sanity/lib/loaders";
 
-export default function Home() {
+export default async function Home({ params }: PageProps<"/[locale]">) {
+  const { locale } = await params;
+  if (!isLaunchedLocale(locale)) notFound();
+  const page = await loadPage(locale, null);
+  if (!page) notFound();
+
   // The teaser shows the real price of the default configuration, never a typed number.
   const quote = getConfiguratorQuote(DEFAULT_CONFIGURATOR_STATE);
 
@@ -47,8 +54,8 @@ export default function Home() {
     <>
       <SiteHeader />
       <main>
-        <SignatureHero />
-        <Manifest />
+        <PageBuilder locale={locale} page={page} />
+        {/* Still static until they become Page Blocks (sanity-pagebuilder Phase 4). */}
         <SignaturePromises />
         <MaterialCards links={materialLinks} />
         <ConfiguratorTeaser

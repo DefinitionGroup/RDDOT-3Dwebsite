@@ -1,29 +1,28 @@
 "use client";
 
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import type { MotionValue } from "motion/react";
-
-export type WordToken = { text: string; serif?: boolean };
+import { emphasisWords, type EmphasisSegment } from "@/lib/emphasis";
 
 function Word({
-  children,
+  parts,
   progress,
   range,
-  serif,
   still
 }: {
-  children: string;
+  parts: EmphasisSegment[];
   progress: MotionValue<number>;
   range: [number, number];
-  serif?: boolean;
   still: boolean;
 }) {
   const opacity = useTransform(progress, range, [0.16, 1]);
   return (
     <>
       <motion.span className="inline-block" style={still ? undefined : { opacity }}>
-        {serif ? <em>{children}</em> : children}
+        {parts.map((part, index) =>
+          part.serif ? <em key={index}>{part.text}</em> : <Fragment key={index}>{part.text}</Fragment>
+        )}
       </motion.span>{" "}
     </>
   );
@@ -32,30 +31,27 @@ function Word({
 /**
  * The one scroll-linked sequence on the site: a statement whose words light
  * up as the reader reaches them. Opacity only; reduced motion shows it lit.
+ * `text` marks its serif word with asterisks, like every editor headline.
  */
-export function ScrollWords({ className = "", tokens }: { className?: string; tokens: WordToken[] }) {
+export function ScrollWords({ className = "", text }: { className?: string; text: string }) {
   const ref = useRef<HTMLHeadingElement>(null);
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start 0.85", "end 0.45"]
   });
-  const words = tokens.flatMap((token) =>
-    token.text.split(" ").map((word) => ({ word, serif: token.serif }))
-  );
+  const words = emphasisWords(text);
 
   return (
     <h2 className={className} ref={ref}>
-      {words.map((entry, index) => (
+      {words.map((parts, index) => (
         <Word
-          key={`${entry.word}-${index}`}
+          key={index}
+          parts={parts}
           progress={scrollYProgress}
           range={[index / words.length, (index + 1) / words.length]}
-          serif={entry.serif}
           still={Boolean(reduceMotion)}
-        >
-          {entry.word}
-        </Word>
+        />
       ))}
     </h2>
   );

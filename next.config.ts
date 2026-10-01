@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    formats: ["image/avif", "image/webp"]
+    formats: ["image/avif", "image/webp"],
+    // Editorial images from Sanity (ADR 0007: publication-ready media only).
+    remotePatterns: [{ protocol: "https", hostname: "cdn.sanity.io", pathname: "/images/06g3ozu4/**" }]
   },
   turbopack: {
     root: process.cwd()

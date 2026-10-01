@@ -78,22 +78,6 @@ export const navItems: NavItem[] = [
   { title: "Mein Bereich", href: "/konto", quiet: true }
 ];
 
-export const manifest = {
-  label: "Haltung",
-  statement: [
-    { text: "Eine Küche ist kein Möbel. Sie ist der Raum, in dem" },
-    { text: "gelebt", serif: true },
-    { text: "wird." }
-  ],
-  paragraphs: [
-    "Deshalb beginnt jede Signature Küche nicht im Katalog, sondern bei Ihnen: bei Ihrem Grundriss, Ihrem Licht und der Frage, wo morgens der Kaffee steht. Wir planen keine Schauküche. Wir planen den Ort, an dem Ihr Tag anfängt und Ihre Abende länger werden.",
-    "Vier Entscheidungen genügen, um anzufangen. Alles Weitere übernimmt ein Planer, der Ihren Entwurf kennt — persönlich, nicht per Formular."
-  ],
-  image: "/images/signature-detail.webp",
-  alt: "Signature Küche bei Abendlicht mit Glasfront und Holzdecke",
-  caption: "Exclusive Line — Abendlicht, Glas, Eiche"
-};
-
 export const signatureFeatures: Feature[] = [
   {
     id: "material",
@@ -315,16 +299,3 @@ export const footerColumns: FooterColumn[] = [
     ]
   }
 ];
-
-/**
- * The hero film: a 15-second silent loop, served in two sizes from
- * public/video. Transcoded from the supplied master with ffmpeg (H.264,
- * faststart, no audio); the poster is a frame from the same film.
- */
-export const heroFilm = {
-  sources: [
-    { src: "/video/hero-1080.mp4", media: "(min-width: 768px)" },
-    { src: "/video/hero-720.mp4", media: undefined }
-  ],
-  poster: "/images/hero-poster.jpg"
-};

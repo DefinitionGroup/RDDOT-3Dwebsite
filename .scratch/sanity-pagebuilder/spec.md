@@ -106,8 +106,8 @@ Phase 9 can translate them; their German URLs do not change. A locale not in
 
 | Block | From | Notes |
 | --- | --- | --- |
-| `heroFilm` | `signature-hero.tsx` | brand headline, loop video (Sanity file + poster), CTA |
-| `manifest` | `manifest.tsx` | scroll-words statement |
+| `heroFilmBlock` | `signature-hero.tsx` | brand headline, loop video (Sanity file + poster), CTA |
+| `statementBlock` | `manifest.tsx` | scroll-words statement |
 | `promises` | `signature-promises.tsx` | items with detail cards |
 | `materials` | `material-cards.tsx` | smart: each card picks a `finishKey` from the product definition; surcharge and deep link computed in code |
 | `configurator` | `configurator-teaser.tsx` | smart: `productKey`, optional start preset, copy, image; price computed in code |
@@ -178,6 +178,20 @@ in as the 1SP account, so CLI work on `06g3ozu4` needs Martin's login or a proje
 **Phase 3 — Schema skeleton and first blocks.** `page`, `navigation`, `siteSettings`, `seo`,
 image and video objects, `richText`; block registry, types, `PageBuilder`; port `heroFilm`,
 `manifest`, `richText`. *Exit:* homepage renders through `PageBuilder` from demo content.
+*Done 2026-10-01.* Changes against the plan:
+- Block types are `heroFilmBlock` and `statementBlock` (folders `hero-film`, `statement`);
+  "manifest" already means Asset Manifest in CONTEXT.md.
+- Headlines mark their one serif word with asterisks (`Küchen, auf den *Punkt*.`), parsed
+  by `lib/emphasis.ts`; Studio validation allows at most one. Images carry their own `alt`.
+- TypeGen moved here from Phase 6, because block types derive from query results:
+  `pnpm typegen` runs as `prebuild`; `schema.json` and `sanity.types.ts` are committed.
+- `navigation` and `siteSettings` move to Phase 4, where the header and footer consume them.
+- `richText` waits for the legal pages: Impressum and Datenschutz need Martin's real text,
+  and demo mode must not publish invented legal content.
+- `[...slug]` is now the Editorial Page route (one-segment slugs; deeper paths 404).
+- Studio field titles are German; the Studio chrome stays English for now.
+*Evidence:* the hero and statement markup of `/` is byte-identical before and after (65
+lines each); `sanity schema validate` 0 errors, 0 warnings; 87 unit tests incl. emphasis.
 
 **Phase 4 — Port the homepage.** Remaining sections as blocks, header and footer from
 `navigation`. `lib/content.ts` is deleted, its content lives in `content/demo.ts`.

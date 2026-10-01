@@ -2,12 +2,28 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Emphasized } from "@/components/design-system/emphasized";
 import { GlassBadge } from "@/components/design-system/glass";
 import { Pill } from "@/components/design-system/pill";
-import { configureHref, heroFilm } from "@/lib/content";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE, STAGGER } from "@/lib/motion";
 
 type FullscreenVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+
+export type HeroFilmViewProps = {
+  anchor?: string;
+  eyebrow?: string;
+  headline: string;
+  summary?: string;
+  primaryCta?: { label: string; href: string };
+  filmButtonLabel?: string;
+  badge?: string;
+  film: {
+    /** Large screens; also the fallback when no phone file exists. */
+    desktop: string;
+    mobile?: string;
+    poster?: string;
+  };
+};
 
 function PlayCircle() {
   return (
@@ -24,7 +40,16 @@ function PlayCircle() {
  * the page fades in from black once the first frame is there. People who
  * asked for less motion get the still, and the film only on request.
  */
-export function SignatureHero() {
+export function HeroFilmView({
+  anchor,
+  badge,
+  eyebrow,
+  film,
+  filmButtonLabel,
+  headline,
+  primaryCta,
+  summary
+}: HeroFilmViewProps) {
   const reduceMotion = useReducedMotion();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
@@ -60,7 +85,7 @@ export function SignatureHero() {
   return (
     <section
       className="relative h-[100svh] max-h-[900px] min-h-[640px] overflow-hidden bg-canvas"
-      id="top"
+      id={anchor}
     >
       <video
         aria-hidden="true"
@@ -69,13 +94,18 @@ export function SignatureHero() {
         muted
         onPlaying={() => setReady(true)}
         playsInline
-        poster={heroFilm.poster}
+        poster={film.poster}
         preload="metadata"
         ref={videoRef}
       >
-        {heroFilm.sources.map((source) => (
-          <source key={source.src} media={source.media} src={source.src} type="video/mp4" />
-        ))}
+        {film.mobile ? (
+          <>
+            <source media="(min-width: 768px)" src={film.desktop} type="video/mp4" />
+            <source src={film.mobile} type="video/mp4" />
+          </>
+        ) : (
+          <source src={film.desktop} type="video/mp4" />
+        )}
       </video>
       <div aria-hidden="true" className="hero-shade absolute inset-0" />
       <motion.div
@@ -88,36 +118,47 @@ export function SignatureHero() {
 
       <div className="signature-container absolute inset-x-0 bottom-8 flex items-end justify-between gap-16 md:bottom-[72px]">
         <div className="flex max-w-[860px] flex-col gap-5 md:gap-7">
-          <motion.p
-            className="m-0 font-label text-label uppercase tracking-label text-graphite"
-            {...rise(0)}
-          >
-            Premium Küchen
-          </motion.p>
-          <motion.h1 className="m-0 text-balance text-display" {...rise(0)}>
-            Küchen, auf den <em>Punkt</em>.
-          </motion.h1>
-          <motion.p className="m-0 max-w-[42ch] text-body text-graphite md:text-lead" {...rise(1)}>
-            Modulare Signature-Küchen: in 3D geplant, in Ihrem Raum gesehen, in Deutschland
-            gefertigt.
-          </motion.p>
-          <motion.div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" {...rise(2)}>
-            <Pill className="w-full sm:w-auto" href={configureHref}>
-              Küche konfigurieren
-            </Pill>
-            <Pill
-              className="h-12 w-full border-ink/70 pl-2 pr-[22px] font-base text-caption uppercase tracking-film sm:w-auto"
-              leading={<PlayCircle />}
-              onClick={watchFilm}
-              variant="secondary"
+          {eyebrow && (
+            <motion.p
+              className="m-0 font-label text-label uppercase tracking-label text-graphite"
+              {...rise(0)}
             >
-              Den Film ansehen
-            </Pill>
-          </motion.div>
+              {eyebrow}
+            </motion.p>
+          )}
+          <motion.h1 className="m-0 text-balance text-display" {...rise(0)}>
+            <Emphasized text={headline} />
+          </motion.h1>
+          {summary && (
+            <motion.p className="m-0 max-w-[42ch] text-body text-graphite md:text-lead" {...rise(1)}>
+              {summary}
+            </motion.p>
+          )}
+          {(primaryCta || filmButtonLabel) && (
+            <motion.div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" {...rise(2)}>
+              {primaryCta && (
+                <Pill className="w-full sm:w-auto" href={primaryCta.href}>
+                  {primaryCta.label}
+                </Pill>
+              )}
+              {filmButtonLabel && (
+                <Pill
+                  className="h-12 w-full border-ink/70 pl-2 pr-[22px] font-base text-caption uppercase tracking-film sm:w-auto"
+                  leading={<PlayCircle />}
+                  onClick={watchFilm}
+                  variant="secondary"
+                >
+                  {filmButtonLabel}
+                </Pill>
+              )}
+            </motion.div>
+          )}
         </div>
-        <motion.div className="hidden md:block" {...rise(3)}>
-          <GlassBadge className="h-9 px-4">Gefertigt in Deutschland</GlassBadge>
-        </motion.div>
+        {badge && (
+          <motion.div className="hidden md:block" {...rise(3)}>
+            <GlassBadge className="h-9 px-4">{badge}</GlassBadge>
+          </motion.div>
+        )}
       </div>
     </section>
   );

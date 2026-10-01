@@ -10,6 +10,15 @@ export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = "de";
 
+export const LOCALE_TITLES: Record<Locale, string> = {
+  de: "Deutsch",
+  en: "English",
+  es: "Español"
+};
+
+/** The language list in the shape both Sanity localization plugins expect. */
+export const sanityLanguages = LOCALES.map((id) => ({ id, title: LOCALE_TITLES[id] }));
+
 /**
  * Locales the public site serves. A locale opens only once its pages,
  * navigation and functional copy are complete; until then its prefix is a 404
