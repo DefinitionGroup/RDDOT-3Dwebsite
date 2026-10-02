@@ -3,9 +3,11 @@
 import { documentInternationalization } from "@sanity/document-internationalization";
 import { visionTool } from "@sanity/vision";
 import { defineConfig } from "sanity";
+import { presentationTool } from "sanity/presentation";
 import { structureTool } from "sanity/structure";
 import { sanityLanguages } from "./lib/i18n";
 import { apiVersion, dataset, studioProjectId } from "./sanity/env";
+import { resolve } from "./sanity/presentation/resolve";
 import { schemaTypes } from "./sanity/schemaTypes";
 import { structure } from "./sanity/structure";
 
@@ -38,6 +40,14 @@ export default defineConfig({
         : previous
   },
   plugins: [
+    // Editorial Preview: the site in an iframe, drafts streamed in, click-to-edit.
+    presentationTool({
+      resolve,
+      previewUrl: {
+        initial: "/",
+        previewMode: { enable: "/api/draft-mode/enable", disable: "/api/draft-mode/disable" }
+      }
+    }),
     structureTool({ structure }),
     documentInternationalization({
       supportedLanguages: sanityLanguages,

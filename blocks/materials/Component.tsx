@@ -1,3 +1,4 @@
+import { stegaClean } from "next-sanity";
 import type { BlockProps } from "@/blocks/types";
 import { presetPricing, presetState } from "@/features/configurator/catalog";
 import { formatCurrency } from "@/features/configurator/product-definition";
@@ -13,11 +14,13 @@ const CONFIGURE_PATH = "/configure";
  * surcharge. An unknown product or finish keeps the card but drops both.
  */
 export default function MaterialsBlock({ block }: BlockProps<"materialsBlock">) {
+  // Keys are logic: in preview they carry stega markers that would never match.
+  const productKey = stegaClean(block.productKey);
   const cards: MaterialCard[] = (block.items ?? []).map((item) => {
-    const preset = { frontColorKey: item.finishKey };
-    const resolved = presetState(block.productKey, preset);
-    const pricing = presetPricing(block.productKey, preset);
-    if (!resolved) console.warn(`materialsBlock: no finish "${item.finishKey}" in product "${block.productKey}"`);
+    const preset = { frontColorKey: stegaClean(item.finishKey) };
+    const resolved = presetState(productKey, preset);
+    const pricing = presetPricing(productKey, preset);
+    if (!resolved) console.warn(`materialsBlock: no finish "${preset.frontColorKey}" in product "${productKey}"`);
 
     return {
       key: item._key,

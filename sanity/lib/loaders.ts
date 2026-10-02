@@ -10,22 +10,27 @@ import { HOME_PAGE_QUERY, NAVIGATION_QUERY, PAGE_QUERY } from "./queries";
  * The EditorialContent seam of ADR 0007: the only place editorial content is
  * fetched. Demo content answers ONLY when Sanity is not configured; once it
  * is, a missing document is a real 404 and is never masked by demo data.
+ *
+ * Every read also carries the "sanity" cache tag: public visitors get no live
+ * connection to Sanity, so a publish webhook revalidates that tag instead.
  */
+export const SANITY_CACHE_TAG = "sanity";
+const CACHE_TAGS = [SANITY_CACHE_TAG];
 
 /** An Editorial Page in one locale; `slug: null` is that locale's homepage. */
 export async function loadPage(locale: Locale, slug: string | null): Promise<PAGE_QUERY_RESULT> {
   if (!isSanityConfigured) return getDemoPage(locale, slug);
   if (slug === null) {
-    const { data } = await sanityFetch({ query: HOME_PAGE_QUERY, params: { locale } });
+    const { data } = await sanityFetch({ query: HOME_PAGE_QUERY, params: { locale }, tags: CACHE_TAGS });
     return data as HOME_PAGE_QUERY_RESULT;
   }
-  const { data } = await sanityFetch({ query: PAGE_QUERY, params: { locale, slug } });
+  const { data } = await sanityFetch({ query: PAGE_QUERY, params: { locale, slug }, tags: CACHE_TAGS });
   return data as PAGE_QUERY_RESULT;
 }
 
 /** Header and footer links of one locale; null renders a header without links. */
 export async function loadSiteChrome(locale: Locale): Promise<NAVIGATION_QUERY_RESULT> {
   if (!isSanityConfigured) return getDemoChrome(locale);
-  const { data } = await sanityFetch({ query: NAVIGATION_QUERY, params: { locale } });
+  const { data } = await sanityFetch({ query: NAVIGATION_QUERY, params: { locale }, tags: CACHE_TAGS });
   return data as NAVIGATION_QUERY_RESULT;
 }

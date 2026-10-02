@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageBuilder } from "@/components/page-builder/page-builder";
 import { SiteFrame } from "@/components/page-builder/site-frame";
-import { isLaunchedLocale } from "@/lib/i18n";
+import { visibleLocale } from "@/lib/locale-gate";
 import { loadPage } from "@/sanity/lib/loaders";
 
 /**
@@ -10,8 +10,9 @@ import { loadPage } from "@/sanity/lib/loaders";
  * locale layout, keeping the page's language and the site's styles.
  */
 export default async function EditorialPage({ params }: PageProps<"/[locale]/[...slug]">) {
-  const { locale, slug } = await params;
-  if (!isLaunchedLocale(locale) || slug.length !== 1) notFound();
+  const { locale: requested, slug } = await params;
+  const locale = await visibleLocale(requested);
+  if (!locale || slug.length !== 1) notFound();
   const page = await loadPage(locale, slug[0]);
   if (!page) notFound();
 

@@ -1,3 +1,4 @@
+import { stegaClean } from "next-sanity";
 import type { BlockProps } from "@/blocks/types";
 import { presetPricing, presetState } from "@/features/configurator/catalog";
 import { formatCurrency } from "@/features/configurator/product-definition";
@@ -14,10 +15,12 @@ const CONFIGURE_PATH = "/configure";
  * configurator's own default.
  */
 export default function ConfiguratorBlock({ block }: BlockProps<"configuratorBlock">) {
-  const preset = { frontColorKey: block.startFront, cabinetColorKey: block.startCabinet };
-  const resolved = presetState(block.productKey, preset);
-  const pricing = presetPricing(block.productKey, preset);
-  if (!resolved) console.warn(`configuratorBlock: cannot resolve product "${block.productKey}" with its start finishes`);
+  // Keys are logic: in preview they carry stega markers that would never match.
+  const productKey = stegaClean(block.productKey);
+  const preset = { frontColorKey: stegaClean(block.startFront), cabinetColorKey: stegaClean(block.startCabinet) };
+  const resolved = presetState(productKey, preset);
+  const pricing = presetPricing(productKey, preset);
+  if (!resolved) console.warn(`configuratorBlock: cannot resolve product "${productKey}" with its start finishes`);
 
   const hasPreset = Boolean(block.startFront || block.startCabinet);
   const href =

@@ -227,6 +227,31 @@ footer checked in the browser; 375 px without overflow; schema 0 errors / 0 warn
 `stegaClean` on logic strings, `noindex` in preview. *Exit:* click-to-select and
 drag-reorder work in Presentation; a draft edit streams into the preview.
 
+*Done 2026-10-02.* Viewer token `ccread` in `.env.local` (role `viewer`, a write is refused);
+`.env.local` now carries the project, so local development reads Sanity, not demo content.
+- `/api/draft-mode/enable` (`defineEnableDraftMode`, secret checked with the Viewer token)
+  and `/disable` (relative redirects only); `presentationTool` with `sanity/presentation/resolve.ts`
+  mirroring the routes (German unprefixed). `ExitPreview` ("Vorschau beenden") outside the Studio.
+- **Privacy decision:** `<SanityLive />` mounts only in draft mode and in development. Public
+  visitors open no connection to Sanity (ADR 0007: non-personal content only; a visitor's
+  IP is personal data). Every read carries the `sanity` cache tag; Phase 7b adds a signed
+  publish webhook that revalidates it. Until then a deployed site shows published edits only
+  after a rebuild. Still open for the ADR 0007 review: the hero film and its poster load
+  straight from `cdn.sanity.io` in the visitor's browser (images go through `/_next/image`).
+- Editorial Preview may show unlaunched locales: the proxy lets them through when the
+  draft-mode cookie exists, and `lib/locale-gate.ts` verifies draft mode in the route, so a
+  forged cookie still 404s.
+- `PageBuilder` wraps blocks with `data-sanity` only in preview, so public markup is unchanged;
+  `anchor`, `productKey`, finish keys are `stegaClean`ed (the client's default stega filter
+  already skips `href`, `color`, URLs and `seo`).
+*Evidence:* a build reading `06g3ozu4/development` with a test preview secret and two test
+drafts (all deleted afterwards, 0 drafts left): public `/` shows the published headline with
+no `data-sanity`, no stega, indexable; wrong secret 401; enable 307 with the cookie; preview
+`/` shows the draft with 8 `data-sanity` blocks and `noindex`; preview `/en` 200 with
+`lang="en"`; a forged cookie on `/en` 404; a draft patch appeared in the open page after
+~2 s without a reload; "Vorschau beenden" returns to the published page. Neither token in
+`.next/static`. Not yet exercised: the Presentation tool itself, which needs a Studio login.
+
 **Phase 7 — Seed, structure, SEO.** Seed `development` from `content/demo.ts` (images and
 the hero film uploaded), Studio structure (pages per locale, singletons, catch-all),
 `sanity schema deploy`; metadata from `seo`, canonical, `hreflang` only for existing
