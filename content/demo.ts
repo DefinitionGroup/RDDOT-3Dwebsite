@@ -330,9 +330,11 @@ const home: PageDocument = {
   ]
 };
 
-const pages: PageDocument[] = [home];
+/** Every demo page; the seed script writes them to Sanity. */
+export const demoPages: PageDocument[] = [home];
 
-const chrome: Partial<Record<Locale, SiteChrome>> = {
+/** Navigation per locale; the seed script writes one document each. */
+export const demoChrome: Partial<Record<Locale, SiteChrome>> = {
   de: {
     items: [
       { _key: key("nav"), label: "Haltung", href: "#haltung", quiet: null },
@@ -368,11 +370,11 @@ const chrome: Partial<Record<Locale, SiteChrome>> = {
 
 export function getDemoPage(locale: Locale, slug: string | null): PageDocument | null {
   return (
-    pages.find((page) => page.language === locale && (slug === null ? page.isHomepage : page.slug === slug)) ??
+    demoPages.find((page) => page.language === locale && (slug === null ? page.isHomepage : page.slug === slug)) ??
     null
   );
 }
 
 export function getDemoChrome(locale: Locale): SiteChrome | null {
-  return chrome[locale] ?? null;
+  return demoChrome[locale] ?? null;
 }

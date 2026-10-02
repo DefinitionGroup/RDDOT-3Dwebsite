@@ -4,9 +4,10 @@ import { documentInternationalization } from "@sanity/document-internationalizat
 import { visionTool } from "@sanity/vision";
 import { defineConfig } from "sanity";
 import { structureTool } from "sanity/structure";
-import { DEFAULT_LOCALE, sanityLanguages } from "./lib/i18n";
+import { sanityLanguages } from "./lib/i18n";
 import { apiVersion, dataset, studioProjectId } from "./sanity/env";
 import { schemaTypes } from "./sanity/schemaTypes";
+import { structure } from "./sanity/structure";
 
 export default defineConfig({
   name: "rotpunkt-signature",
@@ -16,23 +17,31 @@ export default defineConfig({
   dataset,
   schema: {
     types: schemaTypes,
-    // Every new page starts with a language; the plain template would leave it empty.
     templates: (previous) => [
-      ...previous.filter((template) => template.id !== "page"),
+      // A page always starts in a language (the plugin adds page-de, page-en, page-es);
+      // navigation is one fixed document per language, opened from the structure.
+      ...previous.filter((template) => template.id !== "page" && template.schemaType !== "navigation"),
       {
-        id: "page-by-language",
-        title: "Seite",
-        schemaType: "page",
+        id: "navigation-by-language",
+        title: "Navigation",
+        schemaType: "navigation",
         parameters: [{ name: "language", type: "string" }],
-        value: (params: { language?: string }) => ({ language: params?.language ?? DEFAULT_LOCALE })
+        value: (params: { language: string }) => ({ language: params.language })
       }
     ]
   },
+  document: {
+    // Navigation documents exist once per language and are not duplicated or deleted from here.
+    actions: (previous, context) =>
+      context.schemaType === "navigation"
+        ? previous.filter(({ action }) => action !== "duplicate" && action !== "delete")
+        : previous
+  },
   plugins: [
-    structureTool(),
+    structureTool({ structure }),
     documentInternationalization({
       supportedLanguages: sanityLanguages,
-      schemaTypes: ["page", "navigation"],
+      schemaTypes: ["page"],
       languageField: "language"
     }),
     visionTool({ defaultApiVersion: apiVersion })

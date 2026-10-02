@@ -233,6 +233,28 @@ the hero film uploaded), Studio structure (pages per locale, singletons, catch-a
 translations, `sitemap.ts`, `robots.ts`, `redirect` enforcement in `proxy.ts`.
 *Exit:* the seeded homepage from Sanity matches the demo homepage.
 
+*Seed and structure done 2026-10-02 (7a); SEO, `siteSettings`, sitemap, robots and
+redirects remain (7b).*
+- `pnpm sanity:seed` (`scripts/seed-sanity.ts`, via `sanity exec --with-user-token`)
+  inverts `content/demo.ts` to stored shapes, uploads the files under `/public`, writes
+  `page-de-home` and `navigation-de`, then reads them back through the site's own queries
+  and compares them with the demo content. Refuses `production` without
+  `--allow-production`. Ran twice: same asset ids, 9 assets, 2 documents, 0 drafts.
+- `sanity schema deploy` done for workspace `rotpunkt-signature` → `06g3ozu4/development`.
+- Studio structure (`sanity/structure.ts`): Seiten per language (the plugin's `page-de`,
+  `page-en`, `page-es` templates), Navigation as one fixed document per language
+  (`navigation-<locale>`, no duplicate/delete), then a catch-all for any other type.
+  Navigation left the translation plugin: one document per language needs no linking.
+- **Private datasets need the read token for published reads too.** `defineLive` sends
+  `serverToken` only for drafts and stega, so `sanity/lib/live.ts` gives the server-only
+  client the token itself. Without it the seeded homepage 404'd.
+- Live events on the private dataset work without a token (`welcome` + opaque sync tags),
+  so Phase 6 can mount `<SanityLive />` for published content without exposing anything.
+*Evidence:* a build against the seeded dataset (CLI token passed for that one build only,
+found nowhere in `.next/server` or `.next/static`) renders `/` with status 200, 501 lines
+identical to demo mode except Sanity's blur placeholders on two images; all 8 images and
+both film files load from `cdn.sanity.io`; `/studio` reaches "Choose login provider".
+
 **Phase 8 — Docs and handoff.** `blocks/CONTRACT.md`, `SANITY.md` (listed as needed in
 STATUS.md), ADR 0013, update AGENTS.md ("Sanity is not wired yet") and STATUS.md.
 

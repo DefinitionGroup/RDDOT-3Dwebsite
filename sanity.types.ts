@@ -251,42 +251,6 @@ export type LinkField = {
   href: string;
 };
 
-export type TranslationMetadata = {
-  _id: string;
-  _type: "translation.metadata";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
-  translations?: InternationalizedArrayReference;
-  schemaTypes?: Array<string>;
-};
-
-export type InternationalizedArrayReference = Array<
-  {
-    _key: string;
-  } & InternationalizedArrayReferenceValue
->;
-
-export type PageReference = {
-  _ref: string;
-  _type: "reference";
-  _weak?: boolean;
-  [internalGroqTypeReferenceTo]?: "page";
-};
-
-export type NavigationReference = {
-  _ref: string;
-  _type: "reference";
-  _weak?: boolean;
-  [internalGroqTypeReferenceTo]?: "navigation";
-};
-
-export type InternationalizedArrayReferenceValue = {
-  _type: "internationalizedArrayReferenceValue";
-  value?: PageReference | NavigationReference;
-  language: string;
-};
-
 export type Navigation = {
   _id: string;
   _type: "navigation";
@@ -313,6 +277,35 @@ export type Navigation = {
     _key: string;
   }>;
   footerNote?: string;
+};
+
+export type TranslationMetadata = {
+  _id: string;
+  _type: "translation.metadata";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  translations?: InternationalizedArrayReference;
+  schemaTypes?: Array<string>;
+};
+
+export type InternationalizedArrayReference = Array<
+  {
+    _key: string;
+  } & InternationalizedArrayReferenceValue
+>;
+
+export type PageReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "page";
+};
+
+export type InternationalizedArrayReferenceValue = {
+  _type: "internationalizedArrayReferenceValue";
+  value?: PageReference;
+  language: string;
 };
 
 export type Page = {
@@ -489,12 +482,11 @@ export type AllSanitySchemaTypes =
   | VideoLoop
   | Seo
   | LinkField
+  | Navigation
   | TranslationMetadata
   | InternationalizedArrayReference
   | PageReference
-  | NavigationReference
   | InternationalizedArrayReferenceValue
-  | Navigation
   | Page
   | SanityImageCrop
   | SanityImageHotspot

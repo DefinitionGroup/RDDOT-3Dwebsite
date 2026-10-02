@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "typegen": "sanity schema extract --enforce-required-fields --force && sanity typegen generate",
+    "sanity:seed": "sanity exec scripts/seed-sanity.ts --with-user-token --",
     "prebuild": "pnpm typegen",
     "build": "next build",
     "postbuild": "node scripts/verify-server-bundle.mjs",
