@@ -21,7 +21,7 @@ export function Label({ as: Tag = "p", children, className = "", tone = "graphit
 }
 
 type SectionIntroProps = {
-  label: string;
+  label?: string;
   title: ReactNode;
   className?: string;
   size?: "heading" | "heading-lg";
@@ -42,7 +42,7 @@ export function SectionIntro({
         align === "center" ? "items-center text-center" : ""
       } ${className}`}
     >
-      <Label>{label}</Label>
+      {label && <Label>{label}</Label>}
       <h2 className={`m-0 text-balance ${size === "heading-lg" ? "text-heading-lg" : "text-heading"}`}>
         {title}
       </h2>

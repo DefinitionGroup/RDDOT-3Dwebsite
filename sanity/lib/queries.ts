@@ -21,7 +21,11 @@ const pageContentFragment = /* groq */ `content[]{
     ...,
     film{ "desktop": desktop.${fileFragment}, "mobile": mobile.${fileFragment}, poster ${imageFragment} }
   },
-  _type == "statementBlock" => { ..., image ${imageFragment} }
+  _type == "statementBlock" => { ..., image ${imageFragment} },
+  _type == "materialsBlock" => { ..., items[]{ ..., image ${imageFragment} } },
+  _type == "configuratorBlock" => { ..., image ${imageFragment} },
+  _type == "roomStoryBlock" => { ..., image ${imageFragment} },
+  _type == "collectionsBlock" => { ..., items[]{ ..., image ${imageFragment} } }
 }`;
 
 const pageProjection = /* groq */ `{
@@ -38,6 +42,16 @@ const pageProjection = /* groq */ `{
 
 export const HOME_PAGE_QUERY = defineQuery(
   `*[_type == "page" && language == $locale && isHomepage == true][0]${pageProjection}`
+);
+
+/** Header and footer links for one locale. */
+export const NAVIGATION_QUERY = defineQuery(
+  `*[_type == "navigation" && language == $locale][0]{
+    items[]{ _key, label, href, quiet },
+    cta,
+    footerColumns[]{ _key, title, links[]{ _key, label, href } },
+    footerNote
+  }`
 );
 
 /** A page by its slug in one locale. Never falls back to another language (ADR 0007). */

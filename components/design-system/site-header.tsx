@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { Pill, RoundButton } from "@/components/design-system/pill";
-import { configureHref, navItems } from "@/lib/content";
+import type { SiteChrome } from "@/blocks/types";
 import { DURATION, SIGNATURE_EASE, STAGGER } from "@/lib/motion";
 
 function MenuIcon({ open }: { open: boolean }) {
@@ -22,10 +22,13 @@ function MenuIcon({ open }: { open: boolean }) {
 
 /**
  * The marketing header: transparent over the film, frosted once the page
- * scrolls. Four links and the ghost pill on desktop; on phones a round menu
- * button opens the same links as a full-screen sheet.
+ * scrolls. The links and the ghost pill on desktop; on phones a round menu
+ * button opens the same links as a full-screen sheet. Links come from the
+ * locale's navigation document.
  */
-export function SiteHeader() {
+export function SiteHeader({ chrome }: { chrome: SiteChrome | null }) {
+  const navItems = chrome?.items ?? [];
+  const cta = chrome?.cta;
   const { scrollY } = useScroll();
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -70,16 +73,18 @@ export function SiteHeader() {
                   item.quiet ? "text-graphite" : "text-ink"
                 }`}
                 href={item.href}
-                key={item.title}
+                key={item._key}
               >
-                {item.title}
+                {item.label}
               </Link>
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <Pill className="hidden md:inline-flex" href={configureHref} variant="secondary">
-              Küche konfigurieren
-            </Pill>
+            {cta && (
+              <Pill className="hidden md:inline-flex" href={cta.href} variant="secondary">
+                {cta.label}
+              </Pill>
+            )}
             <RoundButton
               aria-controls="site-menu"
               aria-expanded={menuOpen}
@@ -111,7 +116,7 @@ export function SiteHeader() {
                   <motion.li
                     animate={{ opacity: 1, y: 0 }}
                     initial={{ opacity: 0, y: 12 }}
-                    key={item.title}
+                    key={item._key}
                     transition={{
                       duration: DURATION.reveal,
                       ease: SIGNATURE_EASE,
@@ -125,14 +130,16 @@ export function SiteHeader() {
                       href={item.href}
                       onClick={closeMenu}
                     >
-                      {item.title}
+                      {item.label}
                     </Link>
                   </motion.li>
                 ))}
               </ul>
-              <Pill className="w-full" href={configureHref}>
-                Küche konfigurieren
-              </Pill>
+              {cta && (
+                <Pill className="w-full" href={cta.href}>
+                  {cta.label}
+                </Pill>
+              )}
             </nav>
           </motion.div>
         )}

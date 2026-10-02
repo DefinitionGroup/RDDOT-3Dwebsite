@@ -22,6 +22,158 @@ export type SanityImageAssetReference = {
   [internalGroqTypeReferenceTo]?: "sanity.imageAsset";
 };
 
+export type MaterialImage = {
+  asset?: SanityImageAssetReference;
+  media?: unknown; // Unable to locate the referenced type "material.image.media" in schema
+  hotspot?: SanityImageHotspot;
+  crop?: SanityImageCrop;
+  alt: string;
+  _type: "image";
+};
+
+export type CollectionImage = {
+  asset?: SanityImageAssetReference;
+  media?: unknown; // Unable to locate the referenced type "collection.image.media" in schema
+  hotspot?: SanityImageHotspot;
+  crop?: SanityImageCrop;
+  alt: string;
+  _type: "image";
+};
+
+export type ClosingBlock = {
+  _type: "closingBlock";
+  headline: string;
+  body?: string;
+  cta?: LinkField;
+  anchor?: string;
+};
+
+export type CollectionsBlock = {
+  _type: "collectionsBlock";
+  label?: string;
+  headline: string;
+  items?: Array<{
+    title: string;
+    subtitle?: string;
+    body?: string;
+    link?: LinkField;
+    image: CollectionImage;
+    caption?: string;
+    _type: "collection";
+    _key: string;
+  }>;
+  anchor?: string;
+};
+
+export type RoomStoryBlock = {
+  _type: "roomStoryBlock";
+  label?: string;
+  headline: string;
+  lead?: string;
+  features?: Array<{
+    label: string;
+    title: string;
+    body?: string;
+    _type: "roomFeature";
+    _key: string;
+  }>;
+  cta?: LinkField;
+  image: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt: string;
+    _type: "image";
+  };
+  imageBadge?: string;
+  caption?: string;
+  anchor?: string;
+};
+
+export type ConfiguratorBlock = {
+  _type: "configuratorBlock";
+  productKey: "rdtdot-signature-kitchen-v1";
+  startFront?:
+    "porcelain" | "castoro-ottawa" | "verde-kitami" | "walnut-memory";
+  startCabinet?: "graphite" | "porcelain" | "oak";
+  label?: string;
+  headline: string;
+  body?: string;
+  counterBefore?: string;
+  counterAfter?: string;
+  image: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt: string;
+    _type: "image";
+  };
+  stages?: Array<{
+    label: string;
+    title: string;
+    body?: string;
+    _type: "stage";
+    _key: string;
+  }>;
+  ctaLabel?: string;
+  explainerLabel?: string;
+  explainerTitle?: string;
+  explainerIntro?: string;
+  steps?: Array<{
+    label: string;
+    title: string;
+    body?: string;
+    _type: "step";
+    _key: string;
+  }>;
+  anchor?: string;
+};
+
+export type MaterialsBlock = {
+  _type: "materialsBlock";
+  productKey: "rdtdot-signature-kitchen-v1";
+  label?: string;
+  headline: string;
+  intro?: string;
+  items?: Array<{
+    finishKey:
+      "porcelain" | "castoro-ottawa" | "verde-kitami" | "walnut-memory";
+    name: string;
+    kind?: string;
+    body?: string;
+    image?: MaterialImage;
+    color?: string;
+    colorAlt?: string;
+    zoom?: number;
+    detail?: Array<string>;
+    facts?: Array<string>;
+    _type: "material";
+    _key: string;
+  }>;
+  cta?: LinkField;
+  detailCtaLabel?: string;
+  anchor?: string;
+};
+
+export type PromisesBlock = {
+  _type: "promisesBlock";
+  label?: string;
+  headline: string;
+  intro?: string;
+  items?: Array<{
+    label: string;
+    title: string;
+    body: string;
+    detail?: Array<string>;
+    _type: "promise";
+    _key: string;
+  }>;
+  detailCta?: LinkField;
+  anchor?: string;
+};
+
 export type StatementBlock = {
   _type: "statementBlock";
   label?: string;
@@ -122,10 +274,45 @@ export type PageReference = {
   [internalGroqTypeReferenceTo]?: "page";
 };
 
+export type NavigationReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "navigation";
+};
+
 export type InternationalizedArrayReferenceValue = {
   _type: "internationalizedArrayReferenceValue";
-  value?: PageReference;
+  value?: PageReference | NavigationReference;
   language: string;
+};
+
+export type Navigation = {
+  _id: string;
+  _type: "navigation";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  language: "de" | "en" | "es";
+  items?: Array<{
+    label: string;
+    href: string;
+    quiet?: boolean;
+    _type: "navItem";
+    _key: string;
+  }>;
+  cta?: LinkField;
+  footerColumns?: Array<{
+    title: string;
+    links?: Array<
+      {
+        _key: string;
+      } & LinkField
+    >;
+    _type: "footerColumn";
+    _key: string;
+  }>;
+  footerNote?: string;
 };
 
 export type Page = {
@@ -146,6 +333,24 @@ export type Page = {
     | ({
         _key: string;
       } & StatementBlock)
+    | ({
+        _key: string;
+      } & PromisesBlock)
+    | ({
+        _key: string;
+      } & MaterialsBlock)
+    | ({
+        _key: string;
+      } & ConfiguratorBlock)
+    | ({
+        _key: string;
+      } & RoomStoryBlock)
+    | ({
+        _key: string;
+      } & CollectionsBlock)
+    | ({
+        _key: string;
+      } & ClosingBlock)
   >;
 };
 
@@ -270,6 +475,14 @@ export type Geopoint = {
 
 export type AllSanitySchemaTypes =
   | SanityImageAssetReference
+  | MaterialImage
+  | CollectionImage
+  | ClosingBlock
+  | CollectionsBlock
+  | RoomStoryBlock
+  | ConfiguratorBlock
+  | MaterialsBlock
+  | PromisesBlock
   | StatementBlock
   | HeroFilmBlock
   | SanityFileAssetReference
@@ -279,7 +492,9 @@ export type AllSanitySchemaTypes =
   | TranslationMetadata
   | InternationalizedArrayReference
   | PageReference
+  | NavigationReference
   | InternationalizedArrayReferenceValue
+  | Navigation
   | Page
   | SanityImageCrop
   | SanityImageHotspot
@@ -295,7 +510,7 @@ export type AllSanitySchemaTypes =
 
 // Source: sanity/lib/queries.ts
 // Variable: HOME_PAGE_QUERY
-// Query: *[_type == "page" && language == $locale && isHomepage == true][0]{  _id,  title,  "slug": slug.current,  language,  isHomepage,  seo{ title, description, image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  "translations": *[_type == "translation.metadata" && references(^._id)][0]    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },  content[]{  ...,  _type == "heroFilmBlock" => {    ...,    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} }  },  _type == "statementBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} }}}
+// Query: *[_type == "page" && language == $locale && isHomepage == true][0]{  _id,  title,  "slug": slug.current,  language,  isHomepage,  seo{ title, description, image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  "translations": *[_type == "translation.metadata" && references(^._id)][0]    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },  content[]{  ...,  _type == "heroFilmBlock" => {    ...,    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} }  },  _type == "statementBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  _type == "materialsBlock" => { ..., items[]{ ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} } },  _type == "configuratorBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  _type == "roomStoryBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  _type == "collectionsBlock" => { ..., items[]{ ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} } }}}
 export type HOME_PAGE_QUERY_RESULT = {
   _id: string;
   title: string;
@@ -326,6 +541,88 @@ export type HOME_PAGE_QUERY_RESULT = {
   content: Array<
     | {
         _key: string;
+        _type: "closingBlock";
+        headline: string;
+        body?: string;
+        cta?: LinkField;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "collectionsBlock";
+        label?: string;
+        headline: string;
+        items: Array<{
+          title: string;
+          subtitle?: string;
+          body?: string;
+          link?: LinkField;
+          image: {
+            asset: {
+              _id: string;
+              url: string;
+              lqip: string | null;
+              dimensions: SanityImageDimensions | null;
+            } | null;
+            media?: unknown; // Unable to locate the referenced type "collection.image.media" in schema
+            hotspot?: SanityImageHotspot;
+            crop?: SanityImageCrop;
+            alt: string;
+            _type: "image";
+          };
+          caption?: string;
+          _type: "collection";
+          _key: string;
+        }> | null;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "configuratorBlock";
+        productKey: "rdtdot-signature-kitchen-v1";
+        startFront?:
+          "castoro-ottawa" | "porcelain" | "verde-kitami" | "walnut-memory";
+        startCabinet?: "graphite" | "oak" | "porcelain";
+        label?: string;
+        headline: string;
+        body?: string;
+        counterBefore?: string;
+        counterAfter?: string;
+        image: {
+          asset: {
+            _id: string;
+            url: string;
+            lqip: string | null;
+            dimensions: SanityImageDimensions | null;
+          } | null;
+          media?: unknown;
+          hotspot?: SanityImageHotspot;
+          crop?: SanityImageCrop;
+          alt: string;
+          _type: "image";
+        };
+        stages?: Array<{
+          label: string;
+          title: string;
+          body?: string;
+          _type: "stage";
+          _key: string;
+        }>;
+        ctaLabel?: string;
+        explainerLabel?: string;
+        explainerTitle?: string;
+        explainerIntro?: string;
+        steps?: Array<{
+          label: string;
+          title: string;
+          body?: string;
+          _type: "step";
+          _key: string;
+        }>;
+        anchor?: string;
+      }
+    | {
+        _key: string;
         _type: "heroFilmBlock";
         eyebrow?: string;
         headline: string;
@@ -361,6 +658,92 @@ export type HOME_PAGE_QUERY_RESULT = {
       }
     | {
         _key: string;
+        _type: "materialsBlock";
+        productKey: "rdtdot-signature-kitchen-v1";
+        label?: string;
+        headline: string;
+        intro?: string;
+        items: Array<{
+          finishKey:
+            "castoro-ottawa" | "porcelain" | "verde-kitami" | "walnut-memory";
+          name: string;
+          kind?: string;
+          body?: string;
+          image: {
+            asset: {
+              _id: string;
+              url: string;
+              lqip: string | null;
+              dimensions: SanityImageDimensions | null;
+            } | null;
+            media?: unknown; // Unable to locate the referenced type "material.image.media" in schema
+            hotspot?: SanityImageHotspot;
+            crop?: SanityImageCrop;
+            alt: string;
+            _type: "image";
+          } | null;
+          color?: string;
+          colorAlt?: string;
+          zoom?: number;
+          detail?: Array<string>;
+          facts?: Array<string>;
+          _type: "material";
+          _key: string;
+        }> | null;
+        cta?: LinkField;
+        detailCtaLabel?: string;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "promisesBlock";
+        label?: string;
+        headline: string;
+        intro?: string;
+        items?: Array<{
+          label: string;
+          title: string;
+          body: string;
+          detail?: Array<string>;
+          _type: "promise";
+          _key: string;
+        }>;
+        detailCta?: LinkField;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "roomStoryBlock";
+        label?: string;
+        headline: string;
+        lead?: string;
+        features?: Array<{
+          label: string;
+          title: string;
+          body?: string;
+          _type: "roomFeature";
+          _key: string;
+        }>;
+        cta?: LinkField;
+        image: {
+          asset: {
+            _id: string;
+            url: string;
+            lqip: string | null;
+            dimensions: SanityImageDimensions | null;
+          } | null;
+          media?: unknown;
+          hotspot?: SanityImageHotspot;
+          crop?: SanityImageCrop;
+          alt: string;
+          _type: "image";
+        };
+        imageBadge?: string;
+        caption?: string;
+        anchor?: string;
+      }
+    | {
+        _key: string;
         _type: "statementBlock";
         label?: string;
         statement: string;
@@ -386,8 +769,31 @@ export type HOME_PAGE_QUERY_RESULT = {
 } | null;
 
 // Source: sanity/lib/queries.ts
+// Variable: NAVIGATION_QUERY
+// Query: *[_type == "navigation" && language == $locale][0]{    items[]{ _key, label, href, quiet },    cta,    footerColumns[]{ _key, title, links[]{ _key, label, href } },    footerNote  }
+export type NAVIGATION_QUERY_RESULT = {
+  items: Array<{
+    _key: string;
+    label: string;
+    href: string;
+    quiet: boolean | null;
+  }> | null;
+  cta: LinkField | null;
+  footerColumns: Array<{
+    _key: string;
+    title: string;
+    links: Array<{
+      _key: string;
+      label: string;
+      href: string;
+    }> | null;
+  }> | null;
+  footerNote: string | null;
+} | null;
+
+// Source: sanity/lib/queries.ts
 // Variable: PAGE_QUERY
-// Query: *[_type == "page" && language == $locale && slug.current == $slug && isHomepage != true][0]{  _id,  title,  "slug": slug.current,  language,  isHomepage,  seo{ title, description, image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  "translations": *[_type == "translation.metadata" && references(^._id)][0]    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },  content[]{  ...,  _type == "heroFilmBlock" => {    ...,    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} }  },  _type == "statementBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} }}}
+// Query: *[_type == "page" && language == $locale && slug.current == $slug && isHomepage != true][0]{  _id,  title,  "slug": slug.current,  language,  isHomepage,  seo{ title, description, image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  "translations": *[_type == "translation.metadata" && references(^._id)][0]    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },  content[]{  ...,  _type == "heroFilmBlock" => {    ...,    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} }  },  _type == "statementBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  _type == "materialsBlock" => { ..., items[]{ ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} } },  _type == "configuratorBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  _type == "roomStoryBlock" => { ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} },  _type == "collectionsBlock" => { ..., items[]{ ..., image {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }} } }}}
 export type PAGE_QUERY_RESULT = {
   _id: string;
   title: string;
@@ -418,6 +824,88 @@ export type PAGE_QUERY_RESULT = {
   content: Array<
     | {
         _key: string;
+        _type: "closingBlock";
+        headline: string;
+        body?: string;
+        cta?: LinkField;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "collectionsBlock";
+        label?: string;
+        headline: string;
+        items: Array<{
+          title: string;
+          subtitle?: string;
+          body?: string;
+          link?: LinkField;
+          image: {
+            asset: {
+              _id: string;
+              url: string;
+              lqip: string | null;
+              dimensions: SanityImageDimensions | null;
+            } | null;
+            media?: unknown; // Unable to locate the referenced type "collection.image.media" in schema
+            hotspot?: SanityImageHotspot;
+            crop?: SanityImageCrop;
+            alt: string;
+            _type: "image";
+          };
+          caption?: string;
+          _type: "collection";
+          _key: string;
+        }> | null;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "configuratorBlock";
+        productKey: "rdtdot-signature-kitchen-v1";
+        startFront?:
+          "castoro-ottawa" | "porcelain" | "verde-kitami" | "walnut-memory";
+        startCabinet?: "graphite" | "oak" | "porcelain";
+        label?: string;
+        headline: string;
+        body?: string;
+        counterBefore?: string;
+        counterAfter?: string;
+        image: {
+          asset: {
+            _id: string;
+            url: string;
+            lqip: string | null;
+            dimensions: SanityImageDimensions | null;
+          } | null;
+          media?: unknown;
+          hotspot?: SanityImageHotspot;
+          crop?: SanityImageCrop;
+          alt: string;
+          _type: "image";
+        };
+        stages?: Array<{
+          label: string;
+          title: string;
+          body?: string;
+          _type: "stage";
+          _key: string;
+        }>;
+        ctaLabel?: string;
+        explainerLabel?: string;
+        explainerTitle?: string;
+        explainerIntro?: string;
+        steps?: Array<{
+          label: string;
+          title: string;
+          body?: string;
+          _type: "step";
+          _key: string;
+        }>;
+        anchor?: string;
+      }
+    | {
+        _key: string;
         _type: "heroFilmBlock";
         eyebrow?: string;
         headline: string;
@@ -449,6 +937,92 @@ export type PAGE_QUERY_RESULT = {
             _type: "image";
           };
         };
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "materialsBlock";
+        productKey: "rdtdot-signature-kitchen-v1";
+        label?: string;
+        headline: string;
+        intro?: string;
+        items: Array<{
+          finishKey:
+            "castoro-ottawa" | "porcelain" | "verde-kitami" | "walnut-memory";
+          name: string;
+          kind?: string;
+          body?: string;
+          image: {
+            asset: {
+              _id: string;
+              url: string;
+              lqip: string | null;
+              dimensions: SanityImageDimensions | null;
+            } | null;
+            media?: unknown; // Unable to locate the referenced type "material.image.media" in schema
+            hotspot?: SanityImageHotspot;
+            crop?: SanityImageCrop;
+            alt: string;
+            _type: "image";
+          } | null;
+          color?: string;
+          colorAlt?: string;
+          zoom?: number;
+          detail?: Array<string>;
+          facts?: Array<string>;
+          _type: "material";
+          _key: string;
+        }> | null;
+        cta?: LinkField;
+        detailCtaLabel?: string;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "promisesBlock";
+        label?: string;
+        headline: string;
+        intro?: string;
+        items?: Array<{
+          label: string;
+          title: string;
+          body: string;
+          detail?: Array<string>;
+          _type: "promise";
+          _key: string;
+        }>;
+        detailCta?: LinkField;
+        anchor?: string;
+      }
+    | {
+        _key: string;
+        _type: "roomStoryBlock";
+        label?: string;
+        headline: string;
+        lead?: string;
+        features?: Array<{
+          label: string;
+          title: string;
+          body?: string;
+          _type: "roomFeature";
+          _key: string;
+        }>;
+        cta?: LinkField;
+        image: {
+          asset: {
+            _id: string;
+            url: string;
+            lqip: string | null;
+            dimensions: SanityImageDimensions | null;
+          } | null;
+          media?: unknown;
+          hotspot?: SanityImageHotspot;
+          crop?: SanityImageCrop;
+          alt: string;
+          _type: "image";
+        };
+        imageBadge?: string;
+        caption?: string;
         anchor?: string;
       }
     | {
@@ -480,8 +1054,9 @@ export type PAGE_QUERY_RESULT = {
 // Query TypeMap
 declare global {
   interface SanityQueries {
-    '*[_type == "page" && language == $locale && isHomepage == true][0]{\n  _id,\n  title,\n  "slug": slug.current,\n  language,\n  isHomepage,\n  seo{ title, description, image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  "translations": *[_type == "translation.metadata" && references(^._id)][0]\n    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },\n  content[]{\n  ...,\n  _type == "heroFilmBlock" => {\n    ...,\n    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n  },\n  _type == "statementBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n}\n}': HOME_PAGE_QUERY_RESULT;
-    '*[_type == "page" && language == $locale && slug.current == $slug && isHomepage != true][0]{\n  _id,\n  title,\n  "slug": slug.current,\n  language,\n  isHomepage,\n  seo{ title, description, image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  "translations": *[_type == "translation.metadata" && references(^._id)][0]\n    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },\n  content[]{\n  ...,\n  _type == "heroFilmBlock" => {\n    ...,\n    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n  },\n  _type == "statementBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n}\n}': PAGE_QUERY_RESULT;
+    '*[_type == "page" && language == $locale && isHomepage == true][0]{\n  _id,\n  title,\n  "slug": slug.current,\n  language,\n  isHomepage,\n  seo{ title, description, image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  "translations": *[_type == "translation.metadata" && references(^._id)][0]\n    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },\n  content[]{\n  ...,\n  _type == "heroFilmBlock" => {\n    ...,\n    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n  },\n  _type == "statementBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "materialsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } },\n  _type == "configuratorBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "roomStoryBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "collectionsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } }\n}\n}': HOME_PAGE_QUERY_RESULT;
+    '*[_type == "navigation" && language == $locale][0]{\n    items[]{ _key, label, href, quiet },\n    cta,\n    footerColumns[]{ _key, title, links[]{ _key, label, href } },\n    footerNote\n  }': NAVIGATION_QUERY_RESULT;
+    '*[_type == "page" && language == $locale && slug.current == $slug && isHomepage != true][0]{\n  _id,\n  title,\n  "slug": slug.current,\n  language,\n  isHomepage,\n  seo{ title, description, image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  "translations": *[_type == "translation.metadata" && references(^._id)][0]\n    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },\n  content[]{\n  ...,\n  _type == "heroFilmBlock" => {\n    ...,\n    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n  },\n  _type == "statementBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "materialsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } },\n  _type == "configuratorBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "roomStoryBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "collectionsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } }\n}\n}': PAGE_QUERY_RESULT;
   }
 }
 // Lets @sanity/client releases that predate the global registry read it too

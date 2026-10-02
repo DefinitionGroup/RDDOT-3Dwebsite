@@ -201,6 +201,27 @@ lines each); `sanity schema validate` 0 errors, 0 warnings; 87 unit tests incl. 
 `configurator` blocks wired to it. *Exit:* changing a finish in Studio changes the link and
 the surcharge shown; an unknown key cannot be published.
 
+*Phases 4 and 5 done together 2026-10-02* (the two configurator sections sit in the middle
+of the homepage, so porting them apart would have split the page around static leftovers).
+- Blocks: `promisesBlock`, `materialsBlock`, `configuratorBlock`, `roomStoryBlock`,
+  `collectionsBlock`, `closingBlock`. `components/sections/` and `lib/content.ts` are gone;
+  the homepage is `SiteFrame` + `PageBuilder`, like every Editorial Page.
+- `navigation` (document-level, one per language) feeds header and footer through
+  `loadSiteChrome(locale)`. `siteSettings` moves to Phase 7, where SEO defaults need it.
+- `features/configurator/catalog.ts` is the product seam: `resolveProduct`, Studio choices
+  for products and finishes, `presetState` / `presetPricing`. Unknown product or finish →
+  the card keeps its copy and drops link and price (logged), never a guessed fallback.
+- Headlines may carry a line break: desktop rhythm only, a space on phones.
+- Functional copy still in code, for Phase 9's dictionaries: "Mehr zu …", "Richtpreis",
+  "Richtpreis der Grundausstattung / dieser Ausstattung", "Aufpreis …", "In der
+  Grundausstattung enthalten", "Die drei Entscheidungen".
+*Evidence:* full `/` markup from `<header>` to `</footer>` identical to Phase 3 (500 lines)
+except the walnut tile's `object-position: center bottom` → `50% 100%` (same position, now
+from a hotspot). Walnut deep link decodes to the default state with `walnut-memory`; detail
+cards, explainer (4 steps, "Richtpreis der Grundausstattung · 10.103 €"), phone menu and
+footer checked in the browser; 375 px without overflow; schema 0 errors / 0 warnings;
+93 unit tests incl. 6 for the catalog.
+
 **Phase 6 — TypeGen, Presentation, Live.** `sanity.cli.ts` typegen block, `pnpm typegen` as
 `prebuild`, draft-mode routes, `resolve.ts` (German paths unprefixed), data attributes,
 `stegaClean` on logic strings, `noindex` in preview. *Exit:* click-to-select and

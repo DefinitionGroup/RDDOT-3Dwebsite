@@ -1,0 +1,56 @@
+import type { BlockProps } from "@/blocks/types";
+import { presetPricing, presetState } from "@/features/configurator/catalog";
+import { formatCurrency } from "@/features/configurator/product-definition";
+import { CONFIG_QUERY_PARAM, encodeConfiguration } from "@/features/configurator/state-codec";
+import { imageFocus, imageUrl } from "@/sanity/lib/image";
+import { ConfiguratorView } from "./configurator-view";
+
+const CONFIGURE_PATH = "/configure";
+
+/**
+ * Resolves the block's product on the server: the real indicative price of
+ * its starting configuration and the link that opens it. An unknown product
+ * keeps the editorial content and drops the price; the link then opens the
+ * configurator's own default.
+ */
+export default function ConfiguratorBlock({ block }: BlockProps<"configuratorBlock">) {
+  const preset = { frontColorKey: block.startFront, cabinetColorKey: block.startCabinet };
+  const resolved = presetState(block.productKey, preset);
+  const pricing = presetPricing(block.productKey, preset);
+  if (!resolved) console.warn(`configuratorBlock: cannot resolve product "${block.productKey}" with its start finishes`);
+
+  const hasPreset = Boolean(block.startFront || block.startCabinet);
+  const href =
+    resolved && hasPreset
+      ? `${CONFIGURE_PATH}?${CONFIG_QUERY_PARAM}=${encodeConfiguration(resolved.state)}`
+      : CONFIGURE_PATH;
+
+  return (
+    <ConfiguratorView
+      anchor={block.anchor}
+      body={block.body}
+      counter={
+        block.counterBefore || block.counterAfter
+          ? { before: block.counterBefore, after: block.counterAfter }
+          : null
+      }
+      cta={{ label: block.ctaLabel ?? "Jetzt konfigurieren", href }}
+      explainer={
+        block.explainerLabel
+          ? {
+              label: block.explainerLabel,
+              title: block.explainerTitle,
+              intro: block.explainerIntro,
+              steps: (block.steps ?? []).map(({ _key, label, title, body }) => ({ key: _key, label, title, body }))
+            }
+          : null
+      }
+      headline={block.headline}
+      image={{ src: imageUrl(block.image), alt: block.image.alt, position: imageFocus(block.image) }}
+      label={block.label}
+      price={pricing ? formatCurrency(pricing.totalCents) : null}
+      priceNote={hasPreset ? "Richtpreis dieser Ausstattung" : "Richtpreis der Grundausstattung"}
+      stages={(block.stages ?? []).map(({ _key, label, title, body }) => ({ key: _key, label, title, body }))}
+    />
+  );
+}

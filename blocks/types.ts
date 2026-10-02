@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/i18n";
-import type { PAGE_QUERY_RESULT } from "@/sanity.types";
+import type { NAVIGATION_QUERY_RESULT, PAGE_QUERY_RESULT } from "@/sanity.types";
 
 /*
  * Block types come from the generated query results, never from stored
@@ -12,6 +12,9 @@ export type PageDocument = NonNullable<PAGE_QUERY_RESULT>;
 export type PageBlock = NonNullable<PageDocument["content"]>[number];
 export type BlockType = PageBlock["_type"];
 export type BlockOf<T extends BlockType> = Extract<PageBlock, { _type: T }>;
+
+/** Header and footer links of one locale (the navigation document, resolved). */
+export type SiteChrome = NonNullable<NAVIGATION_QUERY_RESULT>;
 
 /** An image as `imageFragment` projects it: asset resolved, editor alt text alongside. */
 export type ResolvedImage = BlockOf<"statementBlock">["image"];

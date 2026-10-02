@@ -32,7 +32,7 @@ export default defineConfig({
     structureTool(),
     documentInternationalization({
       supportedLanguages: sanityLanguages,
-      schemaTypes: ["page"],
+      schemaTypes: ["page", "navigation"],
       languageField: "language"
     }),
     visionTool({ defaultApiVersion: apiVersion })

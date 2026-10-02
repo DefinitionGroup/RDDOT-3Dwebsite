@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
-import { SiteFooter } from "@/components/design-system/site-footer";
-import { SiteHeader } from "@/components/design-system/site-header";
 import { PageBuilder } from "@/components/page-builder/page-builder";
+import { SiteFrame } from "@/components/page-builder/site-frame";
 import { isLaunchedLocale } from "@/lib/i18n";
 import { loadPage } from "@/sanity/lib/loaders";
 
@@ -17,12 +16,8 @@ export default async function EditorialPage({ params }: PageProps<"/[locale]/[..
   if (!page) notFound();
 
   return (
-    <>
-      <SiteHeader />
-      <main>
-        <PageBuilder locale={locale} page={page} />
-      </main>
-      <SiteFooter />
-    </>
+    <SiteFrame locale={locale}>
+      <PageBuilder locale={locale} page={page} />
+    </SiteFrame>
   );
 }
