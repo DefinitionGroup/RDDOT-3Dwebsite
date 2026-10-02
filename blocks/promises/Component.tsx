@@ -8,9 +8,11 @@ import { Label, SectionIntro } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import { Reveal } from "@/components/design-system/reveal";
 import type { BlockProps } from "@/blocks/types";
+import { getMessages } from "@/lib/messages";
 
 /** Promises as cards: material, technology, manufacturing, planning. Each opens its story. */
-export default function PromisesBlock({ block }: BlockProps<"promisesBlock">) {
+export default function PromisesBlock({ block, locale }: BlockProps<"promisesBlock">) {
+  const t = getMessages(locale).blocks;
   const [openKey, setOpenKey] = useState<string | null>(null);
   const items = block.items ?? [];
   const open = items.find((item) => item._key === openKey) ?? null;
@@ -29,7 +31,7 @@ export default function PromisesBlock({ block }: BlockProps<"promisesBlock">) {
                 <Label>{item.label}</Label>
                 <DetailTrigger
                   id={item._key}
-                  label={`Mehr zu ${item.title}`}
+                  label={t.moreAbout(item.title)}
                   onOpen={() => setOpenKey(item._key)}
                   open={openKey === item._key}
                 />

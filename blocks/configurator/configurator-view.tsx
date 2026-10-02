@@ -27,11 +27,12 @@ type ConfiguratorViewProps = {
   /** The formatted indicative price of the starting configuration; null when the product is unknown. */
   price: string | null;
   priceNote: string;
+  /** Interface words in the page's language. */
+  labels: { price: string; decisions: string };
   explainer: { label: string; title?: string; intro?: string; steps: Step[] } | null;
 };
 
 const CYCLE_MS = 3200;
-const COUNT_WORDS: Record<number, string> = { 2: "zwei", 3: "drei", 4: "vier" };
 
 /**
  * The configurator as a card with a living HUD: the decisions cycle over the
@@ -46,6 +47,7 @@ export function ConfiguratorView({
   headline,
   image,
   label,
+  labels,
   price,
   priceNote,
   stages
@@ -88,7 +90,7 @@ export function ConfiguratorView({
               <div className="absolute left-4 top-4 md:left-6 md:top-6">
                 <GlassSegments
                   activeId={stageKey}
-                  ariaLabel={`Die ${COUNT_WORDS[stages.length] ?? stages.length} Entscheidungen`}
+                  ariaLabel={labels.decisions}
                   layoutGroup="teaser"
                   onChange={(id) => {
                     setPaused(true);
@@ -119,7 +121,7 @@ export function ConfiguratorView({
               {price && (
                 <Glass className="inline-flex h-11 items-baseline gap-2.5 px-5">
                   <Label as="span" className="tracking-badge">
-                    Richtpreis
+                    {labels.price}
                   </Label>
                   <span className="tnum text-[1.125rem] font-display leading-none">{price}</span>
                 </Glass>

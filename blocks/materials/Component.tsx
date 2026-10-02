@@ -3,17 +3,19 @@ import type { BlockProps } from "@/blocks/types";
 import { presetPricing, presetState } from "@/features/configurator/catalog";
 import { formatCurrency } from "@/features/configurator/product-definition";
 import { CONFIG_QUERY_PARAM, encodeConfiguration } from "@/features/configurator/state-codec";
+import { localizePath } from "@/lib/i18n";
+import { getMessages } from "@/lib/messages";
 import { imageFocus, imageUrl } from "@/sanity/lib/image";
 import { MaterialsView, type MaterialCard } from "./materials-view";
-
-const CONFIGURE_PATH = "/configure";
 
 /**
  * Resolves each card's finish against the configurator on the server: the
  * link opens the scene with that front, the line under it states the
  * surcharge. An unknown product or finish keeps the card but drops both.
  */
-export default function MaterialsBlock({ block }: BlockProps<"materialsBlock">) {
+export default function MaterialsBlock({ block, locale }: BlockProps<"materialsBlock">) {
+  const t = getMessages(locale).blocks;
+  const configurePath = localizePath(locale, "/configure");
   // Keys are logic: in preview they carry stega markers that would never match.
   const productKey = stegaClean(block.productKey);
   const cards: MaterialCard[] = (block.items ?? []).map((item) => {
@@ -34,11 +36,12 @@ export default function MaterialsBlock({ block }: BlockProps<"materialsBlock">) 
       color: item.image ? undefined : item.color,
       detail: item.detail ?? [],
       facts: item.facts ?? [],
-      href: resolved ? `${CONFIGURE_PATH}?${CONFIG_QUERY_PARAM}=${encodeConfiguration(resolved.state)}` : null,
+      href: resolved ? `${configurePath}?${CONFIG_QUERY_PARAM}=${encodeConfiguration(resolved.state)}` : null,
+      detailLabel: t.moreAbout(item.name),
       price: pricing
         ? pricing.frontDeltaCents === 0
-          ? "In der Grundausstattung enthalten"
-          : `Aufpreis ${formatCurrency(pricing.frontDeltaCents)}`
+          ? t.includedAsStandard
+          : t.surcharge(formatCurrency(pricing.frontDeltaCents, locale))
         : null
     };
   });

@@ -24,8 +24,10 @@ export type MaterialCard = {
   facts: string[];
   /** Opens the configurator with this front chosen; null when the finish is unknown. */
   href: string | null;
-  /** "In der Grundausstattung enthalten" or the surcharge, from the product definition. */
+  /** "Included as standard" or the surcharge, from the product definition, in the page's language. */
   price: string | null;
+  /** Accessible name of the card's detail button. */
+  detailLabel: string;
 };
 
 type MaterialsViewProps = {
@@ -58,7 +60,7 @@ export function MaterialsView({ anchor, cards, cta, detailCtaLabel, headline, in
                   action={
                     <DetailTrigger
                       id={`material-${card.key}`}
-                      label={`Mehr zu ${card.name}`}
+                      label={card.detailLabel}
                       onOpen={() => setOpenKey(card.key)}
                       open={openKey === card.key}
                       tone={card.color ? "dark" : "glass"}

@@ -316,6 +316,27 @@ STATUS.md), ADR 0013, update AGENTS.md ("Sanity is not wired yet") and STATUS.md
 *Exit:* all three locales pass the same smoke test; no German string on an `/en` or `/es`
 page; `hreflang` lists exactly the existing translations; `LAUNCHED_LOCALES` = de, en, es.
 
+*9a done 2026-10-02 — editorial content.* English and Spanish homepage and navigation,
+transcreated (Spanish in the formal "usted"), in `content/home/{de,en,es}.ts`, seeded into
+`development` with `translation-metadata-page-home` linking the three homepages; anchors and
+links are per language (`#approach`, `/en/configure`, …). Interface words on editorial pages
+moved into typed dictionaries `lib/messages/{de,en,es}.ts` (English and Spanish `satisfies`
+the German shape; a test compares their keys): header, language switch, logo home link,
+block strings ("More about …", "Surcharge …", "Indicative price …"), preview exit; blocks
+link to the configurator in their own language. `pnpm dev` opens all locales
+(`OPEN_LOCALES`); production stays gated by `LAUNCHED_LOCALES = ["de"]`. The seed now keeps
+existing documents (`--replace` overwrites) so it never clobbers Studio edits.
+*Evidence:* German documents kept and still identical to the demo; English/Spanish written
+and read back identical. In preview, `/en` and `/es` contain no German word and no umlaut in
+text, `alt` or `aria-label`; `lang`, logo link, every configurator link, switcher, nav,
+detail cards ("Surcharge €580", "Suplemento 580 €"), explainer and price formats are in the
+page's language; all anchors exist. Publicly `/en`, `/es`, `/en/configure` stay 404 with no
+switcher on `/`. 100 unit tests.
+
+*9b remaining before launch:* the functional routes `/configure`, `/konto`, `/anfrage`,
+`/share` (≈200 strings, auth email in the customer's locale), the 404 page, `AppHeader`'s
+German defaults; native review of the English and Spanish copy; then `LAUNCHED_LOCALES`.
+
 ## 6. Later, separately
 
 - `inline` configurator block (§4).

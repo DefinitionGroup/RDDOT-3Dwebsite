@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { DEFAULT_LOCALE, isLaunchedLocale, isLocale } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isLocale, isOpenLocale } from "@/lib/i18n";
 
 // Any path no route serves; it lands in `[...slug]`, which calls notFound().
 const NOT_LAUNCHED_SEGMENT = "_locale-not-launched";
@@ -26,7 +26,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  if (isLaunchedLocale(first)) return NextResponse.next();
+  if (isOpenLocale(first)) return NextResponse.next();
   // Editorial Preview may look at locales before launch; the route itself
   // verifies the draft-mode cookie, so a forged one still ends in a 404.
   if (isLocale(first) && request.cookies.has(DRAFT_MODE_COOKIE)) return NextResponse.next();

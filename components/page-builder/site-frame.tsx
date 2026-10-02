@@ -18,9 +18,9 @@ export async function SiteFrame({
   const chrome = await loadSiteChrome(locale);
   return (
     <>
-      <SiteHeader chrome={chrome} languages={languages} />
+      <SiteHeader chrome={chrome} languages={languages} locale={locale} />
       <main>{children}</main>
-      <SiteFooter chrome={chrome} />
+      <SiteFooter chrome={chrome} locale={locale} />
     </>
   );
 }

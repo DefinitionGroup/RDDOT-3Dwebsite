@@ -6,6 +6,8 @@ import type { LanguageLink } from "@/lib/language-links";
 
 type LanguageSwitchProps = {
   links: LanguageLink[];
+  /** Interface words in the page's language. */
+  labels: { nav: string; current: (name: string) => string };
   /**
    * `row`: DE · EN · ES in the header bar. `sheet`: the same, larger, in the
    * phone menu. `compact`: the current language opening the others, for
@@ -28,13 +30,13 @@ function Dot() {
  * active segment; each language is named in itself. Plain links rather than
  * client navigation: switching reloads the page in the other locale's layout.
  */
-export function LanguageSwitch({ className = "", links, onNavigate, variant = "row" }: LanguageSwitchProps) {
+export function LanguageSwitch({ className = "", labels, links, onNavigate, variant = "row" }: LanguageSwitchProps) {
   if (links.length < 2) return null;
-  if (variant === "compact") return <CompactSwitch className={className} links={links} />;
+  if (variant === "compact") return <CompactSwitch className={className} labels={labels} links={links} />;
   const size = variant === "sheet" ? "min-h-12 px-3 text-title" : "min-h-11 px-1.5 text-nav";
 
   return (
-    <nav aria-label="Sprache" className={className}>
+    <nav aria-label={labels.nav} className={className}>
       <ul className="m-0 flex list-none items-center gap-1 p-0">
         {links.map((link) => (
           <li key={link.locale}>
@@ -58,7 +60,15 @@ export function LanguageSwitch({ className = "", links, onNavigate, variant = "r
 }
 
 /** The current language as a button; the others open beneath it. Escape or a click outside closes. */
-function CompactSwitch({ className, links }: { className: string; links: LanguageLink[] }) {
+function CompactSwitch({
+  className,
+  labels,
+  links
+}: {
+  className: string;
+  labels: LanguageSwitchProps["labels"];
+  links: LanguageLink[];
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -85,7 +95,7 @@ function CompactSwitch({ className, links }: { className: string; links: Languag
       <button
         aria-controls={listId}
         aria-expanded={open}
-        aria-label={`Sprache: ${LOCALE_TITLES[current.locale]}`}
+        aria-label={labels.current(LOCALE_TITLES[current.locale])}
         className={`${linkBase} min-h-11 px-1.5 text-nav text-ink`}
         onClick={() => setOpen((value) => !value)}
         type="button"
@@ -97,7 +107,7 @@ function CompactSwitch({ className, links }: { className: string; links: Languag
         </svg>
       </button>
       {open && (
-        <nav aria-label="Sprache" className="absolute right-0 top-full mt-2" id={listId}>
+        <nav aria-label={labels.nav} className="absolute right-0 top-full mt-2" id={listId}>
           <ul className="m-0 flex min-w-36 list-none flex-col rounded-card border border-hairline bg-charcoal p-1.5 shadow-[0_12px_40px_rgb(0_0_0/0.5)]">
             {links.map((link) => (
               <li key={link.locale}>

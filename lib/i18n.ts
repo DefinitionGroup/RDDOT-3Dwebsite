@@ -27,6 +27,13 @@ export const sanityLanguages = LOCALES.map((id) => ({ id, title: LOCALE_TITLES[i
 export const LAUNCHED_LOCALES: readonly Locale[] = ["de"];
 
 /**
+ * Locales a request may open without Editorial Preview: the launched ones in
+ * production, all of them on a developer's machine so translations can be
+ * read before launch.
+ */
+export const OPEN_LOCALES: readonly Locale[] = process.env.NODE_ENV === "development" ? LOCALES : LAUNCHED_LOCALES;
+
+/**
  * First path segments the application owns. Editorial pages may not take
  * these as slugs, and the proxy leaves `api` and `studio` alone.
  */
@@ -47,6 +54,10 @@ export function isLocale(value: string): value is Locale {
 
 export function isLaunchedLocale(value: string): value is Locale {
   return isLocale(value) && LAUNCHED_LOCALES.includes(value);
+}
+
+export function isOpenLocale(value: string): value is Locale {
+  return isLocale(value) && OPEN_LOCALES.includes(value);
 }
 
 /** The public path of `path` in `locale`: `/` stays `/` in German, `/en` in English. */

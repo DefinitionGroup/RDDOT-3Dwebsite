@@ -1,8 +1,10 @@
 /**
  * Writes the demo content (content/demo.ts) into a Sanity dataset.
  *
- *   pnpm sanity:seed                  upload assets, write pages and navigation, verify
- *   pnpm sanity:seed -- --dry-run     print what would be written, touch nothing
+ *   pnpm sanity:seed                  upload assets, add missing pages, navigation and
+ *                                     translation links, verify
+ *   pnpm sanity:seed --replace        also overwrite documents that already exist
+ *   pnpm sanity:seed --dry-run        print what would be written, touch nothing
  *
  * Runs through `sanity exec --with-user-token`, so it writes as whoever the
  * CLI is authenticated as: a `sanity login`, or SANITY_AUTH_TOKEN for a
@@ -11,22 +13,25 @@
  *
  * The demo content is in the shape the queries *return*; this inverts it to
  * the stored shape: local files under /public become uploaded assets and
- * references, computed fields are dropped. Ids are deterministic and assets
- * deduplicate by content, so running it again replaces rather than adds.
- * Afterwards it reads everything back through the site's own queries and
- * compares the result with the demo content.
+ * references, computed fields are dropped, and pages of one translation group
+ * get a translation.metadata document linking them. Ids are deterministic and
+ * assets deduplicate by content. Documents that already exist are kept, since
+ * editors may have changed them; --replace overwrites them deliberately.
+ * Afterwards it reads everything back through the site's own queries: what it
+ * wrote must match the demo content; a kept document that differs is reported.
  */
 import { createReadStream, existsSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { getCliClient } from "sanity/cli";
-import { demoChrome, demoPages } from "../content/demo";
+import { demoChrome, demoPages, translationGroup } from "../content/demo";
 import { LOCALES } from "../lib/i18n";
 import { apiVersion } from "../sanity/env";
 import { HOME_PAGE_QUERY, NAVIGATION_QUERY, PAGE_QUERY } from "../sanity/lib/queries";
 
 const dryRun = process.argv.includes("--dry-run");
 const allowProduction = process.argv.includes("--allow-production");
+const replace = process.argv.includes("--replace");
 const client = getCliClient({ apiVersion });
 
 type AnyObject = Record<string, unknown>;
@@ -101,9 +106,34 @@ function toStored(node: unknown, assetIds: Map<string, string>): unknown {
   return stored;
 }
 
+const pageId = (page: (typeof demoPages)[number]) => `page-${page.language}-${translationGroup(page)}`;
+
+/** One translation.metadata per group of pages in more than one language, as the plugin writes it. */
+function translationDocuments(): StoredDocument[] {
+  const groups = new Map<string, typeof demoPages>();
+  for (const page of demoPages) groups.set(translationGroup(page), [...(groups.get(translationGroup(page)) ?? []), page]);
+  return [...groups].flatMap(([group, pages]) =>
+    pages.length < 2
+      ? []
+      : [
+          {
+            _id: `translation-metadata-page-${group}`,
+            _type: "translation.metadata",
+            schemaTypes: ["page"],
+            translations: pages.map((page) => ({
+              _key: page.language,
+              _type: "internationalizedArrayReferenceValue",
+              language: page.language,
+              value: reference(pageId(page))
+            }))
+          }
+        ]
+  );
+}
+
 function pageDocuments(assetIds: Map<string, string>): StoredDocument[] {
   return demoPages.map((page) => ({
-    _id: `page-${page.language}-${page.isHomepage ? "home" : page.slug}`,
+    _id: pageId(page),
     _type: "page",
     title: page.title,
     language: page.language,
@@ -165,15 +195,17 @@ function comparable(node: unknown): unknown {
   return out;
 }
 
-async function verify() {
+async function verify(written: Set<string>) {
   const failures: string[] = [];
+  const differs = (id: string, label: string) => (written.has(id) ? failures : kept).push(label);
+  const kept: string[] = [];
   for (const page of demoPages) {
     const params = { locale: page.language, slug: page.slug ?? "" };
     const stored = page.isHomepage
       ? await client.fetch(HOME_PAGE_QUERY, { locale: page.language }, { perspective: "published" })
       : await client.fetch(PAGE_QUERY, params, { perspective: "published" });
     if (!isDeepStrictEqual(comparable(stored), comparable(JSON.parse(JSON.stringify(page))))) {
-      failures.push(`page ${page.language} ${page.slug ?? "(home)"}`);
+      differs(pageId(page), `page ${page.language} ${page.slug ?? "(home)"}`);
     }
   }
   for (const locale of LOCALES) {
@@ -181,11 +213,12 @@ async function verify() {
     if (!chrome) continue;
     const stored = await client.fetch(NAVIGATION_QUERY, { locale }, { perspective: "published" });
     if (!isDeepStrictEqual(comparable(stored), comparable(JSON.parse(JSON.stringify(chrome))))) {
-      failures.push(`navigation ${locale}`);
+      differs(`navigation-${locale}`, `navigation ${locale}`);
     }
   }
+  if (kept.length) console.log(`note    kept documents differ from the demo content (edited in the Studio?): ${kept.join(", ")}`);
   if (failures.length) throw new Error(`Read-back differs from the demo content: ${failures.join(", ")}`);
-  console.log("verify  pages and navigation read back identical to the demo content");
+  console.log("verify  everything written reads back identical to the demo content");
 }
 
 /* ----------------------------------------------------------------- main */
@@ -207,16 +240,25 @@ async function main() {
   for (const url of images) assetIds.set(url, await upload("image", url));
   for (const url of files) assetIds.set(url, await upload("file", url));
 
-  const documents = [...pageDocuments(assetIds), ...navigationDocuments()];
+  const documents = [...pageDocuments(assetIds), ...navigationDocuments(), ...translationDocuments()];
   if (dryRun) {
     console.log(JSON.stringify(documents, null, 2));
     return;
   }
+  const existing = new Set(await client.fetch<string[]>("*[_id in $ids]._id", { ids: documents.map((document) => document._id) }));
   const transaction = client.transaction();
-  for (const document of documents) transaction.createOrReplace(document);
-  await transaction.commit({ visibility: "sync" });
-  for (const document of documents) console.log(`doc     ${document._id}`);
-  await verify();
+  const written = new Set<string>();
+  for (const document of documents) {
+    if (existing.has(document._id) && !replace) {
+      console.log(`keep    ${document._id}`);
+      continue;
+    }
+    transaction.createOrReplace(document);
+    written.add(document._id);
+    console.log(`${existing.has(document._id) ? "replace" : "create "} ${document._id}`);
+  }
+  if (written.size) await transaction.commit({ visibility: "sync" });
+  await verify(written);
 }
 
 main().catch((error) => {

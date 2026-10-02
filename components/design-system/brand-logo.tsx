@@ -5,13 +5,20 @@ type BrandLogoProps = {
   /** Hides the "Signature" suffix on tight surfaces. */
   compact?: boolean;
   href?: string;
+  /** Accessible name; the home link of the page's language. */
+  label?: string;
 };
 
 /** The wordmark: weight 500, the red dot as the o. Always white — every surface is dark. */
-export function BrandLogo({ className = "", compact = false, href = "/" }: BrandLogoProps) {
+export function BrandLogo({
+  className = "",
+  compact = false,
+  href = "/",
+  label = "rotpunkt Signature Startseite"
+}: BrandLogoProps) {
   return (
     <Link
-      aria-label="rotpunkt Signature Startseite"
+      aria-label={label}
       className={`group inline-flex items-center gap-4 whitespace-nowrap text-ink ${className}`}
       href={href}
     >

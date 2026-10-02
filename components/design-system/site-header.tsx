@@ -7,7 +7,9 @@ import { BrandLogo } from "@/components/design-system/brand-logo";
 import { LanguageSwitch } from "@/components/design-system/language-switch";
 import { Pill, RoundButton } from "@/components/design-system/pill";
 import type { SiteChrome } from "@/blocks/types";
+import { localizePath, type Locale } from "@/lib/i18n";
 import type { LanguageLink } from "@/lib/language-links";
+import { getMessages } from "@/lib/messages";
 import { DURATION, SIGNATURE_EASE, STAGGER } from "@/lib/motion";
 
 function MenuIcon({ open }: { open: boolean }) {
@@ -29,7 +31,17 @@ function MenuIcon({ open }: { open: boolean }) {
  * locale's navigation document; the language switch appears once more than
  * one language can be opened.
  */
-export function SiteHeader({ chrome, languages = [] }: { chrome: SiteChrome | null; languages?: LanguageLink[] }) {
+export function SiteHeader({
+  chrome,
+  languages = [],
+  locale
+}: {
+  chrome: SiteChrome | null;
+  languages?: LanguageLink[];
+  locale: Locale;
+}) {
+  const t = getMessages(locale).header;
+  const languageLabels = { nav: t.language, current: t.currentLanguage };
   const navItems = chrome?.items ?? [];
   const cta = chrome?.cta;
   const hasLanguages = languages.length > 1;
@@ -69,7 +81,7 @@ export function SiteHeader({ chrome, languages = [] }: { chrome: SiteChrome | nu
         }`}
       >
         <nav className="signature-container flex h-16 items-center justify-between lg:h-20">
-          <BrandLogo />
+          <BrandLogo href={localizePath(locale, "/")} label={t.home} />
           <div className="hidden items-center gap-7 lg:flex">
             {navItems.map((item) => (
               <Link
@@ -89,8 +101,13 @@ export function SiteHeader({ chrome, languages = [] }: { chrome: SiteChrome | nu
              * the action: the switch turns compact and the action steps aside (the
              * links and the page carry it). From xl on everything fits.
              */}
-            <LanguageSwitch className="mr-3 hidden xl:block" links={languages} />
-            <LanguageSwitch className="mr-1 hidden lg:block xl:hidden" links={languages} variant="compact" />
+            <LanguageSwitch className="mr-3 hidden xl:block" labels={languageLabels} links={languages} />
+            <LanguageSwitch
+              className="mr-1 hidden lg:block xl:hidden"
+              labels={languageLabels}
+              links={languages}
+              variant="compact"
+            />
             {cta && (
               <Pill
                 className={hasLanguages ? "hidden md:inline-flex lg:hidden xl:inline-flex" : "hidden md:inline-flex"}
@@ -103,7 +120,7 @@ export function SiteHeader({ chrome, languages = [] }: { chrome: SiteChrome | nu
             <RoundButton
               aria-controls="site-menu"
               aria-expanded={menuOpen}
-              aria-label={menuOpen ? "Menü schließen" : "Menü öffnen"}
+              aria-label={menuOpen ? t.closeMenu : t.openMenu}
               className="lg:hidden"
               onClick={() => setMenuOpen((open) => !open)}
               ref={closeRef}
@@ -151,7 +168,13 @@ export function SiteHeader({ chrome, languages = [] }: { chrome: SiteChrome | nu
                 ))}
               </ul>
               <div className="flex flex-col gap-6">
-                <LanguageSwitch className="-ml-3" links={languages} onNavigate={closeMenu} variant="sheet" />
+                <LanguageSwitch
+                  className="-ml-3"
+                  labels={languageLabels}
+                  links={languages}
+                  onNavigate={closeMenu}
+                  variant="sheet"
+                />
                 {cta && (
                   <Pill className="w-full" href={cta.href}>
                     {cta.label}

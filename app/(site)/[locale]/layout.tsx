@@ -7,6 +7,7 @@ import { MotionProvider } from "@/components/design-system/motion-provider";
 import { ExitPreview } from "@/components/page-builder/exit-preview";
 import { LAUNCHED_LOCALES } from "@/lib/i18n";
 import { visibleLocale } from "@/lib/locale-gate";
+import { getMessages } from "@/lib/messages";
 import { isSanityConfigured } from "@/sanity/env";
 import { SanityLive } from "@/sanity/lib/live";
 import "../../globals.css";
@@ -82,7 +83,7 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[lo
         {isSanityConfigured && isPreview && (
           <>
             <VisualEditing />
-            <ExitPreview />
+            <ExitPreview label={getMessages(locale).preview.exit} />
           </>
         )}
       </body>
