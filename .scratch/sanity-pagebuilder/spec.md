@@ -192,6 +192,12 @@ image and video objects, `richText`; block registry, types, `PageBuilder`; port 
 - Studio field titles are German; the Studio chrome stays English for now.
 *Evidence:* the hero and statement markup of `/` is byte-identical before and after (65
 lines each); `sanity schema validate` 0 errors, 0 warnings; 87 unit tests incl. emphasis.
+*Correction 2026-10-02:* identical markup was not enough. `tailwind.config.ts` did not scan
+`blocks/`, so from this phase on every class used only in a block was missing from the CSS
+(80 of 627 selectors): the hero collapsed and the grids lost their columns. Martin saw it;
+fixed in `889c51d`, guarded by `lib/tailwind-content.test.ts`, verified by comparing the
+generated stylesheet with the pre-branch one (all 627 selectors back) and full-page
+screenshots. Rendering checks from here on compare CSS and screenshots, not only markup.
 
 **Phase 4 — Port the homepage.** Remaining sections as blocks, header and footer from
 `navigation`. `lib/content.ts` is deleted, its content lives in `content/demo.ts`.
