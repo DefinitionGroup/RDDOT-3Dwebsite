@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { PageBuilder } from "@/components/page-builder/page-builder";
 import { SiteFrame } from "@/components/page-builder/site-frame";
-import { visibleLocale } from "@/lib/locale-gate";
+import { languageLinks } from "@/lib/language-links";
+import { visibleLocale, visibleLocales } from "@/lib/locale-gate";
 import { loadPage } from "@/sanity/lib/loaders";
 
 /** The locale's homepage: an Editorial Page like any other, at the locale root. */
@@ -12,7 +13,7 @@ export default async function Home({ params }: PageProps<"/[locale]">) {
   if (!page) notFound();
 
   return (
-    <SiteFrame locale={locale}>
+    <SiteFrame languages={languageLinks({ ...page, locale }, await visibleLocales())} locale={locale}>
       <PageBuilder locale={locale} page={page} />
     </SiteFrame>
   );

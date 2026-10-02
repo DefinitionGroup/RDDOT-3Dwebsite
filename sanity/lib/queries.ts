@@ -36,7 +36,8 @@ const pageProjection = /* groq */ `{
   isHomepage,
   seo{ title, description, image ${imageFragment} },
   "translations": *[_type == "translation.metadata" && references(^._id)][0]
-    .translations[defined(value)]{ language, "slug": value->slug.current, "isHomepage": value->isHomepage },
+    .translations[]{ "language": value->language, "slug": value->slug.current, "isHomepage": value->isHomepage }
+    [defined(language)],
   ${pageContentFragment}
 }`;
 

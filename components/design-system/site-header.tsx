@@ -4,8 +4,10 @@ import Link from "next/link";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
+import { LanguageSwitch } from "@/components/design-system/language-switch";
 import { Pill, RoundButton } from "@/components/design-system/pill";
 import type { SiteChrome } from "@/blocks/types";
+import type { LanguageLink } from "@/lib/language-links";
 import { DURATION, SIGNATURE_EASE, STAGGER } from "@/lib/motion";
 
 function MenuIcon({ open }: { open: boolean }) {
@@ -24,11 +26,13 @@ function MenuIcon({ open }: { open: boolean }) {
  * The marketing header: transparent over the film, frosted once the page
  * scrolls. The links and the ghost pill on desktop; on phones a round menu
  * button opens the same links as a full-screen sheet. Links come from the
- * locale's navigation document.
+ * locale's navigation document; the language switch appears once more than
+ * one language can be opened.
  */
-export function SiteHeader({ chrome }: { chrome: SiteChrome | null }) {
+export function SiteHeader({ chrome, languages = [] }: { chrome: SiteChrome | null; languages?: LanguageLink[] }) {
   const navItems = chrome?.items ?? [];
   const cta = chrome?.cta;
+  const hasLanguages = languages.length > 1;
   const { scrollY } = useScroll();
   const [isScrolled, setIsScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -69,7 +73,7 @@ export function SiteHeader({ chrome }: { chrome: SiteChrome | null }) {
           <div className="hidden items-center gap-7 lg:flex">
             {navItems.map((item) => (
               <Link
-                className={`inline-flex min-h-11 items-center px-1 text-nav leading-none transition-colors duration-state ease-signature hover:text-porcelain ${
+                className={`inline-flex min-h-11 items-center whitespace-nowrap px-1 text-nav leading-none transition-colors duration-state ease-signature hover:text-porcelain ${
                   item.quiet ? "text-graphite" : "text-ink"
                 }`}
                 href={item.href}
@@ -80,8 +84,19 @@ export function SiteHeader({ chrome }: { chrome: SiteChrome | null }) {
             ))}
           </div>
           <div className="flex items-center gap-2">
+            {/*
+             * Between lg and xl the bar cannot hold brand, links, the language row and
+             * the action: the switch turns compact and the action steps aside (the
+             * links and the page carry it). From xl on everything fits.
+             */}
+            <LanguageSwitch className="mr-3 hidden xl:block" links={languages} />
+            <LanguageSwitch className="mr-1 hidden lg:block xl:hidden" links={languages} variant="compact" />
             {cta && (
-              <Pill className="hidden md:inline-flex" href={cta.href} variant="secondary">
+              <Pill
+                className={hasLanguages ? "hidden md:inline-flex lg:hidden xl:inline-flex" : "hidden md:inline-flex"}
+                href={cta.href}
+                variant="secondary"
+              >
                 {cta.label}
               </Pill>
             )}
@@ -135,11 +150,14 @@ export function SiteHeader({ chrome }: { chrome: SiteChrome | null }) {
                   </motion.li>
                 ))}
               </ul>
-              {cta && (
-                <Pill className="w-full" href={cta.href}>
-                  {cta.label}
-                </Pill>
-              )}
+              <div className="flex flex-col gap-6">
+                <LanguageSwitch className="-ml-3" links={languages} onNavigate={closeMenu} variant="sheet" />
+                {cta && (
+                  <Pill className="w-full" href={cta.href}>
+                    {cta.label}
+                  </Pill>
+                )}
+              </div>
             </nav>
           </motion.div>
         )}

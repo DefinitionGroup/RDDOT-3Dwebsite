@@ -303,7 +303,15 @@ STATUS.md), ADR 0013, update AGENTS.md ("Sanity is not wired yet") and STATUS.md
 - Functional route paths stay identical across locales (`/en/configure`, `/es/konto`);
   translated paths are a later nicety.
 - Locale switcher in the header, linking to the translation of the current page or, when
-  none exists, to that locale's homepage.
+  none exists, to that locale's homepage. *Built early, 2026-10-02, on Martin's request:*
+  `lib/language-links.ts` (tested) + `components/design-system/language-switch.tsx`. It lists
+  only locales the visitor can open — the launched ones, or all three in Editorial Preview —
+  so it is hidden publicly until English and Spanish launch. From xl a DE · EN · ES row
+  beside the header action; between lg and xl a compact "DE ▾" panel, and the header action
+  steps aside there because brand, five links, switch and action do not fit at 1024 px;
+  in the phone menu a row above the action. The page query now drops translations whose
+  document does not exist in the current perspective. Functional routes (configure, konto,
+  anfrage) get the switch with their Phase 9 translation.
 
 *Exit:* all three locales pass the same smoke test; no German string on an `/en` or `/es`
 page; `hreflang` lists exactly the existing translations; `LAUNCHED_LOCALES` = de, en, es.

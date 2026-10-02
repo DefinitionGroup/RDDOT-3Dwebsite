@@ -1,6 +1,11 @@
 import "server-only";
 import { draftMode } from "next/headers";
-import { isLaunchedLocale, isLocale, type Locale } from "./i18n";
+import { isLaunchedLocale, isLocale, LAUNCHED_LOCALES, LOCALES, type Locale } from "./i18n";
+
+/** Locales this request may switch to: the launched ones, or all of them in Editorial Preview. */
+export async function visibleLocales(): Promise<readonly Locale[]> {
+  return (await draftMode()).isEnabled ? LOCALES : LAUNCHED_LOCALES;
+}
 
 /**
  * The locale if this request may show it: launched locales always, the
