@@ -192,7 +192,7 @@ export function SceneEditBar({
     }`;
 
   return (
-    <div className="glass rounded-card p-2 text-ink">
+    <div className="chip-solid rounded-card p-2 text-ink">
       <div className="flex items-center gap-2 px-1 pt-1">
         <button
           aria-label="Modul links hinzufügen"

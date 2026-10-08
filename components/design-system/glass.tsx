@@ -4,14 +4,23 @@ import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { Label } from "@/components/design-system/label";
 
+/** glass: frosted, for imagery. solid: soot, for the 3D scene, where frosting tints with the surface below. */
+export type GlassTone = "glass" | "solid";
+
 type GlassProps = {
   children: ReactNode;
   className?: string;
+  tone?: GlassTone;
 };
 
-/** A frosted pill floating over imagery or the scene. */
-export function Glass({ children, className = "" }: GlassProps) {
-  return <div className={`glass rounded-pill text-ink ${className}`}>{children}</div>;
+export const glassToneClass: Record<GlassTone, string> = {
+  glass: "glass",
+  solid: "chip-solid"
+};
+
+/** A pill floating over imagery or the scene. */
+export function Glass({ children, className = "", tone = "glass" }: GlassProps) {
+  return <div className={`${glassToneClass[tone]} rounded-pill text-ink ${className}`}>{children}</div>;
 }
 
 /** The small uppercase badge in a card corner: "Furnier", "Gefertigt in Deutschland". */
@@ -36,6 +45,7 @@ type GlassSegmentsProps = {
   className?: string;
   /** hud: 44 px chips over the scene; card: 36 px inside cards; compact: 44 px, tight, on phones. */
   size?: "hud" | "card" | "compact";
+  tone?: GlassTone;
   ariaLabel: string;
 };
 
@@ -46,7 +56,7 @@ const segmentSize = {
 };
 
 /**
- * The frosted segmented control that carries the three decisions.
+ * The segmented control that carries the three decisions.
  * The active segment lifts to 14 % white and carries the red dot;
  * the highlight slides between segments.
  */
@@ -57,11 +67,12 @@ export function GlassSegments({
   layoutGroup,
   onChange,
   segments,
-  size = "card"
+  size = "card",
+  tone = "glass"
 }: GlassSegmentsProps) {
   const height = segmentSize[size];
   return (
-    <Glass className={`inline-flex items-center gap-0.5 p-1 ${className}`}>
+    <Glass className={`inline-flex items-center gap-0.5 p-1 ${className}`} tone={tone}>
       <div aria-label={ariaLabel} className="contents" role="tablist">
         {segments.map((segment) => {
           const active = segment.id === activeId;

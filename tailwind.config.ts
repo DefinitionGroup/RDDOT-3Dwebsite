@@ -20,6 +20,7 @@ const config: Config = {
       colors: {
         canvas: "rgb(var(--color-canvas) / <alpha-value>)",
         charcoal: "rgb(var(--color-charcoal) / <alpha-value>)",
+        soot: "rgb(var(--color-soot) / <alpha-value>)",
         mist: "rgb(var(--color-mist) / <alpha-value>)",
         hairline: "rgb(var(--color-hairline) / <alpha-value>)",
         graphite: "rgb(var(--color-graphite) / <alpha-value>)",

@@ -1097,7 +1097,7 @@ export function ConfiguratorShell({
         <div className="pointer-events-auto absolute right-10 top-24 z-20">
           <button
             aria-expanded={false}
-            className="glass inline-flex h-11 items-center gap-2 rounded-pill px-5 text-[0.875rem] font-label leading-none text-ink transition-[background-color] duration-state ease-signature hover:bg-ink/[.14]"
+            className="chip-solid inline-flex h-11 items-center gap-2 rounded-pill px-5 text-[0.875rem] font-label leading-none text-ink transition-[background-color] duration-state ease-signature hover:bg-ink/[.14]"
             onClick={() => setPanelOpen(true)}
             type="button"
           >
@@ -1118,11 +1118,11 @@ export function ConfiguratorShell({
         </div>
       )}
 
-      {/* The dragged element follows the pointer as a frosted chip. */}
+      {/* The dragged element follows the pointer as a soot chip. */}
       {drag && (
         <motion.div
           aria-hidden="true"
-          className="glass pointer-events-none fixed left-0 top-0 z-[70] inline-flex h-9 items-center gap-2 rounded-pill px-3.5 text-caption font-label text-ink"
+          className="chip-solid pointer-events-none fixed left-0 top-0 z-[70] inline-flex h-9 items-center gap-2 rounded-pill px-3.5 text-caption font-label text-ink"
           style={{ x: chipX, y: chipY }}
         >
           <span className="size-1.5 rounded-pill bg-signature" />

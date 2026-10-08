@@ -9,7 +9,9 @@ needs to be.
 Design direction (decided 2026-09-02, rebuilt 2026-09-03 on the Sequel style from Refero):
 "rotpunkt after dark" — black stage, charcoal cards, three greys, white structure, signature
 red only as the dot and one filled action per view; Manrope 300/400/500 plus one Instrument
-Serif word per headline; pills, glass HUD chips, 10 px cards; one motion curve. Canvas:
+Serif word per headline; pills, glass chips over imagery, solid soot chips (`chip-solid`,
+`--color-soot` 20 20 20) over the 3D scene since 2026-10-08 because frosted glass tinted
+with the worktop and the wooden floor, 10 px cards; one motion curve. Canvas:
 https://claude.ai/code/artifact/5fed3dc8-f9bd-4489-845d-29cfbaa07be3 (pages Website,
 Konfigurator, System). Implemented 2026-09-03 across four commits: the foundation
 (tokens, fonts, primitives, motion contract), the homepage with the rotpunkt film as

@@ -89,6 +89,7 @@ export function StageSegments({
       onChange={(id) => onSelect(id as PlanningStage)}
       segments={PLANNING_STAGES}
       size={size}
+      tone="solid"
     />
   );
 }
@@ -133,6 +134,7 @@ export function ViewSegments({
       }}
       segments={segments}
       size={size}
+      tone="solid"
     />
   );
 }
@@ -154,14 +156,15 @@ export function CameraSegments({
       onChange={(id) => onSelect(id as CameraView)}
       segments={CAMERA_VIEWS}
       size={size}
+      tone="solid"
     />
   );
 }
 
 const glassAction =
-  "glass pointer-events-auto inline-flex items-center justify-center gap-2 rounded-pill text-[0.875rem] font-label leading-none text-ink transition-[background-color,transform] duration-state ease-signature hover:bg-ink/[.14] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40";
+  "chip-solid pointer-events-auto inline-flex items-center justify-center gap-2 rounded-pill text-[0.875rem] font-label leading-none text-ink transition-[background-color,transform] duration-state ease-signature hover:bg-ink/[.14] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40";
 
-/** "Bearbeiten" and "Foto" as frosted pills (desktop) or rounds (phones). */
+/** "Bearbeiten" and "Foto" as soot pills (desktop) or rounds (phones). */
 export function SceneActions({
   compact,
   onEdit,
