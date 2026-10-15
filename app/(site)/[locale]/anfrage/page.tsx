@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { z } from "zod";
 import { AppHeader } from "@/components/design-system/app-header";
+import { Emphasized } from "@/components/design-system/emphasized";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import {
@@ -22,15 +24,20 @@ import {
 import { QuoteRequestForm } from "@/features/quote-requests/ui/quote-request-form";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
+import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n";
+import { visibleLocale } from "@/lib/locale-gate";
+import { getMessages } from "@/lib/messages";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Anfrage | rotpunkt Signature",
-  description: "Eine gespeicherte Küchenplanung unverbindlich zur Prüfung anfragen."
-};
+export async function generateMetadata({ params }: PageProps<"/[locale]/anfrage">): Promise<Metadata> {
+  const locale = (await visibleLocale((await params).locale)) ?? DEFAULT_LOCALE;
+  const t = getMessages(locale).meta;
+  return { title: t.requestTitle, description: t.requestDescription };
+}
 
 type QuoteRequestPageProps = {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{
     project?: string | string[];
     c?: string | string[];
@@ -43,7 +50,10 @@ type QuoteRequestPageProps = {
  * Guests are asked to save first; nothing here reads a configuration from
  * the URL as if it were the person's plan.
  */
-export default async function QuoteRequestPage({ searchParams }: QuoteRequestPageProps) {
+export default async function QuoteRequestPage({ params: routeParams, searchParams }: QuoteRequestPageProps) {
+  const locale = await visibleLocale((await routeParams).locale);
+  if (!locale) notFound();
+  const messages = getMessages(locale);
   const params = await searchParams;
   const projectId =
     typeof params.project === "string" && z.uuid().safeParse(params.project).success
@@ -52,15 +62,18 @@ export default async function QuoteRequestPage({ searchParams }: QuoteRequestPag
   const guestCode = typeof params.c === "string" ? params.c : null;
   const session = await customerSessions.resolve(await headers());
 
-  const backHref = projectId ? `/configure?project=${projectId}` : "/configure";
+  const backHref = localizePath(locale, projectId ? `/configure?project=${projectId}` : "/configure");
 
   let content: React.ReactNode;
   if (!session) {
-    const returnTo = projectId
-      ? `/anfrage?project=${projectId}`
-      : guestCode
-        ? `/anfrage?c=${encodeURIComponent(guestCode)}`
-        : "/anfrage";
+    const returnTo = localizePath(
+      locale,
+      projectId
+        ? `/anfrage?project=${projectId}`
+        : guestCode
+          ? `/anfrage?c=${encodeURIComponent(guestCode)}`
+          : "/anfrage"
+    );
     content = (
       <AccountAccess
         developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
@@ -68,16 +81,16 @@ export default async function QuoteRequestPage({ searchParams }: QuoteRequestPag
       />
     );
   } else if (!projectId) {
-    content = <SaveFirst guestCode={guestCode} />;
+    content = <SaveFirst guestCode={guestCode} locale={locale} />;
   } else {
     const workspace = await projects.getWorkspace({
       ownerId: session.customerAccountId,
       projectId
     });
     if (!workspace || workspace.lifecycle !== "active") {
-      content = <Unavailable />;
+      content = <Unavailable locale={locale} />;
     } else {
-      const summary = describe(workspace.workingConfiguration);
+      const summary = describe(workspace.workingConfiguration, locale);
       content = summary ? (
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16">
           <QuoteRequestForm
@@ -86,30 +99,36 @@ export default async function QuoteRequestPage({ searchParams }: QuoteRequestPag
             projectName={workspace.name}
           />
           <aside className="lg:pt-[6.5rem]">
-            <ConfigurationSummary summary={summary} />
+            <ConfigurationSummary locale={locale} summary={summary} />
           </aside>
         </div>
       ) : (
-        <Unavailable reason="Diese Konfiguration verwendet eine nicht mehr verfügbare Produktversion. Öffnen Sie das Projekt im Konfigurator, um sie zu aktualisieren." />
+        <Unavailable locale={locale} reason={messages.request.retiredProduct} />
       );
     }
   }
 
   return (
     <main className="min-h-svh bg-canvas px-5 py-6 text-ink sm:px-10 lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
-      <AppHeader action={{ href: backHref, label: "Zur Konfiguration" }} className="mx-auto max-w-6xl" />
+      <AppHeader
+        action={{ href: backHref, label: messages.appHeader.toConfiguration }}
+        className="mx-auto max-w-6xl"
+        locale={locale}
+      />
       <div className="mx-auto mt-14 max-w-6xl pb-16 lg:mt-20">{content}</div>
     </main>
   );
 }
 
 function describe(
-  working: { configuration: Parameters<typeof createRevisionDisplaySnapshot>[0]; productDefinitionVersion: string }
+  working: { configuration: Parameters<typeof createRevisionDisplaySnapshot>[0]; productDefinitionVersion: string },
+  locale: Locale
 ): ConfigurationSummaryData | null {
   try {
     const snapshot = createRevisionDisplaySnapshot(
       working.configuration,
-      working.productDefinitionVersion
+      working.productDefinitionVersion,
+      locale
     );
     const quote = getConfiguratorQuote(working.configuration);
     return {
@@ -119,7 +138,7 @@ function describe(
       frontFinish: snapshot.frontFinish,
       lineItems: quote.lineItems.map((item) => ({
         key: item.key,
-        label: getLocalizedLabel(item.label, "de"),
+        label: getLocalizedLabel(item.label, locale),
         quantity: item.quantity,
         totalCents: item.totalCents
       })),
@@ -135,42 +154,40 @@ function describe(
   }
 }
 
-function SaveFirst({ guestCode }: { guestCode: string | null }) {
-  const saveHref = guestCode
-    ? `/konto?${new URLSearchParams({ intent: "save", import: randomUUID(), c: guestCode }).toString()}`
-    : "/configure";
+function SaveFirst({ guestCode, locale }: { guestCode: string | null; locale: Locale }) {
+  const messages = getMessages(locale);
+  const t = messages.request;
+  const saveHref = localizePath(
+    locale,
+    guestCode
+      ? `/konto?${new URLSearchParams({ intent: "save", import: randomUUID(), c: guestCode }).toString()}`
+      : "/configure"
+  );
   return (
     <div className="max-w-2xl">
-      <Label>Anfrage</Label>
+      <Label>{t.label}</Label>
       <h1 className="m-0 mt-5 text-heading">
-        Zuerst als <em>Projekt</em> speichern.
+        <Emphasized text={t.saveFirstTitle} />
       </h1>
-      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
-        Eine Anfrage bezieht sich immer auf einen festgehaltenen Planungsstand eines
-        Projekts. Speichern Sie Ihre Konfiguration, dann fragen Sie sie direkt aus dem
-        Projekt heraus an.
-      </p>
+      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{t.saveFirstBody}</p>
       <Pill className="mt-10" href={saveHref}>
-        {guestCode ? "Als Projekt speichern" : "Zum Konfigurator"}
+        {guestCode ? messages.configurator.saveAsProject : messages.appHeader.toConfigurator}
       </Pill>
     </div>
   );
 }
 
-function Unavailable({
-  reason = "Das Projekt wurde nicht gefunden oder kann nicht angefragt werden."
-}: {
-  reason?: string;
-}) {
+function Unavailable({ locale, reason }: { locale: Locale; reason?: string }) {
+  const t = getMessages(locale).request;
   return (
     <div className="max-w-2xl">
-      <Label>Anfrage</Label>
+      <Label>{t.label}</Label>
       <h1 className="m-0 mt-5 text-heading">
-        Hier fehlt noch das <em>Projekt</em>.
+        <Emphasized text={t.missingTitle} />
       </h1>
-      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{reason}</p>
-      <Pill className="mt-10" href="/konto" variant="secondary">
-        Zu meinen Projekten
+      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{reason ?? t.missingBody}</p>
+      <Pill className="mt-10" href={localizePath(locale, "/konto")} variant="secondary">
+        {t.toProjects}
       </Pill>
     </div>
   );

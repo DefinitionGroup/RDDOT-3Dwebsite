@@ -1,16 +1,12 @@
 "use client";
 
+import { Emphasized } from "@/components/design-system/emphasized";
 import { Overlay } from "@/components/design-system/overlay";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import { getLocalizedLabel } from "@/features/configurator/product-definition";
 import type { FinishOption, LocaleCode } from "@/features/configurator/types";
-
-export const FINISH_MATERIAL_LABEL: Record<FinishOption["material"], string> = {
-  matte: "matt",
-  satin: "seidenmatt",
-  structured: "strukturiert"
-};
+import { useMessages } from "@/lib/messages/locale-context";
 
 export function finishSurfaceStyle(finish: FinishOption) {
   return finish.textureUrl
@@ -51,35 +47,31 @@ export function MaterialOverlay({
   open,
   priceText
 }: MaterialOverlayProps) {
+  const messages = useMessages();
+  const t = messages.materialOverlay;
   return (
     <Overlay
       footer={
         <>
           <p className="tnum m-0 text-caption text-graphite">
-            {changed ? "Richtpreis" : "Richtpreis unverändert"} · {priceText}
+            {changed ? messages.common.indicativePrice : t.priceUnchanged} · {priceText}
           </p>
           <div className="flex items-center gap-2.5">
             <Pill onClick={onCancel} variant="secondary">
-              Abbrechen
+              {messages.common.cancel}
             </Pill>
-            <Pill onClick={onApply}>Übernehmen</Pill>
+            <Pill onClick={onApply}>{t.apply}</Pill>
           </div>
         </>
       }
-      label="Material"
+      label={t.label}
       onClose={onCancel}
       open={open}
-      title={
-        <>
-          Die <em>Front</em>.
-        </>
-      }
+      title={<Emphasized text={t.title} />}
     >
-      <p className="m-0 mt-4 max-w-[44ch] text-body text-graphite">
-        {frontOptions.length} Oberflächen, alle grifflos. Die Wahl wirkt sofort in der Szene.
-      </p>
+      <p className="m-0 mt-4 max-w-[44ch] text-body text-graphite">{t.intro(frontOptions.length)}</p>
 
-      <div aria-label="Front" className="mt-6 grid grid-cols-2 gap-4" role="group">
+      <div aria-label={messages.datasheet.front} className="mt-6 grid grid-cols-2 gap-4" role="group">
         {frontOptions.map((option) => {
           const active = option.key === frontColor.key;
           return (
@@ -104,8 +96,7 @@ export function MaterialOverlay({
               <span className="flex flex-col gap-0.5">
                 <span className="text-body font-label">{getLocalizedLabel(option.label, locale)}</span>
                 <span className="text-[0.875rem] text-graphite">
-                  {option.textureUrl ? "Struktur, " : "Lack, "}
-                  {FINISH_MATERIAL_LABEL[option.material]}
+                  {(option.textureUrl ? t.texture : t.lacquer)(messages.finishMaterials[option.material])}
                 </span>
               </span>
             </button>
@@ -114,8 +105,8 @@ export function MaterialOverlay({
       </div>
 
       <div className="mt-6 flex items-center justify-between gap-4 border-t border-hairline pt-4">
-        <Label>Korpus</Label>
-        <div aria-label="Korpus" className="flex items-center gap-2.5" role="group">
+        <Label>{messages.datasheet.cabinet}</Label>
+        <div aria-label={messages.datasheet.cabinet} className="flex items-center gap-2.5" role="group">
           {cabinetOptions.map((option) => {
             const active = option.key === cabinetColor.key;
             return (

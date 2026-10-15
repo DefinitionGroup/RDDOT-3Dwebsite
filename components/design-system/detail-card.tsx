@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Label } from "@/components/design-system/label";
 import { RoundButton } from "@/components/design-system/pill";
+import { useMessages } from "@/lib/messages/locale-context";
 import { DURATION, SIGNATURE_EASE } from "@/lib/motion";
 
 const morph = { type: "spring", stiffness: 280, damping: 32, mass: 0.9 } as const;
@@ -95,6 +96,7 @@ export function DetailCard({
   );
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const closeLabel = useMessages().common.close;
 
   useEffect(() => {
     if (!open) return;
@@ -121,7 +123,7 @@ export function DetailCard({
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-5">
           <motion.button
             animate={{ opacity: 1 }}
-            aria-label="Schließen"
+            aria-label={closeLabel}
             className="absolute inset-0 bg-canvas/55 backdrop-blur-sm"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
@@ -152,7 +154,7 @@ export function DetailCard({
                     {title}
                   </h2>
                 </div>
-                <RoundButton aria-label="Schließen" onClick={onClose} ref={closeRef} tone="quiet">
+                <RoundButton aria-label={closeLabel} onClick={onClose} ref={closeRef} tone="quiet">
                   <CloseIcon />
                 </RoundButton>
               </div>

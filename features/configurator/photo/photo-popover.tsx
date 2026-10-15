@@ -3,14 +3,15 @@
 import { Camera, Download, RotateCcw, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type FormEvent, useId, useState } from "react";
+import { Emphasized } from "@/components/design-system/emphasized";
 import { FieldLabel, TextField } from "@/components/design-system/field";
 import { Label } from "@/components/design-system/label";
 import { Pill, RoundButton } from "@/components/design-system/pill";
 import { PHOTO_PRESETS } from "@/features/configurator/photo/photo-presets";
 import { getLocalizedLabel } from "@/features/configurator/product-definition";
 import type { LocaleCode } from "@/features/configurator/types";
-import { PHOTO_DISCLOSURE } from "@/features/photo-gallery/ui/gallery-types";
 import { ProjectNameField } from "@/features/projects/ui/project-name-field";
+import { useMessages } from "@/lib/messages/locale-context";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
 
 export type PhotoStatus =
@@ -47,12 +48,6 @@ type PhotoPopoverProps = {
   status: PhotoStatus;
 };
 
-const DEFAULT_PROJECT_NAME = "Meine Signature Küche";
-
-const STEP_COPY: Record<"uploading" | "generating", string> = {
-  uploading: "Die Aufnahme wird übertragen und geprüft …",
-  generating: "Ihr Foto entsteht … das dauert etwa 10–30 Sekunden."
-};
 
 /** The photo card over the dimmed scene. Stays open while a job is running. */
 export function PhotoPopover({
@@ -68,13 +63,15 @@ export function PhotoPopover({
   selectedPresetKey,
   status
 }: PhotoPopoverProps) {
+  const messages = useMessages();
+  const t = messages.photo;
   const isBusy = status.phase === "working" || status.phase === "creating";
   const nameId = useId();
-  const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
+  const [projectName, setProjectName] = useState(t.defaultProjectName);
 
   function createProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onCreateProject(projectName.trim() || DEFAULT_PROJECT_NAME);
+    onCreateProject(projectName.trim() || t.defaultProjectName);
   }
 
   return (
@@ -90,7 +87,7 @@ export function PhotoPopover({
         >
           <motion.section
             animate={{ opacity: 1, y: 0 }}
-            aria-label="KI-Foto"
+            aria-label={t.label}
             className="w-full max-w-xl rounded-card border border-hairline bg-charcoal/[.96] p-6 backdrop-blur-[24px] md:p-8"
             exit={{ opacity: 0, y: OVERLAY_SLIDE }}
             initial={{ opacity: 0, y: OVERLAY_SLIDE }}
@@ -99,31 +96,28 @@ export function PhotoPopover({
           >
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="flex flex-col gap-3">
-                <Label>KI-Foto</Label>
+                <Label>{t.label}</Label>
                 <h2 className="m-0 text-panel">
-                  Ihre Küche als <em>Foto</em>.
+                  <Emphasized text={t.title} />
                 </h2>
               </div>
-              <RoundButton aria-label="Schließen" disabled={isBusy} onClick={onClose} tone="quiet">
+              <RoundButton aria-label={messages.common.close} disabled={isBusy} onClick={onClose} tone="quiet">
                 <X aria-hidden="true" size={14} strokeWidth={1.5} />
               </RoundButton>
             </div>
 
             {project && (
               <div className="mb-6 flex items-center justify-between gap-4 border-b border-hairline pb-4">
-                <Label as="span">Projekt</Label>
+                <Label as="span">{t.project}</Label>
                 <ProjectNameField name={project.name} onRenamed={onRenamed} projectId={project.id} />
               </div>
             )}
 
             {status.phase === "name" && (
               <form onSubmit={createProject}>
-                <p className="m-0 text-pretty text-body text-graphite">
-                  Ein Foto gehört zu einem gespeicherten Projekt. Wir legen es jetzt für Sie an —
-                  Versionen, Fotos und Anfragen bleiben dann zusammen.
-                </p>
+                <p className="m-0 text-pretty text-body text-graphite">{t.nameIntro}</p>
                 <div className="mt-6">
-                  <FieldLabel htmlFor={nameId}>Name des Projekts</FieldLabel>
+                  <FieldLabel htmlFor={nameId}>{t.projectName}</FieldLabel>
                   <TextField
                     autoFocus
                     className="h-12 text-body"
@@ -131,7 +125,7 @@ export function PhotoPopover({
                     maxLength={120}
                     onChange={(event) => setProjectName(event.target.value)}
                     onFocus={(event) => event.currentTarget.select()}
-                    placeholder={DEFAULT_PROJECT_NAME}
+                    placeholder={t.defaultProjectName}
                     value={projectName}
                   />
                 </div>
@@ -140,7 +134,7 @@ export function PhotoPopover({
                   leading={<Camera aria-hidden="true" size={15} strokeWidth={1.5} />}
                   type="submit"
                 >
-                  Projekt anlegen und Foto aufnehmen
+                  {t.createAndShoot}
                 </Pill>
               </form>
             )}
@@ -155,7 +149,7 @@ export function PhotoPopover({
                   />
                 </div>
                 <p aria-live="polite" className="m-0 mt-5 text-center text-body text-graphite">
-                  Ihr Projekt wird angelegt …
+                  {t.creating}
                 </p>
               </div>
             )}
@@ -163,13 +157,11 @@ export function PhotoPopover({
             {status.phase === "blocked" && (
               <div>
                 <p className="m-0 text-pretty text-body text-graphite">
-                  {status.reason === "guest"
-                    ? "Visualisierungen gehören zu einem gespeicherten Projekt. Sichern Sie Ihre Konfiguration, dann bleibt jedes Foto dauerhaft bei ihr."
-                    : "Ihr aktueller Stand wird gerade gespeichert. Sobald das erledigt ist, kann das Foto zu genau diesem Stand erzeugt werden."}
+                  {status.reason === "guest" ? t.guestBlocked : t.notYetSaved}
                 </p>
                 {status.reason === "guest" && (
                   <Pill className="mt-6" onClick={onSaveAsProject}>
-                    Als Projekt speichern
+                    {messages.configurator.saveAsProject}
                   </Pill>
                 )}
               </div>
@@ -177,11 +169,8 @@ export function PhotoPopover({
 
             {(status.phase === "idle" || status.phase === "error") && (
               <>
-                <p className="m-0 text-pretty text-body text-graphite">
-                  Wählen Sie eine Szene. Die aktuelle Konfiguration wird fotografiert und von der
-                  KI in ein realistisches Foto verwandelt.
-                </p>
-                <div aria-label="Szene" className="mt-5 flex flex-wrap gap-2" role="group">
+                <p className="m-0 text-pretty text-body text-graphite">{t.chooseScene}</p>
+                <div aria-label={t.scene} className="mt-5 flex flex-wrap gap-2" role="group">
                   {PHOTO_PRESETS.map((preset) => {
                     const isActive = preset.key === selectedPresetKey;
                     return (
@@ -216,7 +205,7 @@ export function PhotoPopover({
                   leading={<Camera aria-hidden="true" size={15} strokeWidth={1.5} />}
                   onClick={onGenerate}
                 >
-                  Foto aufnehmen
+                  {t.shoot}
                 </Pill>
               </>
             )}
@@ -227,7 +216,7 @@ export function PhotoPopover({
                   {status.preview && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      alt="Aufgenommene Szene"
+                      alt={t.capturedAlt}
                       className="size-full object-cover opacity-60"
                       src={status.preview}
                     />
@@ -239,7 +228,7 @@ export function PhotoPopover({
                   />
                 </div>
                 <p aria-live="polite" className="m-0 mt-5 text-center text-body text-graphite">
-                  {STEP_COPY[status.step]}
+                  {status.step === "uploading" ? t.uploading : t.generating}
                 </p>
               </div>
             )}
@@ -249,13 +238,13 @@ export function PhotoPopover({
                 <div className="aspect-video w-full overflow-hidden rounded-card bg-canvas">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    alt="KI-generiertes Küchenfoto"
+                    alt={t.resultAlt}
                     className="size-full object-cover"
                     src={status.imageUrl}
                   />
                 </div>
                 <p className="m-0 mt-3 text-caption text-graphite">
-                  {PHOTO_DISCLOSURE} Sie liegt jetzt bei Ihrem Projekt.
+                  {messages.gallery.disclosure} {t.keptWithProject}
                 </p>
                 <div className="mt-5 flex items-center gap-2">
                   <Pill
@@ -266,15 +255,15 @@ export function PhotoPopover({
                       // The download URL is minted per request, so it is fetched
                       // at click time rather than held in the page.
                       event.preventDefault();
-                      void downloadPhoto(status.photoId);
+                      void downloadPhoto(status.photoId, t.downloadFilename);
                     }}
                   >
-                    Herunterladen
+                    {messages.common.download}
                   </Pill>
                   <RoundButton
-                    aria-label="Neues Foto aufnehmen"
+                    aria-label={t.newPhoto}
                     onClick={onGenerate}
-                    title="Nochmal"
+                    title={t.again}
                     tone="quiet"
                   >
                     <RotateCcw aria-hidden="true" size={16} strokeWidth={1.5} />
@@ -289,7 +278,7 @@ export function PhotoPopover({
   );
 }
 
-async function downloadPhoto(photoId: string) {
+async function downloadPhoto(photoId: string, fallbackFilename: string) {
   const response = await fetch(`/api/photos/${photoId}`, { cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as {
     url?: string;
@@ -299,7 +288,7 @@ async function downloadPhoto(photoId: string) {
 
   const anchor = document.createElement("a");
   anchor.href = payload.url;
-  anchor.download = payload.filename ?? "visualisierung.jpg";
+  anchor.download = payload.filename ?? fallbackFilename;
   anchor.rel = "noopener";
   document.body.append(anchor);
   anchor.click();

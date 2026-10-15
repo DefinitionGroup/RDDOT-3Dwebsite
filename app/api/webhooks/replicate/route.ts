@@ -17,7 +17,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const event = await getPhotoGenerationAdapter().parseWebhook(request);
   if (!event) {
-    return NextResponse.json({ error: "Ungültige Zustellung." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-delivery" }, { status: 400 });
   }
 
   const result = await getPhotoJobs().recordProviderEvent(event);

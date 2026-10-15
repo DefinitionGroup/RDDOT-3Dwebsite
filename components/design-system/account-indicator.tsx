@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { localizePath, type Locale } from "@/lib/i18n";
+import { getMessages } from "@/lib/messages";
 
-export function AccountIndicator() {
+export function AccountIndicator({ locale }: { locale: Locale }) {
   return (
     <Link
-      aria-label="Mein Bereich"
+      aria-label={getMessages(locale).common.account}
       className="group grid size-11 place-items-center rounded-pill text-ink transition-colors duration-state ease-signature hover:bg-ink/[.08]"
-      href="/konto"
+      href={localizePath(locale, "/konto")}
     >
       <svg aria-hidden="true" className="size-6" fill="none" viewBox="0 0 24 24">
         <circle cx="12" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.4" />

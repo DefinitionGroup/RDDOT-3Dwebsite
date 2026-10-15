@@ -2,7 +2,11 @@
 
 import { useRef, useState } from "react";
 import { clearProjectDraftRecovery } from "@/features/projects/project-draft-recovery";
+import { localizeSnapshotLabel } from "@/features/projects/revision-display";
 import type { EditableProjectRevision } from "@/features/projects/ui/project-editor-types";
+import { INTL_LOCALE } from "@/lib/i18n";
+import { apiErrorMessage } from "@/lib/messages";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
 type VersionActionStatus =
   | { phase: "idle" }
@@ -19,7 +23,6 @@ type VersionActionStatus =
 type CheckpointResponse = {
   revision?: EditableProjectRevision;
   created?: boolean;
-  error?: string;
 };
 
 export function ProjectVersions({
@@ -35,6 +38,9 @@ export function ProjectVersions({
   projectId: string;
   savedVersion: number | null;
 }) {
+  const locale = useLocale();
+  const messages = useMessages();
+  const t = messages.versions;
   const [revisions, setRevisions] = useState(initialRevisions);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [totalCount, setTotalCount] = useState(initialTotalCount);
@@ -64,9 +70,7 @@ export function ProjectVersions({
       if (!response.ok || !payload?.revision) {
         setStatus({
           phase: "error",
-          message:
-            payload?.error ??
-            "Die Version konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+          message: apiErrorMessage(messages, payload, t.saveFailed),
           requiresReload: response.status === 401 || response.status === 409,
           retry: { kind: "save" }
         });
@@ -83,15 +87,12 @@ export function ProjectVersions({
       checkpointOperation.current = null;
       setStatus({
         phase: "success",
-        message: payload.created
-          ? "Version dauerhaft gespeichert."
-          : "Dieser Stand war bereits als Version gespeichert."
+        message: payload.created ? t.saved : t.alreadySaved
       });
     } catch {
       setStatus({
         phase: "error",
-        message:
-          "Die Verbindung wurde unterbrochen. Sie können dieselbe Speicheranfrage erneut senden.",
+        message: t.saveOffline,
         retry: { kind: "save" }
       });
     }
@@ -115,13 +116,10 @@ export function ProjectVersions({
         revisions?: EditableProjectRevision[];
         totalCount?: number;
         nextCursor?: { createdAt: string; id: string } | null;
-        error?: string;
       } | null;
 
       if (!response.ok || !payload?.revisions || payload.totalCount === undefined) {
-        setPaginationError(
-          payload?.error ?? "Weitere Versionen konnten nicht geladen werden."
-        );
+        setPaginationError(apiErrorMessage(messages, payload, t.loadMoreFailed));
         return;
       }
 
@@ -134,7 +132,7 @@ export function ProjectVersions({
       setTotalCount(payload.totalCount);
       setNextCursor(payload.nextCursor ?? null);
     } catch {
-      setPaginationError("Die Verbindung wurde beim Nachladen unterbrochen.");
+      setPaginationError(messages.common.connectionLostLoading);
     } finally {
       setIsLoadingMore(false);
     }
@@ -155,15 +153,12 @@ export function ProjectVersions({
       );
       const payload = (await response.json().catch(() => null)) as {
         restored?: boolean;
-        error?: string;
       } | null;
 
       if (!response.ok) {
         setStatus({
           phase: "error",
-          message:
-            payload?.error ??
-            "Die Version konnte nicht wiederhergestellt werden. Bitte versuchen Sie es erneut.",
+          message: apiErrorMessage(messages, payload, t.restoreFailed),
           requiresReload: response.status === 401 || response.status === 409,
           retry: { kind: "restore", revisionId }
         });
@@ -172,7 +167,7 @@ export function ProjectVersions({
 
       if (!payload?.restored) {
         setRestoreCandidateId(null);
-        setStatus({ phase: "success", message: "Diese Version ist bereits aktiv." });
+        setStatus({ phase: "success", message: t.alreadyActive });
         return;
       }
 
@@ -181,8 +176,7 @@ export function ProjectVersions({
     } catch {
       setStatus({
         phase: "error",
-        message:
-          "Die Verbindung wurde unterbrochen. Der aktuelle Arbeitsstand wurde nicht ersetzt.",
+        message: t.restoreOffline,
         retry: { kind: "restore", revisionId }
       });
     }
@@ -191,34 +185,28 @@ export function ProjectVersions({
   return (
     <section className="border-t border-hairline pt-5">
       <div className="flex items-center justify-between gap-4">
-        <p className="m-0 text-nav">Versionen</p>
+        <p className="m-0 text-nav">{t.heading}</p>
         <button
           className="inline-flex h-11 items-center justify-center rounded-pill border border-ink px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-ink/10 disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
           disabled={!savedVersion || isBusy}
           onClick={() => void saveVersion()}
           type="button"
         >
-          {status.phase === "saving" ? "Speichert …" : "Version speichern"}
+          {status.phase === "saving" ? t.saving : t.save}
         </button>
       </div>
 
       {!savedVersion && (
-        <p className="m-0 mt-3 text-caption text-graphite">
-          Warten Sie, bis der aktuelle Arbeitsstand automatisch gespeichert ist.
-        </p>
+        <p className="m-0 mt-3 text-caption text-graphite">{t.waitForAutosave}</p>
       )}
 
       <details className="mt-4 border-y border-hairline" open={totalCount > 0}>
         <summary className="cursor-pointer py-4 text-caption text-graphite transition-colors duration-state ease-signature hover:text-ink">
-          {totalCount === 1
-            ? "1 gespeicherte Version"
-            : `${totalCount} gespeicherte Versionen`}
+          {t.count(totalCount)}
         </summary>
 
         {revisions.length === 0 ? (
-          <p className="m-0 border-t border-hairline py-5 text-caption text-graphite">
-            Noch keine feste Version. Autosaves bleiben davon getrennt.
-          </p>
+          <p className="m-0 border-t border-hairline py-5 text-caption text-graphite">{t.empty}</p>
         ) : (
           <ol className="divide-y divide-hairline border-t border-hairline">
             {revisions.map((revision) => (
@@ -226,10 +214,10 @@ export function ProjectVersions({
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <p className="m-0 text-caption text-ink">
-                      {revision.label ?? "Gespeicherte Version"}
+                      {revision.label ?? t.unnamed}
                     </p>
                     <p className="m-0 mt-1 text-caption text-graphite">
-                      {new Intl.DateTimeFormat("de-DE", {
+                      {new Intl.DateTimeFormat(INTL_LOCALE[locale], {
                         dateStyle: "medium",
                         timeStyle: "short"
                       }).format(new Date(revision.createdAt))}
@@ -241,18 +229,18 @@ export function ProjectVersions({
                     onClick={() => setRestoreCandidateId(revision.id)}
                     type="button"
                   >
-                    Wiederherstellen
+                    {t.restore}
                   </button>
                 </div>
 
                 {revision.displaySnapshot ? (
                   <div className="mt-3 text-caption text-graphite">
                     <p className="m-0">
-                      {revision.displaySnapshot.cabinetFinish} ·{" "}
-                      {revision.displaySnapshot.frontFinish}
+                      {localizeSnapshotLabel(revision.displaySnapshot.cabinetFinish, locale)} ·{" "}
+                      {localizeSnapshotLabel(revision.displaySnapshot.frontFinish, locale)}
                     </p>
                     <p className="m-0">
-                      {new Intl.NumberFormat("de-DE", {
+                      {new Intl.NumberFormat(INTL_LOCALE[locale], {
                         currency: revision.displaySnapshot.currency,
                         maximumFractionDigits: 0,
                         style: "currency"
@@ -260,17 +248,12 @@ export function ProjectVersions({
                     </p>
                   </div>
                 ) : (
-                  <p className="m-0 mt-3 text-caption text-graphite">
-                    Historischer Stand ohne aktuelle Anzeigeinformationen.
-                  </p>
+                  <p className="m-0 mt-3 text-caption text-graphite">{t.noSnapshot}</p>
                 )}
 
                 {restoreCandidateId === revision.id && (
                   <div className="mt-4 border-t border-hairline pt-4">
-                    <p className="m-0 text-caption text-graphite">
-                      Der aktuelle Arbeitsstand wird vorher automatisch als
-                      Sicherheitsversion festgehalten.
-                    </p>
+                    <p className="m-0 text-caption text-graphite">{t.restoreNote}</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <button
                         className="inline-flex h-11 items-center justify-center rounded-pill bg-signature px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-signature-hover disabled:cursor-wait disabled:opacity-40"
@@ -280,15 +263,15 @@ export function ProjectVersions({
                       >
                         {status.phase === "restoring" &&
                         status.revisionId === revision.id
-                          ? "Stellt wieder her …"
-                          : "Jetzt wiederherstellen"}
+                          ? t.restoring
+                          : t.restoreNow}
                       </button>
                       <button
                         className="inline-flex h-11 items-center justify-center rounded-pill border border-ink px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-ink/10 disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
                         onClick={() => setRestoreCandidateId(null)}
                         type="button"
                       >
-                        Abbrechen
+                        {messages.common.cancel}
                       </button>
                     </div>
                   </div>
@@ -306,7 +289,7 @@ export function ProjectVersions({
               onClick={() => void loadMore()}
               type="button"
             >
-              {isLoadingMore ? "Lädt …" : "Weitere Versionen laden"}
+              {isLoadingMore ? messages.common.loading : t.loadMore}
             </button>
             {paginationError && (
               <p className="m-0 mt-2 text-caption text-ink">
@@ -339,7 +322,7 @@ export function ProjectVersions({
               }}
               type="button"
             >
-              {status.requiresReload ? "Neu laden" : "Erneut versuchen"}
+              {status.requiresReload ? messages.common.reload : messages.common.retry}
             </button>
           </div>
         )}

@@ -16,6 +16,24 @@ export const LOCALE_TITLES: Record<Locale, string> = {
   es: "Español"
 };
 
+/**
+ * The `Intl` locale each site locale formats dates and numbers with. English
+ * is British: the site sells from Germany into Europe, so dates read
+ * day-month-year.
+ */
+export const INTL_LOCALE: Record<Locale, string> = {
+  de: "de-DE",
+  en: "en-GB",
+  es: "es-ES"
+};
+
+/**
+ * The header a browser request names its page's locale in, where the server
+ * has to write in that language but sees no locale in the URL: the sign-in
+ * code email.
+ */
+export const LOCALE_HEADER = "x-site-locale";
+
 /** The language list in the shape both Sanity localization plugins expect. */
 export const sanityLanguages = LOCALES.map((id) => ({ id, title: LOCALE_TITLES[id] }));
 

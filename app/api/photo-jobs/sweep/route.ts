@@ -21,7 +21,7 @@ function authorized(request: Request) {
  */
 export async function POST(request: Request) {
   if (!authorized(request)) {
-    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "not-found" }, { status: 404 });
   }
   const result = await getPhotoJobs().sweepInFlightJobs({ limit: 50 });
   return NextResponse.json(result, { headers: { "cache-control": "no-store" } });

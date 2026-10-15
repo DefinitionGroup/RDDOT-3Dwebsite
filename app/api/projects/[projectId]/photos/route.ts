@@ -14,19 +14,19 @@ export async function GET(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   const cursor = readGalleryCursor(new URL(request.url));
   if (!cursor.ok) {
-    return NextResponse.json({ error: "Der Seitenzeiger ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-cursor" }, { status: 400 });
   }
 
   const page = await getPhotoGallery().listForProject({

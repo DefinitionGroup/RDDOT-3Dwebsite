@@ -10,14 +10,14 @@ export async function GET(request: Request) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const cursor = readGalleryCursor(new URL(request.url));
   if (!cursor.ok) {
-    return NextResponse.json({ error: "Der Seitenzeiger ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-cursor" }, { status: 400 });
   }
 
   const page = await getPhotoGallery().listForAccount({

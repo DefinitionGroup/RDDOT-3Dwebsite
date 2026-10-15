@@ -4,11 +4,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   formatGalleryDate,
-  PHOTO_DISCLOSURE,
   type GalleryResponse,
   type SerializedGalleryCursor,
   type SerializedGalleryPhoto
 } from "@/features/photo-gallery/ui/gallery-types";
+import { apiErrorMessage } from "@/lib/messages";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
 /**
  * Display URLs are presigned and expire. Refresh a little before they do, so a
@@ -43,8 +44,8 @@ export function PhotoGallery({
   initialPhotos,
   initialNextCursor,
   initialTotalCount,
-  heading = "Visualisierungen",
-  emptyMessage = "Noch keine Visualisierung. Erzeugte Ansichten sammeln sich hier.",
+  heading,
+  emptyMessage,
   density = "roomy"
 }: {
   scope: Scope;
@@ -60,6 +61,9 @@ export function PhotoGallery({
    */
   density?: "roomy" | "compact";
 }) {
+  const locale = useLocale();
+  const messages = useMessages();
+  const t = messages.gallery;
   const isCompact = density === "compact";
   const [photos, setPhotos] = useState(initialPhotos);
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
@@ -91,8 +95,7 @@ export function PhotoGallery({
         if (!response.ok || !payload?.photos) {
           setStatus({
             phase: "error",
-            message:
-              payload?.error ?? "Die Visualisierungen konnten nicht geladen werden."
+            message: apiErrorMessage(messages, payload, t.loadFailed)
           });
           return;
         }
@@ -105,13 +108,14 @@ export function PhotoGallery({
         if (error instanceof DOMException && error.name === "AbortError") return;
         setStatus({
           phase: "error",
-          message: "Die Verbindung wurde unterbrochen."
+          message: messages.common.connectionLost
         });
       }
     },
-    // Only the identity of the scope matters, not the object reference.
+    // Only the identity of the scope matters, not the object reference; the
+    // messages change only with the locale.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scopeKey]
+    [scopeKey, messages]
   );
 
   // Re-mint the presigned URLs shortly before the earliest one lapses.
@@ -143,9 +147,7 @@ export function PhotoGallery({
         .catch(() => null)) as GalleryResponse | null;
 
       if (!response.ok || !payload?.photos) {
-        setActionError(
-          payload?.error ?? "Weitere Visualisierungen konnten nicht geladen werden."
-        );
+        setActionError(apiErrorMessage(messages, payload, t.loadMoreFailed));
         return;
       }
 
@@ -158,7 +160,7 @@ export function PhotoGallery({
       setTotalCount(payload.totalCount ?? totalCount);
       setNextCursor(payload.nextCursor ?? null);
     } catch {
-      setActionError("Die Verbindung wurde beim Nachladen unterbrochen.");
+      setActionError(messages.common.connectionLostLoading);
     } finally {
       setIsLoadingMore(false);
     }
@@ -177,25 +179,22 @@ export function PhotoGallery({
       const payload = (await response.json().catch(() => null)) as {
         url?: string;
         filename?: string;
-        error?: string;
       } | null;
 
       if (!response.ok || !payload?.url) {
-        setActionError(
-          payload?.error ?? "Der Download konnte nicht vorbereitet werden."
-        );
+        setActionError(apiErrorMessage(messages, payload, t.downloadFailed));
         return;
       }
 
       const anchor = document.createElement("a");
       anchor.href = payload.url;
-      anchor.download = payload.filename ?? "visualisierung.jpg";
+      anchor.download = payload.filename ?? messages.photo.downloadFilename;
       anchor.rel = "noopener";
       document.body.append(anchor);
       anchor.click();
       anchor.remove();
     } catch {
-      setActionError("Die Verbindung wurde unterbrochen.");
+      setActionError(messages.common.connectionLost);
     } finally {
       setBusyPhotoId(null);
     }
@@ -209,12 +208,8 @@ export function PhotoGallery({
       const response = await fetch(`/api/photos/${photoId}`, { method: "DELETE" });
 
       if (!response.ok && response.status !== 404) {
-        const payload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setActionError(
-          payload?.error ?? "Die Visualisierung konnte nicht gelöscht werden."
-        );
+        const payload: unknown = await response.json().catch(() => null);
+        setActionError(apiErrorMessage(messages, payload, t.deleteFailed));
         return;
       }
 
@@ -223,7 +218,7 @@ export function PhotoGallery({
       setDeleteCandidateId(null);
       if (lightboxId === photoId) setLightboxId(null);
     } catch {
-      setActionError("Die Verbindung wurde unterbrochen.");
+      setActionError(messages.common.connectionLost);
     } finally {
       setBusyPhotoId(null);
     }
@@ -243,13 +238,9 @@ export function PhotoGallery({
   return (
     <section className="border-t border-hairline pt-5">
       <div className="flex items-baseline justify-between gap-4">
-        <p className="m-0 text-nav">{heading}</p>
+        <p className="m-0 text-nav">{heading ?? t.heading}</p>
         <span className="text-caption text-graphite">
-          {status.phase === "loading"
-            ? "Lädt …"
-            : totalCount === 1
-              ? "1 Ansicht"
-              : `${totalCount} Ansichten`}
+          {status.phase === "loading" ? messages.common.loading : t.count(totalCount)}
         </span>
       </div>
 
@@ -264,14 +255,14 @@ export function PhotoGallery({
             }}
             type="button"
           >
-            Erneut versuchen
+            {messages.common.retry}
           </button>
         </div>
       )}
 
       {status.phase === "ready" && photos.length === 0 && (
         <p className="m-0 mt-4 max-w-[46ch] text-caption text-graphite">
-          {emptyMessage}
+          {emptyMessage ?? t.empty}
         </p>
       )}
 
@@ -285,7 +276,7 @@ export function PhotoGallery({
             {photos.map((photo) => (
               <li key={photo.id}>
                 <button
-                  aria-label={`${photo.projectName}, ${formatGalleryDate(photo.createdAt)} — grösser anzeigen`}
+                  aria-label={t.enlarge(photo.projectName, formatGalleryDate(photo.createdAt, locale))}
                   className="group relative block w-full overflow-hidden rounded-card bg-mist"
                   onClick={() => setLightboxId(photo.id)}
                   style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
@@ -303,7 +294,7 @@ export function PhotoGallery({
                       the configurator panel, which has no scroll container. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    alt={`Visualisierung ${photo.projectName}`}
+                    alt={t.alt(photo.projectName)}
                     className="size-full object-cover transition-opacity duration-300 group-hover:opacity-90"
                     decoding="async"
                     height={photo.height}
@@ -323,12 +314,12 @@ export function PhotoGallery({
                   <p className="m-0 min-w-0 truncate text-caption text-graphite">
                     {scope.kind === "account"
                       ? photo.projectName
-                      : (photo.revisionLabel ?? "Stand")}
+                      : (photo.revisionLabel ?? t.revisionFallback)}
                   </p>
                   <span
                     className={`text-caption text-ash ${isCompact ? "block" : "shrink-0"}`}
                   >
-                    {formatGalleryDate(photo.createdAt)}
+                    {formatGalleryDate(photo.createdAt, locale)}
                   </span>
                 </div>
               </li>
@@ -336,7 +327,7 @@ export function PhotoGallery({
           </ul>
 
           <p className="m-0 mt-4 text-caption text-graphite">
-            {PHOTO_DISCLOSURE}
+            {t.disclosure}
           </p>
         </>
       )}
@@ -349,7 +340,7 @@ export function PhotoGallery({
             onClick={() => void loadMore()}
             type="button"
           >
-            {isLoadingMore ? "Lädt …" : "Weitere Ansichten laden"}
+            {isLoadingMore ? messages.common.loading : t.loadMore}
           </button>
         </div>
       )}
@@ -362,7 +353,7 @@ export function PhotoGallery({
         {lightboxPhoto && (
           <motion.div
             animate={{ opacity: 1 }}
-            aria-label="Visualisierung"
+            aria-label={t.dialog}
             aria-modal="true"
             className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/85 p-4 backdrop-blur-sm sm:p-8"
             exit={{ opacity: 0 }}
@@ -376,7 +367,7 @@ export function PhotoGallery({
             <div className="flex max-h-full w-full max-w-4xl flex-col gap-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                alt={`Visualisierung ${lightboxPhoto.projectName}`}
+                alt={t.alt(lightboxPhoto.projectName)}
                 className="max-h-[70svh] w-full rounded-card object-contain"
                 height={lightboxPhoto.height}
                 onError={() => void loadFirstPage()}
@@ -393,8 +384,8 @@ export function PhotoGallery({
                       : ""}
                   </p>
                   <p className="m-0 mt-1 text-caption text-graphite">
-                    {formatGalleryDate(lightboxPhoto.createdAt)} ·{" "}
-                    {lightboxPhoto.width}×{lightboxPhoto.height} · {PHOTO_DISCLOSURE}
+                    {formatGalleryDate(lightboxPhoto.createdAt, locale)} ·{" "}
+                    {lightboxPhoto.width}×{lightboxPhoto.height} · {t.disclosure}
                   </p>
                 </div>
 
@@ -405,31 +396,28 @@ export function PhotoGallery({
                     onClick={() => void download(lightboxPhoto.id)}
                     type="button"
                   >
-                    {busyPhotoId === lightboxPhoto.id ? "Lädt …" : "Herunterladen"}
+                    {busyPhotoId === lightboxPhoto.id ? messages.common.loading : messages.common.download}
                   </button>
                   <button
                     className="inline-flex min-h-11 items-center text-caption text-graphite underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain disabled:cursor-wait disabled:text-ash"
                     onClick={() => setDeleteCandidateId(lightboxPhoto.id)}
                     type="button"
                   >
-                    Löschen
+                    {t.delete}
                   </button>
                   <button
                     className="inline-flex min-h-11 items-center text-caption text-graphite underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain disabled:cursor-wait disabled:text-ash"
                     onClick={() => setLightboxId(null)}
                     type="button"
                   >
-                    Schliessen
+                    {messages.common.close}
                   </button>
                 </div>
               </div>
 
               {deleteCandidateId === lightboxPhoto.id && (
                 <div className="border-t border-hairline pt-4 text-ink">
-                  <p className="m-0 text-caption text-graphite">
-                    Diese Visualisierung wird dauerhaft gelöscht. Ihre
-                    Konfiguration und deren Versionen bleiben unverändert.
-                  </p>
+                  <p className="m-0 text-caption text-graphite">{t.deleteNote}</p>
                   <div className="mt-3 flex gap-2">
                     <button
                       className="inline-flex h-11 items-center justify-center rounded-pill bg-signature px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-signature-hover disabled:cursor-wait disabled:opacity-40"
@@ -438,15 +426,15 @@ export function PhotoGallery({
                       type="button"
                     >
                       {busyPhotoId === lightboxPhoto.id
-                        ? "Löscht …"
-                        : "Endgültig löschen"}
+                        ? t.deleting
+                        : t.deleteForever}
                     </button>
                     <button
                       className="inline-flex h-11 items-center justify-center rounded-pill border border-ink px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-ink/10 disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
                       onClick={() => setDeleteCandidateId(null)}
                       type="button"
                     >
-                      Abbrechen
+                      {messages.common.cancel}
                     </button>
                   </div>
                 </div>

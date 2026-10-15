@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Label } from "@/components/design-system/label";
 import { RoundButton } from "@/components/design-system/pill";
+import { useMessages } from "@/lib/messages/locale-context";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
 
 type OverlayProps = {
@@ -48,6 +49,7 @@ export function Overlay({
   );
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
+  const closeLabel = useMessages().common.close;
 
   useEffect(() => {
     if (!open) return;
@@ -76,7 +78,7 @@ export function Overlay({
         <div className={`fixed inset-0 z-[80] flex ${sheet ? "justify-end" : "items-center justify-center p-5"}`}>
           <motion.button
             animate={{ opacity: 1 }}
-            aria-label="Schließen"
+            aria-label={closeLabel}
             className="absolute inset-0 bg-canvas/45 backdrop-blur-sm"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
@@ -106,7 +108,7 @@ export function Overlay({
                     {title}
                   </h2>
                 </div>
-                <RoundButton aria-label="Schließen" onClick={onClose} ref={closeRef}>
+                <RoundButton aria-label={closeLabel} onClick={onClose} ref={closeRef}>
                   <CloseIcon />
                 </RoundButton>
               </div>

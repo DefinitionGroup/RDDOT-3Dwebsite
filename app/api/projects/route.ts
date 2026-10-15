@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Bitte melden Sie sich an, um ein Projekt zu speichern." },
+      { code: "sign-in-to-save" },
       { status: 401 }
     );
   }
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     requestBody = await request.json();
   } catch {
     return NextResponse.json(
-      { error: "Die Projektanfrage ist ungültig." },
+      { code: "invalid-project-request" },
       { status: 400 }
     );
   }
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const body = createProjectSchema.safeParse(requestBody);
   if (!body.success) {
     return NextResponse.json(
-      { error: "Die Projektanfrage ist ungültig." },
+      { code: "invalid-project-request" },
       { status: 400 }
     );
   }
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   const configuration = decodeConfiguration(body.data.configurationCode);
   if (!configuration) {
     return NextResponse.json(
-      { error: "Die Konfiguration konnte nicht gelesen werden." },
+      { code: "unreadable-configuration" },
       { status: 400 }
     );
   }

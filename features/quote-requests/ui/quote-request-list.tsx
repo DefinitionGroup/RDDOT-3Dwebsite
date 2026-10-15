@@ -1,34 +1,28 @@
+"use client";
+
 import Link from "next/link";
 import { Label } from "@/components/design-system/label";
 import { formatCurrency } from "@/features/configurator/product-definition";
 import { readPriceIndicationTotal } from "@/features/quote-requests/price-indication";
-import type { QuoteRequestState } from "@/features/quote-requests/quote-request-module";
 import { formatQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
 import type { SerializedQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
-
-const STATE_LABEL: Record<QuoteRequestState, string> = {
-  submitted: "Eingegangen",
-  "in-review": "In Prüfung",
-  answered: "Beantwortet",
-  withdrawn: "Zurückgezogen"
-};
+import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
 /** The account's Quote Requests, newest first, as hairline rows. */
 export function QuoteRequestList({ page }: { page: SerializedQuoteRequestPage }) {
+  const locale = useLocale();
+  const messages = useMessages();
+  const t = messages.requestList;
   return (
     <section className="border-t border-ink pt-5">
       <div className="flex items-baseline justify-between gap-6">
-        <h2 className="m-0 text-nav">Anfragen</h2>
-        <Label as="span">
-          {page.totalCount === 1 ? "1 Anfrage" : `${page.totalCount} Anfragen`}
-        </Label>
+        <h2 className="m-0 text-nav">{t.heading}</h2>
+        <Label as="span">{t.count(page.totalCount)}</Label>
       </div>
 
       {page.quoteRequests.length === 0 ? (
-        <p className="m-0 max-w-[40ch] py-8 text-body text-graphite">
-          Noch keine Anfrage. Wenn ein Projekt so weit ist, fragen Sie es direkt aus dem
-          Konfigurator an – der Stand bleibt dabei festgehalten.
-        </p>
+        <p className="m-0 max-w-[40ch] py-8 text-body text-graphite">{t.empty}</p>
       ) : (
         <ul className="m-0 mt-2 list-none divide-y divide-hairline p-0">
           {page.quoteRequests.map((request) => {
@@ -42,7 +36,7 @@ export function QuoteRequestList({ page }: { page: SerializedQuoteRequestPage })
                   <p className="m-0 text-body font-label">
                     <Link
                       className="transition-colors duration-state ease-signature hover:text-porcelain"
-                      href={`/configure?project=${request.projectId}`}
+                      href={localizePath(locale, `/configure?project=${request.projectId}`)}
                     >
                       {request.projectName}
                     </Link>
@@ -52,17 +46,17 @@ export function QuoteRequestList({ page }: { page: SerializedQuoteRequestPage })
                       {formatQuoteRequestReference(request.reference)}
                     </span>
                     {" · "}
-                    {new Intl.DateTimeFormat("de-DE", {
+                    {new Intl.DateTimeFormat(INTL_LOCALE[locale], {
                       day: "2-digit",
                       month: "2-digit",
                       year: "numeric"
                     }).format(new Date(request.createdAt))}
                     {" · "}
-                    {STATE_LABEL[request.state]}
+                    {t.states[request.state]}
                   </p>
                 </div>
                 <span className="tnum text-caption text-graphite">
-                  {total === null ? "Preis nicht verfügbar" : `Richtpreis ${formatCurrency(total)}`}
+                  {total === null ? messages.common.priceUnavailable : t.price(formatCurrency(total, locale))}
                 </span>
               </li>
             );
@@ -70,9 +64,7 @@ export function QuoteRequestList({ page }: { page: SerializedQuoteRequestPage })
         </ul>
       )}
       {page.nextCursor && (
-        <p className="m-0 mt-3 text-caption text-ash">
-          Ältere Anfragen werden hier bald nachgeladen.
-        </p>
+        <p className="m-0 mt-3 text-caption text-ash">{t.older}</p>
       )}
     </section>
   );

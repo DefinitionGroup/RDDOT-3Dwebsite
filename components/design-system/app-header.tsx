@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AccountIndicator } from "@/components/design-system/account-indicator";
 import { BrandLogo } from "@/components/design-system/brand-logo";
+import { localizePath, type Locale } from "@/lib/i18n";
+import { getMessages } from "@/lib/messages";
 
 type AppHeaderProps = {
   /**
@@ -11,6 +13,7 @@ type AppHeaderProps = {
   /** Hidden on the account surface itself, where it would point at the page. */
   showAccount?: boolean;
   className?: string;
+  locale: Locale;
 };
 
 /**
@@ -24,10 +27,10 @@ type AppHeaderProps = {
  * Deliberately not used on the public shared-revision view, which exposes no
  * account or project navigation by design (CONTEXT.md, Shared Revision View).
  */
-export function AppHeader({ action, className = "", showAccount = true }: AppHeaderProps) {
+export function AppHeader({ action, className = "", locale, showAccount = true }: AppHeaderProps) {
   return (
     <div className={`flex items-center justify-between gap-4 ${className}`}>
-      <BrandLogo compact href="/" />
+      <BrandLogo compact href={localizePath(locale, "/")} label={getMessages(locale).header.home} />
 
       <div className="flex items-center gap-1">
         {action && (
@@ -51,7 +54,7 @@ export function AppHeader({ action, className = "", showAccount = true }: AppHea
             {action.label}
           </Link>
         )}
-        {showAccount && <AccountIndicator />}
+        {showAccount && <AccountIndicator locale={locale} />}
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   RDTD_KITCHEN_PRODUCT_V2
 } from "@/features/configurator/product-definition";
 import type { LocaleCode, WallModuleKey } from "@/features/configurator/types";
+import { useMessages } from "@/lib/messages/locale-context";
 
 export type ElementPaletteProps = {
   canAdd: (key: WallModuleKey) => boolean;
@@ -42,13 +43,11 @@ function Glyph({ moduleKey, widthM }: { moduleKey: WallModuleKey; widthM: number
  * glowing ghost until then. Tapping adds it on the right.
  */
 export function ElementPalette({ canAdd, locale, onAdd, onDragStart }: ElementPaletteProps) {
+  const t = useMessages().palette;
   return (
     <div className="flex flex-col gap-3">
-      <p className="m-0 text-caption text-graphite">
-        Ein Element in die Szene ziehen — es stellt sich links oder rechts an die Zeile.
-        Antippen fügt es rechts an.
-      </p>
-      <ul aria-label="Elemente" className="m-0 grid list-none grid-cols-3 gap-2 p-0">
+      <p className="m-0 text-caption text-graphite">{t.hint}</p>
+      <ul aria-label={t.label} className="m-0 grid list-none grid-cols-3 gap-2 p-0">
         {ELEMENT_KEYS.map((key) => {
           const entry = findWallCatalogEntry(RDTD_KITCHEN_PRODUCT_V2, key);
           const label = getLocalizedLabel(entry.label, locale);
@@ -56,7 +55,7 @@ export function ElementPalette({ canAdd, locale, onAdd, onDragStart }: ElementPa
           return (
             <li key={key}>
               <button
-                aria-label={`${label} hinzufügen`}
+                aria-label={t.add(label)}
                 className="flex w-full cursor-grab touch-none select-none flex-col items-center gap-2.5 rounded-card border border-hairline px-2 py-3 text-center transition-colors duration-state ease-signature hover:border-ink active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-35"
                 disabled={!enabled}
                 onClick={() => onAdd(key)}

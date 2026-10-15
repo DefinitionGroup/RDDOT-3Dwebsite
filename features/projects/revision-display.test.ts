@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createRevisionDisplaySnapshot,
+  localizeSnapshotLabel,
   parseRevisionDisplaySnapshot
 } from "@/features/projects/revision-display";
 import {
@@ -55,6 +56,27 @@ describe("Configuration Revision display snapshot", () => {
         "rdtdot-signature-kitchen-v1@retired"
       )
     ).toThrow("Unsupported Product Definition version");
+  });
+
+  it("describes a configuration in the reader's language", () => {
+    const snapshot = createRevisionDisplaySnapshot(
+      { ...DEFAULT_CONFIGURATOR_STATE, cabinetColorKey: "oak" },
+      RDTD_KITCHEN_PRODUCT_VERSION,
+      "es"
+    );
+
+    expect(snapshot).toMatchObject({
+      productTitle: "Cocina Signature",
+      cabinetFinish: "Roble cálido",
+      layoutLabel: "Línea de cocina, 8 módulos · isla estándar"
+    });
+  });
+
+  it("shows stored German product and finish names in the reader's language", () => {
+    expect(localizeSnapshotLabel("Graphit", "en")).toBe("Graphite");
+    expect(localizeSnapshotLabel("Porzellan", "es")).toBe("Porcelana");
+    expect(localizeSnapshotLabel("Signature Küche", "en")).toBe("Signature Kitchen");
+    expect(localizeSnapshotLabel("Etwas Unbekanntes", "en")).toBe("Etwas Unbekanntes");
   });
 
   it("fails closed when checkpointing against the retired v1 definition", () => {

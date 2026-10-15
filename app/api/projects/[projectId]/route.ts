@@ -17,27 +17,27 @@ export async function PATCH(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   let requestBody: unknown;
   try {
     requestBody = await request.json();
   } catch {
-    return NextResponse.json({ error: "Der neue Name ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-name" }, { status: 400 });
   }
 
   const body = renameSchema.safeParse(requestBody);
   if (!body.success) {
     return NextResponse.json(
-      { error: "Ein Projektname hat 1 bis 120 Zeichen." },
+      { code: "invalid-project-name" },
       { status: 400 }
     );
   }
@@ -48,7 +48,7 @@ export async function PATCH(
     name: body.data.name
   });
   if (result.kind === "unavailable") {
-    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "not-found" }, { status: 404 });
   }
 
   return NextResponse.json(

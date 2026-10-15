@@ -11,12 +11,12 @@ async function resolve(request: Request, jobId: string) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return {
-      error: NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 })
+      error: NextResponse.json({ code: "signed-out" }, { status: 401 })
     };
   }
   if (!z.uuid().safeParse(jobId).success) {
     return {
-      error: NextResponse.json({ error: "Der Auftrag ist ungültig." }, { status: 400 })
+      error: NextResponse.json({ code: "invalid-job" }, { status: 400 })
     };
   }
   return { ownerId: session.customerAccountId };
@@ -33,7 +33,7 @@ export async function GET(
   const photoJobs = getPhotoJobs();
   const job = await photoJobs.getJob({ ownerId: resolved.ownerId!, jobId });
   if (!job) {
-    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "not-found" }, { status: 404 });
   }
 
   // A read of an in-flight job asks the provider (throttled), so a lost
@@ -69,7 +69,7 @@ export async function DELETE(
     jobId
   });
   if (result.kind === "unavailable") {
-    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "not-found" }, { status: 404 });
   }
   return NextResponse.json({ job: serializeJob(result.job) });
 }

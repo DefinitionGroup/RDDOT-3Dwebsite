@@ -4,6 +4,8 @@ import { Check, Pencil, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FormEvent, startTransition, useId, useState } from "react";
 import { RoundButton } from "@/components/design-system/pill";
+import { apiErrorMessage } from "@/lib/messages";
+import { useMessages } from "@/lib/messages/locale-context";
 
 /**
  * The Project's name with an inline rename: pencil, an underline field,
@@ -18,6 +20,8 @@ export function ProjectNameField({
   onRenamed: (name: string) => void;
   projectId: string;
 }) {
+  const messages = useMessages();
+  const t = messages.projectName;
   const router = useRouter();
   const inputId = useId();
   const [editing, setEditing] = useState(false);
@@ -48,17 +52,16 @@ export function ProjectNameField({
       });
       const payload = (await response.json().catch(() => null)) as {
         project?: { name: string };
-        error?: string;
       } | null;
       if (!response.ok || !payload?.project) {
-        setError(payload?.error ?? "Der Name konnte nicht gespeichert werden.");
+        setError(apiErrorMessage(messages, payload, t.failed));
         return;
       }
       onRenamed(payload.project.name);
       setEditing(false);
       startTransition(() => router.refresh());
     } catch {
-      setError("Die Verbindung wurde unterbrochen.");
+      setError(messages.common.connectionLost);
     } finally {
       setIsPending(false);
     }
@@ -71,7 +74,7 @@ export function ProjectNameField({
           {name}
         </p>
         <RoundButton
-          aria-label="Projekt umbenennen"
+          aria-label={t.rename}
           className="-my-2 border-transparent text-graphite hover:text-ink"
           onClick={startEditing}
           size="sm"
@@ -87,7 +90,7 @@ export function ProjectNameField({
     <form className="flex min-w-0 flex-col gap-1" onSubmit={save}>
       <div className="flex items-center gap-2">
         <label className="sr-only" htmlFor={inputId}>
-          Name des Projekts
+          {t.label}
         </label>
         <input
           autoFocus
@@ -102,7 +105,7 @@ export function ProjectNameField({
           value={draft}
         />
         <RoundButton
-          aria-label="Namen speichern"
+          aria-label={t.save}
           disabled={isPending || !draft.trim()}
           size="sm"
           tone="outline"
@@ -111,7 +114,7 @@ export function ProjectNameField({
           <Check aria-hidden="true" size={12} strokeWidth={1.5} />
         </RoundButton>
         <RoundButton
-          aria-label="Umbenennen abbrechen"
+          aria-label={t.cancel}
           disabled={isPending}
           onClick={() => setEditing(false)}
           size="sm"

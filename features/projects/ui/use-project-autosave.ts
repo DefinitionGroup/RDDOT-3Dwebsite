@@ -9,6 +9,8 @@ import {
   writeProjectDraftRecovery
 } from "@/features/projects/project-draft-recovery";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
+import { apiErrorMessage } from "@/lib/messages";
+import { useMessages } from "@/lib/messages/locale-context";
 
 export type ProjectAutosaveStatus =
   | { phase: "saved"; savedAt: string; savedVersion: number }
@@ -22,7 +24,7 @@ export type ProjectAutosaveStatus =
 type SaveResponse = {
   project?: { updatedAt: string; version: number };
   currentVersion?: number;
-  error?: string;
+  code?: string;
 };
 
 const AUTOSAVE_DELAY_MS = 800;
@@ -36,6 +38,8 @@ export function useProjectAutosave({
   onRestore: (configurationCode: string) => boolean;
   project: EditableProject;
 }) {
+  const messages = useMessages();
+  const t = messages.autosave;
   const [status, setStatus] = useState<ProjectAutosaveStatus>({
     phase: "saved",
     savedAt: project.updatedAt,
@@ -137,9 +141,7 @@ export function useProjectAutosave({
             if (mounted.current) {
               setStatus({
                 phase: "error",
-                message:
-                  payload?.error ??
-                  "Die Änderung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+                message: apiErrorMessage(messages, payload, t.failed),
                 requiresSignIn: response.status === 401
               });
             }
@@ -170,8 +172,7 @@ export function useProjectAutosave({
           if (mounted.current) {
             setStatus({
               phase: "error",
-              message:
-                "Die Verbindung wurde unterbrochen. Ihre Änderung bleibt im Browser und kann erneut gespeichert werden."
+              message: t.offline
             });
           }
         })
@@ -196,7 +197,7 @@ export function useProjectAutosave({
       window.clearTimeout(pendingTimer);
       window.clearTimeout(statusTimer);
     };
-  }, [configurationCode, drainAttempt, project.id, retryAttempt]);
+  }, [configurationCode, drainAttempt, messages, project.id, retryAttempt, t]);
 
   useEffect(() => {
     mounted.current = true;
@@ -217,7 +218,7 @@ export function useProjectAutosave({
       hasRecovery.current = false;
       setStatus({
         phase: "error",
-        message: "Der lokale Entwurf ist beschädigt und konnte nicht wiederhergestellt werden."
+        message: t.corruptDraft
       });
       return;
     }

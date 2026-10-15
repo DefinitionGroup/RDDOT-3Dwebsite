@@ -12,14 +12,14 @@ export async function DELETE(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId, linkId } = await context.params;
   if (!z.uuid().safeParse(projectId).success || !z.uuid().safeParse(linkId).success) {
-    return NextResponse.json({ error: "Der Link ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-link" }, { status: 400 });
   }
 
   const result = await sharing.revokeLink({
@@ -28,7 +28,7 @@ export async function DELETE(
     linkId
   });
   if (result.kind === "unavailable") {
-    return NextResponse.json({ error: "Der Link wurde nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "link-not-found" }, { status: 404 });
   }
 
   return NextResponse.json({

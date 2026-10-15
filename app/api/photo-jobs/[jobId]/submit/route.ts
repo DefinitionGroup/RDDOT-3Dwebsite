@@ -17,12 +17,12 @@ export async function POST(
 ) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
-    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    return NextResponse.json({ code: "signed-out" }, { status: 401 });
   }
 
   const { jobId } = await context.params;
   if (!z.uuid().safeParse(jobId).success) {
-    return NextResponse.json({ error: "Der Auftrag ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-job" }, { status: 400 });
   }
 
   const result = await getPhotoJobs().submitJob({
@@ -32,22 +32,22 @@ export async function POST(
 
   switch (result.kind) {
     case "unavailable":
-      return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+      return NextResponse.json({ code: "not-found" }, { status: 404 });
     case "not-runnable":
       return NextResponse.json(
-        { job: serializeJob(result.job), error: "Der Auftrag ist nicht startbereit." },
+        { job: serializeJob(result.job), code: "job-not-ready" },
         { status: 409 }
       );
     case "failed":
       return NextResponse.json(
-        { job: serializeJob(result.job), error: "Die Erzeugung konnte nicht gestartet werden." },
+        { job: serializeJob(result.job), code: "generation-not-started" },
         { status: 502 }
       );
     case "budget-exceeded":
       return NextResponse.json(
         {
           job: serializeJob(result.job),
-          error: "Das Kontingent für Visualisierungen ist heute ausgeschöpft. Bitte versuchen Sie es später erneut."
+          code: "photo-budget-exhausted"
         },
         { status: 503, headers: { "retry-after": String(result.retryAfterSeconds) } }
       );

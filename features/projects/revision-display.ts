@@ -7,10 +7,10 @@ import {
 } from "@/features/configurator/product-definition";
 import type {
   AnyConfiguratorState,
-  ConfiguratorStateV2,
   LocaleCode
 } from "@/features/configurator/types";
 import type { JsonValue } from "@/features/projects/project-module";
+import { getMessages } from "@/lib/messages";
 
 export type RevisionDisplaySnapshotV1 = {
   schemaVersion: 1;
@@ -38,20 +38,6 @@ export type RevisionDisplaySnapshot =
 
 export class UnsupportedProductDefinitionVersionError extends Error {}
 
-function describeIslandSize(islandSize: ConfiguratorStateV2["islandSize"]) {
-  switch (islandSize) {
-    case 0:
-      return "ohne Insel";
-    case 2:
-      return "Insel klein";
-    case 4:
-      return "Insel standard";
-    case 5:
-      return "Insel groß";
-    case 6:
-      return "Insel extra groß";
-  }
-}
 
 export function createRevisionDisplaySnapshot(
   configuration: AnyConfiguratorState,
@@ -87,10 +73,11 @@ export function createRevisionDisplaySnapshot(
   );
   const quote = getConfiguratorQuote(configuration, productDefinition);
 
+  const words = getMessages(locale).snapshot;
   const layoutLabel =
     configuration.schemaVersion === 2
-      ? `Küchenzeile, ${configuration.wallModules.length} Module · ${describeIslandSize(configuration.islandSize)}`
-      : "Küchenzeile, gerade";
+      ? words.layout(configuration.wallModules.length, words.islands[configuration.islandSize])
+      : words.straightLine;
 
   return {
     schemaVersion: 2,
@@ -101,6 +88,27 @@ export function createRevisionDisplaySnapshot(
     totalCents: quote.totalCents,
     currency: quote.currency
   };
+}
+
+/**
+ * A stored snapshot keeps its labels in the language it was written in —
+ * German so far, as revisions are checkpointed on the server. A label that
+ * names the product or a finish of a supported Product Definition is shown in
+ * the reader's language; anything else is shown as stored.
+ */
+export function localizeSnapshotLabel(label: string, locale: LocaleCode) {
+  for (const version of SUPPORTED_PRODUCT_DEFINITION_VERSIONS) {
+    const definition = findConfiguratorProductDefinition(version);
+    if (!definition) continue;
+    const labels = [
+      definition.title,
+      ...definition.cabinetColors.map((option) => option.label),
+      ...definition.frontColors.map((option) => option.label)
+    ];
+    const match = labels.find((candidate) => Object.values(candidate).includes(label));
+    if (match) return getLocalizedLabel(match, locale);
+  }
+  return label;
 }
 
 export function parseRevisionDisplaySnapshot(

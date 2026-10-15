@@ -13,14 +13,14 @@ export async function GET(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { quoteRequestId } = await context.params;
   if (!z.uuid().safeParse(quoteRequestId).success) {
-    return NextResponse.json({ error: "Die Anfrage ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
 
   const quoteRequest = await quoteRequests.get({
@@ -28,7 +28,7 @@ export async function GET(
     quoteRequestId
   });
   if (!quoteRequest) {
-    return NextResponse.json({ error: "Die Anfrage wurde nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "quote-request-not-found" }, { status: 404 });
   }
 
   return NextResponse.json(

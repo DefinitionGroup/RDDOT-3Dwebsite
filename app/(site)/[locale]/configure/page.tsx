@@ -10,22 +10,29 @@ import { projects } from "@/lib/server/projects/projects";
 import { normalizeConfiguratorState } from "@/features/configurator/product-definition";
 import { parseRevisionDisplaySnapshot } from "@/features/projects/revision-display";
 import { sharing } from "@/lib/server/sharing/sharing";
+import { DEFAULT_LOCALE, localizePath } from "@/lib/i18n";
+import { visibleLocale } from "@/lib/locale-gate";
+import { getMessages } from "@/lib/messages";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "3D Konfigurator | rotpunkt Signature",
-  description: "Konfiguriere die erste rotpunkt Signature Küche als 3D-Prototyp."
-};
+export async function generateMetadata({ params }: PageProps<"/[locale]/configure">): Promise<Metadata> {
+  const locale = (await visibleLocale((await params).locale)) ?? DEFAULT_LOCALE;
+  const t = getMessages(locale).meta;
+  return { title: t.configureTitle, description: t.configureDescription };
+}
 
 type ConfigurePageProps = {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{
     [CONFIG_QUERY_PARAM]?: string | string[];
     project?: string | string[];
   }>;
 };
 
-export default async function ConfigurePage({ searchParams }: ConfigurePageProps) {
+export default async function ConfigurePage({ params: routeParams, searchParams }: ConfigurePageProps) {
+  const locale = await visibleLocale((await routeParams).locale);
+  if (!locale) notFound();
   const params = await searchParams;
   const projectId = typeof params.project === "string" ? params.project : null;
 
@@ -34,7 +41,8 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
 
     const session = await customerSessions.resolve(await headers());
     if (!session) {
-      redirect(`/konto?next=${encodeURIComponent(`/configure?project=${projectId}`)}`);
+      const next = localizePath(locale, `/configure?project=${projectId}`);
+      redirect(localizePath(locale, `/konto?next=${encodeURIComponent(next)}`));
     }
 
     const [workspace, revisionPage, shareLinks, gallery] = await Promise.all([
@@ -59,7 +67,7 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
       <ConfiguratorShell
         initialState={normalizeConfiguratorState(workspace.workingConfiguration.configuration)}
         key={`${workspace.id}:${workspace.workingConfiguration.version}`}
-        locale="de"
+        locale={locale}
         project={{
           id: workspace.id,
           name: workspace.name,
@@ -98,6 +106,6 @@ export default async function ConfigurePage({ searchParams }: ConfigurePageProps
   const session = await customerSessions.resolve(await headers());
 
   return (
-    <ConfiguratorShell initialState={initialState} locale="de" signedIn={Boolean(session)} />
+    <ConfiguratorShell initialState={initialState} locale={locale} signedIn={Boolean(session)} />
   );
 }

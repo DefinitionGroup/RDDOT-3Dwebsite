@@ -42,14 +42,14 @@ export async function GET(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   const url = new URL(request.url);
@@ -61,7 +61,7 @@ export async function GET(
     : null;
   const cursor = rawCursor ? cursorSchema.safeParse(rawCursor) : null;
   if (cursor && !cursor.success) {
-    return NextResponse.json({ error: "Der Seitenzeiger ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-cursor" }, { status: 400 });
   }
 
   const page = await projects.listConfigurationRevisions({
@@ -90,26 +90,26 @@ export async function POST(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   let requestBody: unknown;
   try {
     requestBody = await request.json();
   } catch {
-    return NextResponse.json({ error: "Die Anfrage ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
 
   const body = checkpointSchema.safeParse(requestBody);
   if (!body.success) {
-    return NextResponse.json({ error: "Die Anfrage ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
 
   const workspace = await projects.getWorkspace({
@@ -118,7 +118,7 @@ export async function POST(
   });
   if (!workspace || workspace.lifecycle !== "active") {
     return NextResponse.json(
-      { error: "Das Projekt wurde nicht gefunden oder kann nicht bearbeitet werden." },
+      { code: "project-not-editable" },
       { status: 404 }
     );
   }
@@ -126,7 +126,7 @@ export async function POST(
     return NextResponse.json(
       {
         currentVersion: workspace.workingConfiguration.version,
-        error: "Dieses Projekt wurde inzwischen an anderer Stelle geändert."
+        code: "project-conflict"
       },
       { status: 409 }
     );
@@ -142,8 +142,7 @@ export async function POST(
     if (!(error instanceof UnsupportedProductDefinitionVersionError)) throw error;
     return NextResponse.json(
       {
-        error:
-          "Diese Konfiguration verwendet eine nicht mehr verfügbare Produktversion."
+        code: "product-version-retired"
       },
       { status: 409 }
     );
@@ -165,20 +164,20 @@ export async function POST(
     return NextResponse.json(
       {
         currentVersion: result.currentVersion,
-        error: "Dieses Projekt wurde inzwischen an anderer Stelle geändert."
+        code: "project-conflict"
       },
       { status: 409 }
     );
   }
   if (result.kind === "unavailable") {
     return NextResponse.json(
-      { error: "Das Projekt wurde nicht gefunden oder kann nicht bearbeitet werden." },
+      { code: "project-not-editable" },
       { status: 404 }
     );
   }
   if (result.kind === "idempotency-conflict") {
     return NextResponse.json(
-      { error: "Diese Speicheranfrage wurde bereits mit anderen Daten verwendet." },
+      { code: "save-key-reused" },
       { status: 409 }
     );
   }

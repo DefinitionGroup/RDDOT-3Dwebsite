@@ -22,7 +22,7 @@ export async function POST(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
@@ -32,18 +32,18 @@ export async function POST(
     !z.uuid().safeParse(projectId).success ||
     !z.uuid().safeParse(revisionId).success
   ) {
-    return NextResponse.json({ error: "Die Version ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-revision" }, { status: 400 });
   }
 
   let requestBody: unknown;
   try {
     requestBody = await request.json();
   } catch {
-    return NextResponse.json({ error: "Die Anfrage ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
   const body = restoreSchema.safeParse(requestBody);
   if (!body.success) {
-    return NextResponse.json({ error: "Die Anfrage ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
 
   const workspace = await projects.getWorkspace({
@@ -52,7 +52,7 @@ export async function POST(
   });
   if (!workspace || workspace.lifecycle !== "active") {
     return NextResponse.json(
-      { error: "Das Projekt wurde nicht gefunden oder kann nicht bearbeitet werden." },
+      { code: "project-not-editable" },
       { status: 404 }
     );
   }
@@ -67,8 +67,7 @@ export async function POST(
     if (!(error instanceof UnsupportedProductDefinitionVersionError)) throw error;
     return NextResponse.json(
       {
-        error:
-          "Der aktuelle Arbeitsstand verwendet eine nicht mehr verfügbare Produktversion."
+        code: "working-version-retired"
       },
       { status: 409 }
     );
@@ -87,22 +86,21 @@ export async function POST(
     return NextResponse.json(
       {
         currentVersion: result.currentVersion,
-        error: "Dieses Projekt wurde inzwischen an anderer Stelle geändert."
+        code: "project-conflict"
       },
       { status: 409 }
     );
   }
   if (result.kind === "unavailable") {
     return NextResponse.json(
-      { error: "Die Version wurde nicht gefunden oder kann nicht verwendet werden." },
+      { code: "revision-not-usable" },
       { status: 404 }
     );
   }
   if (result.kind === "unsupported-product-definition") {
     return NextResponse.json(
       {
-        error:
-          "Diese historische Produktversion kann mit dem aktuellen Konfigurator nicht geöffnet werden."
+        code: "historical-version-not-restorable"
       },
       { status: 409 }
     );

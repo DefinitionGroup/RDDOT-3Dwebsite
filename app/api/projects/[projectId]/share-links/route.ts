@@ -39,14 +39,14 @@ export async function GET(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   const links = await sharing.listLinks({
@@ -63,19 +63,19 @@ export async function POST(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   const body = createSchema.safeParse(await request.json().catch(() => null));
   if (!body.success) {
-    return NextResponse.json({ error: "Die Anfrage ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
 
   const workspace = await projects.getWorkspace({
@@ -84,7 +84,7 @@ export async function POST(
   });
   if (!workspace || workspace.lifecycle !== "active") {
     return NextResponse.json(
-      { error: "Das Projekt wurde nicht gefunden oder kann nicht geteilt werden." },
+      { code: "project-not-shareable" },
       { status: 404 }
     );
   }
@@ -98,7 +98,7 @@ export async function POST(
   } catch (error) {
     if (!(error instanceof UnsupportedProductDefinitionVersionError)) throw error;
     return NextResponse.json(
-      { error: "Diese Produktversion kann derzeit nicht geteilt werden." },
+      { code: "product-version-not-shareable" },
       { status: 409 }
     );
   }
@@ -116,28 +116,27 @@ export async function POST(
     return NextResponse.json(
       {
         currentVersion: result.currentVersion,
-        error: "Dieses Projekt wurde inzwischen an anderer Stelle geändert."
+        code: "project-conflict"
       },
       { status: 409 }
     );
   }
   if (result.kind === "unavailable") {
     return NextResponse.json(
-      { error: "Das Projekt wurde nicht gefunden oder kann nicht geteilt werden." },
+      { code: "project-not-shareable" },
       { status: 404 }
     );
   }
   if (result.kind === "idempotency-conflict") {
     return NextResponse.json(
-      { error: "Diese Teilen-Anfrage wurde bereits mit anderen Daten verwendet." },
+      { code: "share-key-reused" },
       { status: 409 }
     );
   }
   if (result.kind === "token-conflict") {
     return NextResponse.json(
       {
-        code: "token-conflict",
-        error: "Der sichere Link konnte nicht erzeugt werden. Bitte erneut versuchen."
+        code: "token-conflict"
       },
       { status: 409 }
     );

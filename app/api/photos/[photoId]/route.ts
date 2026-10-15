@@ -10,14 +10,14 @@ async function resolveOwner(request: Request, photoId: string) {
   if (!session) {
     return {
       error: NextResponse.json(
-        { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+        { code: "session-expired" },
         { status: 401 }
       )
     };
   }
   if (!z.uuid().safeParse(photoId).success) {
     return {
-      error: NextResponse.json({ error: "Das Bild ist ungültig." }, { status: 400 })
+      error: NextResponse.json({ code: "invalid-photo" }, { status: 400 })
     };
   }
   return { ownerId: session.customerAccountId };
@@ -40,7 +40,7 @@ export async function GET(
   // A photo belonging to someone else is indistinguishable from one that does
   // not exist.
   if (!download) {
-    return NextResponse.json({ error: "Das Bild wurde nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "photo-not-found" }, { status: 404 });
   }
 
   return NextResponse.json(
@@ -67,7 +67,7 @@ export async function DELETE(
   });
 
   if (result.kind === "unavailable") {
-    return NextResponse.json({ error: "Das Bild wurde nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "photo-not-found" }, { status: 404 });
   }
 
   return new NextResponse(null, { status: 204 });

@@ -41,6 +41,27 @@ describe("German authentication OTP email", () => {
     });
   });
 
+  it("writes in the language the code was asked for in", async () => {
+    const send = vi.fn().mockResolvedValue({ providerMessageId: "message-2" });
+    const sender = createAuthenticationOtpSender({ send });
+
+    await sender(
+      { email: "customer@example.com", otp: "112233", type: "sign-in" },
+      { headers: new Headers({ "x-site-locale": "en" }) }
+    );
+    const english = send.mock.calls[0][0];
+    expect(english.template.locale).toBe("en");
+    expect(english.subject).toBe("Your sign-in code for rotpunkt Signature");
+    expect(english.text).toContain("Your code for signing in is: 112233");
+    expect(english.html).toContain('lang="en"');
+
+    await sender(
+      { email: "cliente@example.com", otp: "445566", type: "sign-in" },
+      { headers: new Headers({ "x-site-locale": "fr" }) }
+    );
+    expect(send.mock.calls[1][0].template.locale).toBe("de");
+  });
+
   it("rejects malformed recipients and codes before delivery", () => {
     expect(() =>
       renderAuthenticationOtp({

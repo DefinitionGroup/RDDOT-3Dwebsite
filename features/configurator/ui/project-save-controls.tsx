@@ -5,6 +5,9 @@ import { Pill } from "@/components/design-system/pill";
 import type { ProjectAutosaveStatus } from "@/features/projects/ui/use-project-autosave";
 import { useProjectAutosave } from "@/features/projects/ui/use-project-autosave";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
+import { INTL_LOCALE, type Locale } from "@/lib/i18n";
+import { getMessages } from "@/lib/messages";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
 type ProjectAutosaveProps = {
   configurationCode: string;
@@ -14,26 +17,27 @@ type ProjectAutosaveProps = {
   project: EditableProject;
 };
 
-function formatTime(iso: string) {
-  return new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(
+function formatTime(iso: string, locale: Locale) {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" }).format(
     new Date(iso)
   );
 }
 
 /** One line for the HUD: what the autosave is doing right now. */
-export function describeAutosave(status: ProjectAutosaveStatus | null) {
+export function describeAutosave(status: ProjectAutosaveStatus | null, locale: Locale) {
   if (!status) return null;
+  const t = getMessages(locale).autosave;
   switch (status.phase) {
     case "saving":
-      return "speichert …";
+      return t.saving;
     case "pending":
-      return "Änderung erkannt …";
+      return t.pending;
     case "saved":
-      return `gespeichert ${formatTime(status.savedAt)}`;
+      return t.saved(formatTime(status.savedAt, locale));
     case "error":
-      return "nicht gespeichert";
+      return t.notSaved;
     default:
-      return "Entwurf wartet";
+      return t.draftWaiting;
   }
 }
 
@@ -50,6 +54,9 @@ export function ProjectAutosave({
   onStatus,
   project
 }: ProjectAutosaveProps) {
+  const locale = useLocale();
+  const messages = useMessages();
+  const t = messages.autosave;
   const { discardRecovery, restoreRecovery, retry, status } = useProjectAutosave({
     configurationCode,
     onRestore,
@@ -62,17 +69,16 @@ export function ProjectAutosave({
 
   if (status.phase === "recovery") {
     return (
-      <Notice live="polite" title="Lokaler Entwurf gefunden.">
+      <Notice live="polite" title={t.recoveryTitle}>
         <p className="m-0 text-caption text-graphite">
-          Eine noch nicht bestätigte Änderung aus diesem Browser wartet seit{" "}
-          {formatTime(status.updatedAt)} Uhr auf Sie.
+          {t.recoveryBody(formatTime(status.updatedAt, locale))}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Pill className="h-11" onClick={restoreRecovery}>
-            Entwurf wiederherstellen
+            {t.restoreDraft}
           </Pill>
           <Pill onClick={discardRecovery} variant="secondary">
-            Verwerfen
+            {messages.common.discard}
           </Pill>
         </div>
       </Notice>
@@ -81,11 +87,8 @@ export function ProjectAutosave({
 
   if (status.phase === "stale-recovery") {
     return (
-      <Notice live="assertive" title="Älterer lokaler Entwurf gefunden.">
-        <p className="m-0 text-caption text-graphite">
-          Das Projekt wurde seitdem geändert. Der lokale Entwurf kann deshalb nur als neues
-          Projekt gesichert oder verworfen werden.
-        </p>
+      <Notice live="assertive" title={t.staleTitle}>
+        <p className="m-0 text-caption text-graphite">{t.staleBody}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Pill
             className="h-11"
@@ -94,10 +97,10 @@ export function ProjectAutosave({
               onSaveAsNew(status.configurationCode);
             }}
           >
-            Als neues Projekt
+            {t.saveAsNew}
           </Pill>
           <Pill onClick={discardRecovery} variant="secondary">
-            Verwerfen
+            {messages.common.discard}
           </Pill>
         </div>
       </Notice>
@@ -106,11 +109,8 @@ export function ProjectAutosave({
 
   if (status.phase === "conflict") {
     return (
-      <Notice live="assertive" title="Neuere Projektversion gefunden.">
-        <p className="m-0 text-caption text-graphite">
-          Ihre Änderung wurde nicht überschrieben. Laden Sie den neuesten Stand oder sichern
-          Sie diese Variante als neues Projekt.
-        </p>
+      <Notice live="assertive" title={t.conflictTitle}>
+        <p className="m-0 text-caption text-graphite">{t.conflictBody}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Pill
             className="h-11"
@@ -119,7 +119,7 @@ export function ProjectAutosave({
               window.location.reload();
             }}
           >
-            Neueste Version laden
+            {t.loadLatest}
           </Pill>
           <Pill
             onClick={() => {
@@ -128,7 +128,7 @@ export function ProjectAutosave({
             }}
             variant="secondary"
           >
-            Als neues Projekt
+            {t.saveAsNew}
           </Pill>
         </div>
       </Notice>
@@ -137,14 +137,14 @@ export function ProjectAutosave({
 
   if (status.phase === "error") {
     return (
-      <Notice live="assertive" title="Nicht gespeichert.">
+      <Notice live="assertive" title={t.errorTitle}>
         <p className="m-0 text-caption text-graphite">{status.message}</p>
         <div className="mt-4">
           <Pill
             className="h-11"
             onClick={status.requiresSignIn ? () => window.location.reload() : retry}
           >
-            {status.requiresSignIn ? "Erneut anmelden" : "Erneut speichern"}
+            {status.requiresSignIn ? t.signInAgain : t.saveAgain}
           </Pill>
         </div>
       </Notice>

@@ -22,6 +22,7 @@ import type {
   WallModuleKey
 } from "@/features/configurator/types";
 import type { EditTarget } from "@/features/configurator/engine/kitchen-model";
+import { useMessages } from "@/lib/messages/locale-context";
 
 export type EditDraft = {
   wallModules: WallModuleKey[];
@@ -35,11 +36,7 @@ export const MODULE_SHORT_LABEL: Record<WallModuleKey, string> = {
 };
 
 /** The three islands on offer; 2 and 6 stay valid for stored configurations. */
-export const ISLAND_OPTIONS: Array<{ size: IslandSize; label: string }> = [
-  { size: 0, label: "Ohne" },
-  { size: 4, label: "Insel" },
-  { size: 5, label: "Große Insel" }
-];
+const ISLAND_OPTIONS: IslandSize[] = [0, 4, 5];
 
 export function lineWidthM(modules: WallModuleKey[]) {
   return modules.reduce(
@@ -112,6 +109,8 @@ export function SceneEditBar({
   quote,
   selected
 }: SceneEditBarProps) {
+  const messages = useMessages();
+  const t = messages.editor;
   const constraints = RDTD_KITCHEN_PRODUCT_V2.wallConstraints;
   const selectedIndex = typeof selected === "number" ? selected : null;
   const selectedKey = selectedIndex !== null ? draft.wallModules[selectedIndex] : null;
@@ -195,7 +194,7 @@ export function SceneEditBar({
     <div className="chip-solid rounded-card p-2 text-ink">
       <div className="flex items-center gap-2 px-1 pt-1">
         <button
-          aria-label="Modul links hinzufügen"
+          aria-label={t.addLeft}
           className="grid h-11 w-8 flex-none place-items-center rounded-lg border border-dashed border-graphite text-ink transition-colors duration-state ease-signature hover:border-ink disabled:cursor-not-allowed disabled:border-hairline disabled:text-ash"
           disabled={!addAllowed}
           onClick={() => addModule("start")}
@@ -228,7 +227,7 @@ export function SceneEditBar({
                 whileDrag={{ scale: 1.04, zIndex: 2 }}
               >
                 <span
-                  aria-label={`${getLocalizedLabel(entry.label, locale)}, Position ${index + 1}`}
+                  aria-label={t.position(getLocalizedLabel(entry.label, locale), index + 1)}
                   className="inline-flex items-center gap-1.5"
                   role="button"
                 >
@@ -242,7 +241,7 @@ export function SceneEditBar({
           })}
         </Reorder.Group>
         <button
-          aria-label="Modul rechts hinzufügen"
+          aria-label={t.addRight}
           className="grid h-11 w-8 flex-none place-items-center rounded-lg border border-dashed border-graphite text-ink transition-colors duration-state ease-signature hover:border-ink disabled:cursor-not-allowed disabled:border-hairline disabled:text-ash"
           disabled={!addAllowed}
           onClick={() => addModule("end")}
@@ -275,7 +274,7 @@ export function SceneEditBar({
           </div>
           <div className="flex gap-1.5">
             <RoundButton
-              aria-label="Nach links schieben"
+              aria-label={t.moveLeft}
               disabled={selectedIndex === 0}
               onClick={() => moveSelected(-1)}
               size="sm"
@@ -284,7 +283,7 @@ export function SceneEditBar({
               <ArrowLeft size={13} strokeWidth={1.5} />
             </RoundButton>
             <RoundButton
-              aria-label="Nach rechts schieben"
+              aria-label={t.moveRight}
               disabled={selectedIndex === draft.wallModules.length - 1}
               onClick={() => moveSelected(1)}
               size="sm"
@@ -293,7 +292,7 @@ export function SceneEditBar({
               <ArrowRight size={13} strokeWidth={1.5} />
             </RoundButton>
             <RoundButton
-              aria-label="Modul entfernen"
+              aria-label={t.remove}
               disabled={draft.wallModules.length <= constraints.minModules}
               onClick={removeSelected}
               size="sm"
@@ -304,27 +303,25 @@ export function SceneEditBar({
           </div>
         </div>
       ) : (
-        <p className="mt-2 border-t border-ink/10 px-1 pt-2.5 text-caption text-graphite">
-          Module ziehen zum Umsortieren · antippen für Typ, Position oder Entfernen.
-        </p>
+        <p className="mt-2 border-t border-ink/10 px-1 pt-2.5 text-caption text-graphite">{t.hint}</p>
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-ink/10 px-1 pt-2">
         <div className="flex flex-1 items-center gap-2">
-          <span className="font-label text-label uppercase tracking-label text-graphite">Insel</span>
+          <span className="font-label text-label uppercase tracking-label text-graphite">{t.island}</span>
           <div className="flex flex-1 flex-wrap gap-1.5">
-            {ISLAND_OPTIONS.map((option) => (
+            {ISLAND_OPTIONS.map((size) => (
               <button
-                aria-pressed={draft.islandSize === option.size}
-                className={chip(draft.islandSize === option.size)}
-                key={option.size}
+                aria-pressed={draft.islandSize === size}
+                className={chip(draft.islandSize === size)}
+                key={size}
                 onClick={() => {
-                  onChange({ ...draft, islandSize: option.size });
-                  onSelect(option.size === 0 ? null : "island");
+                  onChange({ ...draft, islandSize: size });
+                  onSelect(size === 0 ? null : "island");
                 }}
                 type="button"
               >
-                {option.label}
+                {messages.islandSizes[size]}
               </button>
             ))}
           </div>
@@ -340,14 +337,14 @@ export function SceneEditBar({
           onClick={onDiscard}
           variant="secondary"
         >
-          Verwerfen
+          {messages.common.discard}
         </Pill>
         <Pill
           className="h-11"
           leading={<Check size={15} strokeWidth={1.5} />}
           onClick={onCommit}
         >
-          Fertig
+          {t.done}
         </Pill>
       </div>
     </div>

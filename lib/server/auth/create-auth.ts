@@ -2,15 +2,19 @@ import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins";
 import type { Pool } from "pg";
 
-export type SendAuthenticationOtp = (input: {
-  email: string;
-  otp: string;
-  type:
-    | "sign-in"
-    | "email-verification"
-    | "forget-password"
-    | "change-email";
-}) => Promise<void>;
+export type SendAuthenticationOtp = (
+  input: {
+    email: string;
+    otp: string;
+    type:
+      | "sign-in"
+      | "email-verification"
+      | "forget-password"
+      | "change-email";
+  },
+  /** The endpoint's request context; its headers carry the page's locale. */
+  context?: { headers?: Headers | null; request?: Request | null }
+) => Promise<void>;
 
 export function createAuth(input: {
   database: Pool;

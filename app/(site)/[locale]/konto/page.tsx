@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/design-system/app-header";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
@@ -11,15 +12,28 @@ import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-q
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
 import { projects } from "@/lib/server/projects/projects";
 import { quoteRequests } from "@/lib/server/quote-requests/quote-requests";
+import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n";
+import { visibleLocale } from "@/lib/locale-gate";
+import { getMessages } from "@/lib/messages";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Mein Bereich | rotpunkt Signature",
-  description: "Anmelden und private Küchenprojekte weiterplanen."
-};
+export async function generateMetadata({ params }: PageProps<"/[locale]/konto">): Promise<Metadata> {
+  const locale = (await visibleLocale((await params).locale)) ?? DEFAULT_LOCALE;
+  const t = getMessages(locale).meta;
+  return { title: t.accountTitle, description: t.accountDescription };
+}
+
+/** Where a sign-in may return to: a Project in the configurator or its request, in this locale. */
+function safeReturn(next: string | string[] | undefined, locale: Locale) {
+  const allowed = ["/configure?project=", "/anfrage?project="].map((path) => localizePath(locale, path));
+  return typeof next === "string" && allowed.some((prefix) => next.startsWith(prefix))
+    ? next
+    : localizePath(locale, "/konto");
+}
 
 type AccountPageProps = {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{
     c?: string | string[];
     import?: string | string[];
@@ -28,7 +42,10 @@ type AccountPageProps = {
   }>;
 };
 
-export default async function AccountPage({ searchParams }: AccountPageProps) {
+export default async function AccountPage({ params: routeParams, searchParams }: AccountPageProps) {
+  const locale = await visibleLocale((await routeParams).locale);
+  if (!locale) notFound();
+  const messages = getMessages(locale);
   const params = await searchParams;
   const session = await customerSessions.resolve(await headers());
   const [accountProjects, gallery, requests] = session
@@ -60,17 +77,15 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.25)_0%,rgba(0,0,0,0.05)_40%,rgba(0,0,0,0.82)_100%)]"
         />
         <div className="absolute inset-x-0 bottom-0 p-5 sm:p-10 lg:p-14">
-          <BrandLogo href="/" />
-          <p className="m-0 mt-5 max-w-[34ch] text-body text-graphite">
-            Eine Küche entsteht nicht in einem Moment. Ihr Planungsstand wartet dort, wo Sie
-            ihn verlassen haben.
-          </p>
+          <BrandLogo href={localizePath(locale, "/")} label={messages.header.home} />
+          <p className="m-0 mt-5 max-w-[34ch] text-body text-graphite">{messages.account.intro}</p>
         </div>
       </section>
 
       <section className="flex min-h-[69svh] flex-col px-5 py-6 sm:px-10 lg:min-h-svh lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
         <AppHeader
-          action={{ href: "/configure", label: "Zum Konfigurator" }}
+          action={{ href: localizePath(locale, "/configure"), label: messages.appHeader.toConfigurator }}
+          locale={locale}
           showAccount={false}
         />
 
@@ -98,13 +113,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           ) : (
             <AccountAccess
               developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
-              returnTo={
-                typeof params.next === "string" &&
-                (params.next.startsWith("/configure?project=") ||
-                  params.next.startsWith("/anfrage?project="))
-                  ? params.next
-                  : "/konto"
-              }
+              returnTo={safeReturn(params.next, locale)}
             />
           )}
         </div>

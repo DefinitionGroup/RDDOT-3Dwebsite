@@ -13,12 +13,12 @@ export async function POST(
 ) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
-    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    return NextResponse.json({ code: "signed-out" }, { status: 401 });
   }
 
   const { jobId } = await context.params;
   if (!z.uuid().safeParse(jobId).success) {
-    return NextResponse.json({ error: "Der Auftrag ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-job" }, { status: 400 });
   }
 
   const result = await getPhotoJobs().confirmCapture({
@@ -27,11 +27,11 @@ export async function POST(
   });
 
   if (result.kind === "unavailable") {
-    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "not-found" }, { status: 404 });
   }
   if (result.kind === "rejected") {
     return NextResponse.json(
-      { job: serializeJob(result.job), error: "Die Aufnahme wurde abgelehnt." },
+      { job: serializeJob(result.job), code: "capture-rejected" },
       { status: 422 }
     );
   }

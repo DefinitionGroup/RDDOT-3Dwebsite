@@ -14,8 +14,8 @@ import { quoteRequests } from "@/lib/server/quote-requests/quote-requests";
 
 export const runtime = "nodejs";
 
-const SESSION_EXPIRED = "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.";
-const PROJECT_INVALID = "Das Projekt ist ungültig.";
+const SESSION_EXPIRED = "session-expired";
+const PROJECT_INVALID = "invalid-project";
 
 /** Submits a Quote Request for the Project's current Working Configuration. */
 export async function POST(
@@ -24,12 +24,12 @@ export async function POST(
 ) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
-    return NextResponse.json({ error: SESSION_EXPIRED }, { status: 401 });
+    return NextResponse.json({ code: SESSION_EXPIRED }, { status: 401 });
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: PROJECT_INVALID }, { status: 400 });
+    return NextResponse.json({ code: PROJECT_INVALID }, { status: 400 });
   }
 
   const body = quoteRequestSubmissionSchema.safeParse(
@@ -37,7 +37,7 @@ export async function POST(
   );
   if (!body.success) {
     return NextResponse.json(
-      { error: "Bitte prüfen Sie Ihre Angaben. Name, E-Mail-Adresse und Einwilligung sind erforderlich." },
+      { code: "quote-details-required" },
       { status: 400 }
     );
   }
@@ -57,28 +57,28 @@ export async function POST(
       return NextResponse.json(
         {
           currentVersion: result.currentVersion,
-          error: "Dieses Projekt wurde inzwischen an anderer Stelle geändert."
+          code: "project-conflict"
         },
         { status: 409 }
       );
     case "idempotency-conflict":
       return NextResponse.json(
-        { error: "Diese Anfrage wurde bereits mit anderen Angaben gesendet." },
+        { code: "quote-key-reused" },
         { status: 409 }
       );
     case "unsupported-product-definition":
       return NextResponse.json(
-        { error: "Diese Konfiguration verwendet eine nicht mehr verfügbare Produktversion." },
+        { code: "product-version-retired" },
         { status: 409 }
       );
     case "quota-exceeded":
       return NextResponse.json(
-        { error: "Das Tageslimit für Anfragen ist erreicht. Bitte versuchen Sie es später erneut." },
+        { code: "quote-daily-limit" },
         { status: 429, headers: { "retry-after": String(result.retryAfterSeconds) } }
       );
     case "unavailable":
       return NextResponse.json(
-        { error: "Das Projekt wurde nicht gefunden oder kann nicht angefragt werden." },
+        { code: "project-not-requestable" },
         { status: 404 }
       );
     default:
@@ -99,17 +99,17 @@ export async function GET(
 ) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
-    return NextResponse.json({ error: SESSION_EXPIRED }, { status: 401 });
+    return NextResponse.json({ code: SESSION_EXPIRED }, { status: 401 });
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: PROJECT_INVALID }, { status: 400 });
+    return NextResponse.json({ code: PROJECT_INVALID }, { status: 400 });
   }
 
   const cursor = readQuoteRequestCursor(new URL(request.url));
   if (!cursor.ok) {
-    return NextResponse.json({ error: "Der Seitenzeiger ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-cursor" }, { status: 400 });
   }
 
   const page = await quoteRequests.listForProject({

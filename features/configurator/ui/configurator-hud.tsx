@@ -7,21 +7,15 @@ import { BrandLogo } from "@/components/design-system/brand-logo";
 import { GlassSegments } from "@/components/design-system/glass";
 import { Label } from "@/components/design-system/label";
 import type { CameraView, VisualizationMode } from "@/features/configurator/types";
+import { localizePath } from "@/lib/i18n";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
 /** The three decisions, in the order they are usually made. */
 export type PlanningStage = "material" | "layout" | "review";
 
-export const PLANNING_STAGES: { id: PlanningStage; label: string }[] = [
-  { id: "material", label: "Material" },
-  { id: "layout", label: "Aufbau" },
-  { id: "review", label: "Prüfen" }
-];
+const PLANNING_STAGES: PlanningStage[] = ["material", "layout", "review"];
 
-export const CAMERA_VIEWS: { id: CameraView; label: string }[] = [
-  { id: "signature", label: "Raum" },
-  { id: "front", label: "Front" },
-  { id: "detail", label: "Detail" }
-];
+const CAMERA_VIEWS: CameraView[] = ["signature", "front", "detail"];
 
 type ViewId = VisualizationMode | "render";
 
@@ -36,9 +30,10 @@ function AccountIcon() {
 
 /** Brand, context and the account entry: the top-left and top-right of the HUD. */
 export function HudBrand({ context }: { context: string }) {
+  const locale = useLocale();
   return (
     <div className="pointer-events-auto flex items-center gap-4">
-      <BrandLogo compact />
+      <BrandLogo compact href={localizePath(locale, "/")} label={useMessages().header.home} />
       <span aria-hidden="true" className="hidden h-[18px] w-px bg-hairline sm:block" />
       <span className="hidden truncate text-[0.875rem] text-graphite sm:block">{context}</span>
     </div>
@@ -46,11 +41,12 @@ export function HudBrand({ context }: { context: string }) {
 }
 
 export function HudAccountLink() {
+  const locale = useLocale();
   return (
     <Link
-      aria-label="Mein Bereich"
+      aria-label={useMessages().common.account}
       className="pointer-events-auto inline-flex size-11 shrink-0 items-center justify-center rounded-pill border border-hairline text-ink transition-colors duration-state ease-signature hover:border-ink"
-      href="/konto"
+      href={localizePath(locale, "/konto")}
     >
       <AccountIcon />
     </Link>
@@ -60,7 +56,7 @@ export function HudAccountLink() {
 export function HudPrice({ children, size = "hud" }: { children: ReactNode; size?: "hud" | "sheet" }) {
   return (
     <div className={`flex items-baseline gap-2.5 ${size === "sheet" ? "flex-col gap-0.5" : ""}`}>
-      <Label as="span">Richtpreis</Label>
+      <Label as="span">{useMessages().common.indicativePrice}</Label>
       <span
         className={`tnum font-display leading-none tracking-[-0.02em] text-ink ${
           size === "sheet" ? "text-[1.5rem]" : "text-[1.375rem]"
@@ -81,13 +77,14 @@ export function StageSegments({
   onSelect: (stage: PlanningStage) => void;
   size: "hud" | "compact";
 }) {
+  const t = useMessages().configurator.stages;
   return (
     <GlassSegments
       activeId={active}
-      ariaLabel="Planungsschritte"
+      ariaLabel={t.label}
       layoutGroup={`stage-${size}`}
       onChange={(id) => onSelect(id as PlanningStage)}
-      segments={PLANNING_STAGES}
+      segments={PLANNING_STAGES.map((id) => ({ id, label: t[id] }))}
       size={size}
       tone="solid"
     />
@@ -109,21 +106,22 @@ export function ViewSegments({
   size: "hud" | "compact";
   withRender: boolean;
 }) {
+  const t = useMessages().configurator.views;
   const segments: { id: ViewId; label: string; icon?: ReactNode }[] = [
-    { id: "studio", label: "Studio" },
-    { id: "apartment", label: "Appartement" }
+    { id: "studio", label: t.studio },
+    { id: "apartment", label: t.apartment }
   ];
   if (withRender) {
     segments.push({
       id: "render",
-      label: "Rendering",
+      label: t.render,
       icon: <ScanLine aria-hidden="true" size={12} strokeWidth={1.5} />
     });
   }
   return (
     <GlassSegments
       activeId={renderActive ? "render" : active}
-      ariaLabel="Ansicht"
+      ariaLabel={t.label}
       layoutGroup={`view-${size}`}
       onChange={(id) => {
         if (id === "render") {
@@ -148,13 +146,14 @@ export function CameraSegments({
   onSelect: (view: CameraView) => void;
   size: "hud" | "compact";
 }) {
+  const t = useMessages().configurator.cameras;
   return (
     <GlassSegments
       activeId={active}
-      ariaLabel="Kamera"
+      ariaLabel={t.label}
       layoutGroup={`camera-${size}`}
       onChange={(id) => onSelect(id as CameraView)}
-      segments={CAMERA_VIEWS}
+      segments={CAMERA_VIEWS.map((id) => ({ id, label: t[id] }))}
       size={size}
       tone="solid"
     />
@@ -175,25 +174,26 @@ export function SceneActions({
   onPhoto: () => void;
 }) {
   const shape = compact ? "size-[46px]" : "h-12 px-5";
+  const t = useMessages().configurator;
   return (
     <div className="flex items-center gap-2 md:gap-3">
       <button
-        aria-label="Module bearbeiten"
+        aria-label={t.editModules}
         className={`${glassAction} ${shape}`}
         onClick={onEdit}
         type="button"
       >
         <Pencil aria-hidden="true" size={15} strokeWidth={1.5} />
-        {!compact && "Bearbeiten"}
+        {!compact && t.edit}
       </button>
       <button
-        aria-label="Foto erzeugen"
+        aria-label={t.createPhoto}
         className={`${glassAction} ${shape}`}
         onClick={onPhoto}
         type="button"
       >
         <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
-        {!compact && "Foto"}
+        {!compact && t.photo}
       </button>
     </div>
   );

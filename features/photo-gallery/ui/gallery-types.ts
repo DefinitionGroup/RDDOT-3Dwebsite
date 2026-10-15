@@ -1,3 +1,5 @@
+import { INTL_LOCALE, type Locale } from "@/lib/i18n";
+
 /** The wire shape of `GalleryPhoto`, with dates as ISO strings. */
 export type SerializedGalleryPhoto = {
   id: string;
@@ -23,14 +25,11 @@ export type GalleryResponse = {
   photos?: SerializedGalleryPhoto[];
   totalCount?: number;
   nextCursor?: SerializedGalleryCursor | null;
-  error?: string;
+  code?: string;
 };
 
-export const PHOTO_DISCLOSURE =
-  "Illustrative KI-Ansicht. Sie kann keine Produktwahrheit begründen.";
-
-export function formatGalleryDate(value: string) {
-  return new Intl.DateTimeFormat("de-DE", {
+export function formatGalleryDate(value: string, locale: Locale) {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     day: "2-digit",
     month: "2-digit",
     year: "numeric"

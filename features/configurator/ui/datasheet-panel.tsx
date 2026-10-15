@@ -18,22 +18,13 @@ import type {
   WallModuleKey
 } from "@/features/configurator/types";
 import { ElementPalette } from "@/features/configurator/ui/element-palette";
-import {
-  FINISH_MATERIAL_LABEL,
-  finishSurfaceStyle
-} from "@/features/configurator/ui/material-overlay";
+import { finishSurfaceStyle } from "@/features/configurator/ui/material-overlay";
 import { lineWidthM, MODULE_SHORT_LABEL } from "@/features/configurator/ui/module-editor";
 import { PriceLines, priceLineCount } from "@/features/configurator/ui/price-breakdown";
+import { INTL_LOCALE } from "@/lib/i18n";
+import { useMessages } from "@/lib/messages/locale-context";
 
 export type DatasheetSection = "material" | "layout" | "pricing" | "project";
-
-export const ISLAND_LABEL: Record<number, string> = {
-  0: "Ohne",
-  2: "Klein",
-  4: "Insel",
-  5: "Große Insel",
-  6: "Groß"
-};
 
 type SummaryRow = { label: string; value: ReactNode };
 
@@ -74,11 +65,16 @@ type DatasheetPanelProps = {
   };
 };
 
-function formatMeters(value: number) {
-  return `${value.toLocaleString("de-DE", { maximumFractionDigits: 2 })} m`;
+/** A length with its unit; the no-break space keeps "3,72 m" on one line. */
+function formatMeters(value: number, locale: LocaleCode) {
+  return `${value.toLocaleString(INTL_LOCALE[locale], { maximumFractionDigits: 2 })}\u00a0m`;
 }
 
-/** The wall line as a strip: cream modules, appliance niches in charcoal. */
+/**
+ * The wall line as a strip: cream modules, appliance niches in charcoal. It
+ * narrows before the measurement beside it would wrap, as English and
+ * Spanish need a few pixels more than German.
+ */
 function LineStrip({ modules }: { modules: ConfiguratorState["wallModules"] }) {
   const gap = 2;
   const widths = modules.map(
@@ -92,7 +88,7 @@ function LineStrip({ modules }: { modules: ConfiguratorState["wallModules"] }) {
   return (
     <svg
       aria-hidden="true"
-      className="block h-5 w-[132px] shrink-0"
+      className="block h-5 w-[132px] min-w-0 shrink"
       preserveAspectRatio="xMinYMid meet"
       viewBox={`0 0 ${total} 56`}
     >
@@ -137,6 +133,7 @@ function FinishTiles({
   onSelect: (key: string) => void;
   options: FinishOption[];
 }) {
+  const t = useMessages().datasheet;
   return (
     <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3.5">
       <Label>{label}</Label>
@@ -168,10 +165,10 @@ function FinishTiles({
         })}
         {onMore ? (
           <button
-            aria-label="Alle Oberflächen in voller Größe"
+            aria-label={t.allSurfacesFull}
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-card border border-hairline text-graphite transition-colors duration-state ease-signature hover:border-ink hover:text-ink"
             onClick={onMore}
-            title="Alle Oberflächen"
+            title={t.allSurfaces}
             type="button"
           >
             <ArrowUpRight aria-hidden="true" size={14} strokeWidth={1.5} />
@@ -208,29 +205,31 @@ export function DatasheetPanel({
   title,
   variant
 }: DatasheetPanelProps) {
+  const messages = useMessages();
+  const t = messages.datasheet;
   const sheet = variant === "sheet";
   const worktop = quote.lineItems.find((item) => item.key === "island-worktop")?.quantity ?? 0;
   const rows: SummaryRow[] = [
     {
-      label: "Aufbau",
+      label: t.layoutRow,
       value: (
         <span className="flex items-center justify-between gap-3">
           <LineStrip modules={state.wallModules} />
-          <span>
-            {state.wallModules.length} Module · {formatMeters(lineWidthM(state.wallModules))}
+          <span className="whitespace-nowrap">
+            {t.modules(state.wallModules.length, formatMeters(lineWidthM(state.wallModules), locale))}
           </span>
         </span>
       )
     },
     {
-      label: "Insel",
+      label: t.island,
       value:
         state.islandSize === 0
-          ? "Ohne"
-          : `${ISLAND_LABEL[state.islandSize]} · ${formatMeters(worktop)}`
+          ? messages.islandSizes[0]
+          : `${messages.islandSizes[state.islandSize]} · ${formatMeters(worktop, locale)}`
     },
     {
-      label: "Korpus",
+      label: t.cabinet,
       value: (
         <span className="flex items-center justify-end gap-2.5">
           <Swatch finish={cabinetColor} />
@@ -239,11 +238,11 @@ export function DatasheetPanel({
       )
     },
     {
-      label: "Front",
+      label: t.front,
       value: (
         <span className="flex items-center justify-end gap-2.5">
           <Swatch finish={frontColor} />
-          {getLocalizedLabel(frontColor.label, locale)}, {FINISH_MATERIAL_LABEL[frontColor.material]}
+          {getLocalizedLabel(frontColor.label, locale)}, {messages.finishMaterials[frontColor.material]}
         </span>
       )
     },
@@ -261,7 +260,7 @@ export function DatasheetPanel({
       {sheet && (
         <button
           aria-expanded={sheetExpanded}
-          aria-label={sheetExpanded ? "Datenblatt verkleinern" : "Datenblatt vergrößern"}
+          aria-label={sheetExpanded ? t.shrink : t.expand}
           className="flex h-7 w-full shrink-0 items-start justify-center pt-2.5"
           onClick={onToggleSheet}
           type="button"
@@ -277,7 +276,7 @@ export function DatasheetPanel({
           </h1>
           {onCollapse && (
             <RoundButton
-              aria-label="Datenblatt ausblenden"
+              aria-label={t.hide}
               className="-mr-3.5 -mt-2 border-transparent text-graphite hover:text-ink"
               onClick={onCollapse}
               tone="quiet"
@@ -314,19 +313,19 @@ export function DatasheetPanel({
                   <Swatch finish={frontColor} size={14} />
                 </span>
               }
-              title="Material"
+              title={t.material}
             >
               <div className="flex flex-col gap-4">
                 <FinishTiles
                   active={cabinetColor}
-                  label="Korpus"
+                  label={t.cabinet}
                   locale={locale}
                   onSelect={sections.onSelectCabinet}
                   options={RDTD_KITCHEN_PRODUCT_V2.cabinetColors}
                 />
                 <FinishTiles
                   active={frontColor}
-                  label="Front"
+                  label={t.front}
                   locale={locale}
                   onMore={sections.onOpenMaterials}
                   onSelect={sections.onSelectFront}
@@ -340,7 +339,7 @@ export function DatasheetPanel({
               onToggle={() => sections.onToggle("layout")}
               open={sections.open === "layout"}
               summary={state.wallModules.map((key) => MODULE_SHORT_LABEL[key]).join(" ")}
-              title="Aufbau"
+              title={t.layout}
             >
               {sections.editing ? (
                 <>
@@ -350,24 +349,18 @@ export function DatasheetPanel({
                     onAdd={sections.elements.onAdd}
                     onDragStart={sections.elements.onDragStart}
                   />
-                  <p className="m-0 mt-4 text-caption text-graphite">
-                    Ziehen zum Umsortieren, antippen für Typ oder Entfernen — in der Leiste
-                    unter der Szene. Übernommen wird erst mit „Fertig“.
-                  </p>
+                  <p className="m-0 mt-4 text-caption text-graphite">{t.editingHint}</p>
                 </>
               ) : (
                 <>
-                  <p className="m-0 text-caption text-graphite">
-                    Schränke in der Szene verschieben, ergänzen oder tauschen. Der Richtpreis
-                    folgt jeder Änderung; übernommen wird erst mit „Fertig“.
-                  </p>
+                  <p className="m-0 text-caption text-graphite">{t.layoutHint}</p>
                   <Pill
                     className="mt-4 w-full"
                     leading={<Pencil aria-hidden="true" size={14} strokeWidth={1.5} />}
                     onClick={sections.onEdit}
                     variant="secondary"
                   >
-                    Module bearbeiten
+                    {messages.configurator.editModules}
                   </Pill>
                 </>
               )}
@@ -377,8 +370,8 @@ export function DatasheetPanel({
               id={`${variant}-pricing`}
               onToggle={() => sections.onToggle("pricing")}
               open={sections.open === "pricing"}
-              summary={`${priceLineCount(quote)} Preispositionen`}
-              title="Aufstellung"
+              summary={t.priceLines(priceLineCount(quote))}
+              title={t.pricing}
             >
               <PriceLines locale={locale} quote={quote} />
             </AccordionItem>
@@ -406,14 +399,14 @@ export function DatasheetPanel({
       >
         {sheet ? (
           <div className="flex flex-col gap-0.5">
-            <Label as="span">Richtpreis</Label>
+            <Label as="span">{messages.common.indicativePrice}</Label>
             <span className="tnum text-[1.5rem] font-display leading-[1.1] tracking-[-0.025em]">
               {priceText}
             </span>
           </div>
         ) : (
           <div className="flex items-baseline justify-between gap-4">
-            <Label as="span">Richtpreis, unverbindlich</Label>
+            <Label as="span">{t.indicativePriceNonBinding}</Label>
             <span className="tnum text-title font-display leading-none">{priceText}</span>
           </div>
         )}

@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
+import { Emphasized } from "@/components/design-system/emphasized";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import {
@@ -14,6 +15,9 @@ import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import type { SerializedQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { QuoteRequestList } from "@/features/quote-requests/ui/quote-request-list";
 import { authClient } from "@/lib/auth-client";
+import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { apiErrorMessage } from "@/lib/messages";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
 
 type AccountProject = {
@@ -52,6 +56,9 @@ export function AccountWorkspace({
   projects: AccountProject[];
   quoteRequests: SerializedQuoteRequestPage;
 }) {
+  const locale = useLocale();
+  const messages = useMessages();
+  const t = messages.account;
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -68,33 +75,27 @@ export function AccountWorkspace({
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pendingImport),
+        // A guest configuration arrives unnamed; it takes the page language's default.
+        body: JSON.stringify({ ...pendingImport, name: messages.photo.defaultProjectName }),
         signal: abortController.signal
       });
 
       if (!response.ok) {
-        const result = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setImportError(
-          result?.error ??
-            "Das Projekt konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
-        );
+        const result: unknown = await response.json().catch(() => null);
+        setImportError(apiErrorMessage(messages, result, t.importFailed));
         return;
       }
 
-      startTransition(() => router.replace("/konto"));
+      startTransition(() => router.replace(localizePath(locale, "/konto")));
     }
 
     void importProject().catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      setImportError(
-        "Das Projekt konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
-      );
+      setImportError(t.importFailed);
     });
 
     return () => abortController.abort();
-  }, [importAttempt, pendingImport, router]);
+  }, [importAttempt, locale, messages, pendingImport, router, t]);
 
   async function signOut() {
     setIsSigningOut(true);
@@ -112,14 +113,12 @@ export function AccountWorkspace({
       <div className="flex items-start justify-between gap-6">
         <div>
           <h1 className="m-0 text-heading">
-            Mein <em>Bereich</em>.
+            <Emphasized text={t.title} />
           </h1>
-          <p className="m-0 mt-5 max-w-[42ch] text-body text-graphite">
-            Ihre Projekte, Versionen und späteren Anfragen bleiben hier privat zusammen.
-          </p>
+          <p className="m-0 mt-5 max-w-[42ch] text-body text-graphite">{t.body}</p>
         </div>
         <Pill className="-mr-5 shrink-0" disabled={isSigningOut} onClick={signOut} variant="ghost">
-          {isSigningOut ? "Abmeldung …" : "Abmelden"}
+          {isSigningOut ? t.signingOut : t.signOut}
         </Pill>
       </div>
 
@@ -133,7 +132,7 @@ export function AccountWorkspace({
                   className="mt-4 h-11"
                   onClick={() => setImportAttempt((attempt) => attempt + 1)}
                 >
-                  Erneut speichern
+                  {t.saveAgain}
                 </Pill>
               </>
             ) : (
@@ -148,27 +147,22 @@ export function AccountWorkspace({
                     repeat: prefersReducedMotion ? 0 : Infinity
                   }}
                 />
-                Konfiguration wird als privates Projekt gespeichert …
+                {t.importing}
               </div>
             )}
           </div>
         )}
 
         <div className="flex items-baseline justify-between gap-6 border-t border-ink pt-5">
-          <h2 className="m-0 text-nav">Projekte</h2>
-          <Label as="span">
-            {projects.length === 1 ? "1 Projekt" : `${projects.length} Projekte`}
-          </Label>
+          <h2 className="m-0 text-nav">{t.projects}</h2>
+          <Label as="span">{t.projectCount(projects.length)}</Label>
         </div>
 
         {projects.length === 0 ? (
           <div className="py-8">
-            <p className="m-0 max-w-[40ch] text-body text-graphite">
-              Noch ist hier alles offen. Starten Sie im Konfigurator und speichern Sie Ihren
-              Entwurf als privates Projekt.
-            </p>
-            <Pill className="mt-7" href="/configure">
-              Küche konfigurieren
+            <p className="m-0 max-w-[40ch] text-body text-graphite">{t.noProjects}</p>
+            <Pill className="mt-7" href={localizePath(locale, "/configure")}>
+              {t.configure}
             </Pill>
           </div>
         ) : (
@@ -177,21 +171,22 @@ export function AccountWorkspace({
               <li key={project.id}>
                 <Link
                   className="group flex min-w-0 items-end justify-between gap-4 rounded-card bg-charcoal p-5 transition-colors duration-state ease-signature hover:bg-[#262626]"
-                  href={`/configure?project=${project.id}`}
+                  href={localizePath(locale, `/configure?project=${project.id}`)}
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-card">{project.name}</span>
                     <span className="mt-1 block text-caption text-graphite">
-                      Zuletzt geändert am{" "}
-                      {new Intl.DateTimeFormat("de-DE", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric"
-                      }).format(new Date(project.updatedAt))}
+                      {t.lastChanged(
+                        new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric"
+                        }).format(new Date(project.updatedAt))
+                      )}
                     </span>
                   </span>
                   <span className="inline-flex shrink-0 items-center gap-2 text-nav text-graphite transition-colors duration-state ease-signature group-hover:text-ink">
-                    Öffnen
+                    {t.open}
                     <ArrowIcon />
                   </span>
                 </Link>
@@ -207,7 +202,7 @@ export function AccountWorkspace({
 
       <div className="mt-12">
         <PhotoGallery
-          emptyMessage="Noch keine Visualisierung. Ansichten, die Sie im Konfigurator erzeugen, sammeln sich hier über alle Projekte hinweg."
+          emptyMessage={messages.gallery.accountEmpty}
           initialNextCursor={gallery.nextCursor}
           initialPhotos={gallery.photos}
           initialTotalCount={gallery.totalCount}
@@ -217,14 +212,14 @@ export function AccountWorkspace({
       </div>
 
       <p className="m-0 mt-8 text-caption text-ash">
-        Sitzung geschützt bis{" "}
-        {new Intl.DateTimeFormat("de-DE", {
-          day: "2-digit",
-          month: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit"
-        }).format(new Date(expiresAt))}{" "}
-        Uhr.
+        {t.sessionUntil(
+          new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
+          }).format(new Date(expiresAt))
+        )}
       </p>
     </motion.div>
   );

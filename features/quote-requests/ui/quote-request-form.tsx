@@ -3,9 +3,13 @@
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { type FormEvent, useId, useRef, useState } from "react";
+import { Emphasized } from "@/components/design-system/emphasized";
 import { FieldLabel, TextArea, TextField } from "@/components/design-system/field";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
+import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { apiErrorMessage } from "@/lib/messages";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
 import { QUOTE_REQUEST_LIMITS } from "@/features/quote-requests/quote-request-contract";
 import { formatQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
@@ -32,6 +36,9 @@ export function QuoteRequestForm({
   projectId: string;
   projectName: string;
 }) {
+  const locale = useLocale();
+  const messages = useMessages();
+  const t = messages.request;
   const nameId = useId();
   const emailId = useId();
   const phoneId = useId();
@@ -73,7 +80,6 @@ export function QuoteRequestForm({
       const payload = (await response.json().catch(() => null)) as {
         quoteRequest?: SerializedQuoteRequest;
         currentVersion?: number;
-        error?: string;
       } | null;
 
       if (response.ok && payload?.quoteRequest) {
@@ -89,17 +95,9 @@ export function QuoteRequestForm({
         setOutcome({ kind: "conflict", currentVersion: payload.currentVersion });
         return;
       }
-      setOutcome({
-        kind: "error",
-        message:
-          payload?.error ??
-          "Die Anfrage konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
-      });
+      setOutcome({ kind: "error", message: apiErrorMessage(messages, payload, t.failed) });
     } catch {
-      setOutcome({
-        kind: "error",
-        message: "Die Verbindung wurde unterbrochen. Bitte versuchen Sie es erneut."
-      });
+      setOutcome({ kind: "error", message: messages.common.connectionLostRetry });
     } finally {
       setIsPending(false);
     }
@@ -113,47 +111,44 @@ export function QuoteRequestForm({
         initial={prefersReducedMotion ? false : { opacity: 0, y: REVEAL_RISE }}
         transition={{ duration: DURATION.reveal, ease: SIGNATURE_EASE }}
       >
-        <Label>Anfrage eingegangen</Label>
+        <Label>{t.receivedLabel}</Label>
         <h1 className="m-0 mt-5 max-w-3xl text-heading">
-          Vielen <em>Dank</em>, {submitted.contact.name}.
+          <Emphasized text={t.thanks} /> {submitted.contact.name}.
         </h1>
         <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
-          Ihre Anfrage für „{submitted.projectName}“ ist bei uns eingegangen.
-          Unsere Planung prüft die Konfiguration und meldet sich bei Ihnen unter{" "}
+          {t.receivedBody(submitted.projectName)}{" "}
           <span className="text-ink">{submitted.contact.email}</span>.
         </p>
 
         <dl className="tnum m-0 mt-10 flex max-w-md flex-col border-t border-ink text-[0.875rem]">
           <div className="flex justify-between gap-6 border-b border-hairline py-3">
-            <dt className="font-label text-label uppercase tracking-label text-graphite">Referenz</dt>
+            <dt className="font-label text-label uppercase tracking-label text-graphite">{t.reference}</dt>
             <dd className="m-0 font-label tracking-[0.06em] text-ink">
               {formatQuoteRequestReference(submitted.reference)}
             </dd>
           </div>
           <div className="flex justify-between gap-6 border-b border-hairline py-3">
-            <dt className="font-label text-label uppercase tracking-label text-graphite">Eingegangen</dt>
+            <dt className="font-label text-label uppercase tracking-label text-graphite">{t.received}</dt>
             <dd className="m-0 text-ink">
-              {new Intl.DateTimeFormat("de-DE", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit"
-              }).format(new Date(submitted.createdAt))}{" "}
-              Uhr
+              {messages.common.clockTime(
+                new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }).format(new Date(submitted.createdAt))
+              )}
             </dd>
           </div>
         </dl>
 
-        <p className="m-0 mt-6 max-w-[46ch] text-caption text-graphite">
-          Die Anfrage bleibt mit genau diesem Planungsstand in Ihrem Bereich hinterlegt. Sie
-          können Ihr Projekt weiter verändern, ohne die Anfrage zu berühren.
-        </p>
+        <p className="m-0 mt-6 max-w-[46ch] text-caption text-graphite">{t.keptNote}</p>
 
         <div className="mt-10 flex flex-wrap items-center gap-3">
-          <Pill href="/konto">Zu meinen Anfragen</Pill>
-          <Pill href={`/configure?project=${projectId}`} variant="secondary">
-            Zum Projekt
+          <Pill href={localizePath(locale, "/konto")}>{t.toRequests}</Pill>
+          <Pill href={localizePath(locale, `/configure?project=${projectId}`)} variant="secondary">
+            {t.toProject}
           </Pill>
         </div>
       </motion.div>
@@ -162,19 +157,16 @@ export function QuoteRequestForm({
 
   return (
     <div>
-      <Label>Anfrage</Label>
+      <Label>{t.label}</Label>
       <h1 className="m-0 mt-5 max-w-3xl text-heading">
-        Planung <em>anfragen</em>.
+        <Emphasized text={t.title} />
       </h1>
-      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
-        Wir prüfen „{projectName}“ in genau diesem Stand und melden uns mit
-        einem Angebot und den nächsten Schritten. Die Anfrage ist unverbindlich.
-      </p>
+      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{t.intro(projectName)}</p>
 
       <form className="mt-10 max-w-xl" noValidate={false} onSubmit={submit}>
         <div className="grid gap-8 sm:grid-cols-2">
           <div>
-            <FieldLabel htmlFor={nameId}>Name</FieldLabel>
+            <FieldLabel htmlFor={nameId}>{t.name}</FieldLabel>
             <TextField
               autoComplete="name"
               id={nameId}
@@ -186,7 +178,7 @@ export function QuoteRequestForm({
             />
           </div>
           <div>
-            <FieldLabel htmlFor={emailId}>E-Mail-Adresse</FieldLabel>
+            <FieldLabel htmlFor={emailId}>{t.email}</FieldLabel>
             <TextField
               autoComplete="email"
               id={emailId}
@@ -200,8 +192,8 @@ export function QuoteRequestForm({
         </div>
 
         <div className="mt-8">
-          <FieldLabel hint="optional" htmlFor={phoneId}>
-            Telefon
+          <FieldLabel hint={t.optional} htmlFor={phoneId}>
+            {t.phone}
           </FieldLabel>
           <TextField
             autoComplete="tel"
@@ -214,14 +206,14 @@ export function QuoteRequestForm({
         </div>
 
         <div className="mt-8">
-          <FieldLabel hint="optional" htmlFor={noteId}>
-            Notiz zur Planung
+          <FieldLabel hint={t.optional} htmlFor={noteId}>
+            {t.note}
           </FieldLabel>
           <TextArea
             id={noteId}
             maxLength={QUOTE_REQUEST_LIMITS.noteMax}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Raummaße, Wünsche, ein passender Zeitraum …"
+            placeholder={t.notePlaceholder}
             value={note}
           />
           <p className="tnum m-0 mt-2 text-right text-caption text-ash">
@@ -239,38 +231,39 @@ export function QuoteRequestForm({
             type="checkbox"
           />
           <label className="text-caption text-graphite" htmlFor={consentId}>
-            Ich bin damit einverstanden, dass rotpunkt meine Angaben und diese
-            Konfiguration zur Bearbeitung meiner Anfrage verarbeitet und mich
-            dazu kontaktiert. Die Anfrage ist unverbindlich.
+            {t.consent}
           </label>
         </div>
 
         <Pill className="mt-10 w-full sm:w-auto" disabled={isPending || !consent} type="submit">
-          {isPending ? "Anfrage wird gesendet …" : "Anfrage senden"}
+          {isPending ? t.submitting : t.submit}
         </Pill>
 
         <div aria-live="polite" className="mt-6 min-h-6 text-caption text-ink">
           {outcome.kind === "error" && outcome.message}
           {outcome.kind === "signed-out" && (
             <>
-              Ihre Sitzung ist abgelaufen.{" "}
+              {t.sessionExpired}{" "}
               <Link
                 className="underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain"
-                href={`/konto?next=${encodeURIComponent(`/anfrage?project=${projectId}`)}`}
+                href={localizePath(
+                  locale,
+                  `/konto?next=${encodeURIComponent(localizePath(locale, `/anfrage?project=${projectId}`))}`
+                )}
               >
-                Erneut anmelden
+                {t.signInAgain}
               </Link>
             </>
           )}
           {outcome.kind === "conflict" && (
             <>
-              Dieses Projekt wurde inzwischen an anderer Stelle geändert.{" "}
+              {t.conflict}{" "}
               <button
                 className="underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain"
                 onClick={() => window.location.reload()}
                 type="button"
               >
-                Aktuellen Stand laden
+                {t.loadLatest}
               </button>
             </>
           )}

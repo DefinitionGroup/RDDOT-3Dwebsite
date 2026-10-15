@@ -5,9 +5,10 @@ import { notFound } from "next/navigation";
 import { VisualEditing } from "next-sanity/visual-editing";
 import { MotionProvider } from "@/components/design-system/motion-provider";
 import { ExitPreview } from "@/components/page-builder/exit-preview";
-import { LAUNCHED_LOCALES } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isLocale, LAUNCHED_LOCALES } from "@/lib/i18n";
 import { visibleLocale } from "@/lib/locale-gate";
 import { getMessages } from "@/lib/messages";
+import { LocaleProvider } from "@/lib/messages/locale-context";
 import { isSanityConfigured } from "@/sanity/env";
 import { SanityLive } from "@/sanity/lib/live";
 import "../../globals.css";
@@ -29,22 +30,22 @@ const serif = Instrument_Serif({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-const baseMetadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: "rotpunkt Signature",
-  description:
-    "Modulare Signature-Küchen: in 3D geplant, in Deutschland gefertigt, als Projekt gespeichert.",
-  openGraph: {
-    title: "rotpunkt Signature",
-    description: "Die Küche, die bleibt. In 3D geplant, in Deutschland gefertigt.",
-    images: ["/images/signature-hero.jpg"]
-  }
-};
-
 /** Editorial Preview is never indexed (ADR 0007). */
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Promise<Metadata> {
+  const { locale } = await params;
+  const t = getMessages(isLocale(locale) ? locale : DEFAULT_LOCALE).meta;
+  const metadata: Metadata = {
+    metadataBase: new URL(siteUrl),
+    title: "rotpunkt Signature",
+    description: t.siteDescription,
+    openGraph: {
+      title: "rotpunkt Signature",
+      description: t.shareDescription,
+      images: ["/images/signature-hero.jpg"]
+    }
+  };
   const { isEnabled } = await draftMode();
-  return isEnabled ? { ...baseMetadata, robots: { index: false, follow: false } } : baseMetadata;
+  return isEnabled ? { ...metadata, robots: { index: false, follow: false } } : metadata;
 }
 
 export const viewport: Viewport = {
@@ -72,7 +73,9 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[lo
       lang={locale}
     >
       <body>
-        <MotionProvider>{children}</MotionProvider>
+        <LocaleProvider locale={locale}>
+          <MotionProvider>{children}</MotionProvider>
+        </LocaleProvider>
         {/*
          * Live updates connect the browser to Sanity, so they run only for
          * editors in preview and on a developer's machine. Public visitors

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   );
   if (!email.success) {
     return NextResponse.json(
-      { error: "Eine gültige E-Mail-Adresse ist erforderlich." },
+      { code: "email-required" },
       { status: 400 }
     );
   }

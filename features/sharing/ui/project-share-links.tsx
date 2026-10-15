@@ -2,6 +2,9 @@
 
 import { useRef, useState } from "react";
 import type { EditableSharedRevisionLink } from "@/features/projects/ui/project-editor-types";
+import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { apiErrorMessage } from "@/lib/messages";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
 type ShareActionStatus =
   | { phase: "idle" }
@@ -27,9 +30,9 @@ function createSecret() {
 }
 
 function linkState(link: EditableSharedRevisionLink) {
-  if (link.revokedAt) return "Widerrufen";
-  if (new Date(link.expiresAt).getTime() <= Date.now()) return "Abgelaufen";
-  return "Aktiv";
+  if (link.revokedAt) return "revoked";
+  if (new Date(link.expiresAt).getTime() <= Date.now()) return "expired";
+  return "active";
 }
 
 export function ProjectShareLinks({
@@ -41,6 +44,9 @@ export function ProjectShareLinks({
   projectId: string;
   savedVersion: number | null;
 }) {
+  const locale = useLocale();
+  const messages = useMessages();
+  const t = messages.shareLinks;
   const [links, setLinks] = useState(initialLinks);
   const [status, setStatus] = useState<ShareActionStatus>({ phase: "idle" });
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
@@ -51,11 +57,11 @@ export function ProjectShareLinks({
   async function copyUrl(url: string) {
     try {
       await navigator.clipboard.writeText(url);
-      setStatus({ phase: "success", message: "Sicherer Link kopiert." });
+      setStatus({ phase: "success", message: t.copied });
     } catch {
       setStatus({
         phase: "error",
-        message: "Automatisches Kopieren ist blockiert. Markieren Sie den Link im Feld.",
+        message: t.copyBlocked,
         retry: { kind: "copy", url }
       });
     }
@@ -84,14 +90,13 @@ export function ProjectShareLinks({
         link?: EditableSharedRevisionLink;
         created?: boolean;
         code?: string;
-        error?: string;
       } | null;
 
       if (!response.ok || !payload?.link) {
         if (payload?.code === "token-conflict") operation.current = null;
         setStatus({
           phase: "error",
-          message: payload?.error ?? "Der sichere Link konnte nicht erstellt werden.",
+          message: apiErrorMessage(messages, payload, t.createFailed),
           requiresReload:
             response.status === 401 ||
             (response.status === 409 && payload?.code !== "token-conflict"),
@@ -100,7 +105,7 @@ export function ProjectShareLinks({
         return;
       }
 
-      const url = `${window.location.origin}/share/${payload.link.id}#${operation.current.token}`;
+      const url = `${window.location.origin}${localizePath(locale, `/share/${payload.link.id}`)}#${operation.current.token}`;
       setLinks((current) => [
         payload.link!,
         ...current.filter((link) => link.id !== payload.link!.id)
@@ -111,8 +116,7 @@ export function ProjectShareLinks({
     } catch {
       setStatus({
         phase: "error",
-        message:
-          "Die Verbindung wurde unterbrochen. Dieselbe Teilen-Anfrage kann erneut gesendet werden.",
+        message: t.createOffline,
         retry: { kind: "create" }
       });
     }
@@ -129,12 +133,11 @@ export function ProjectShareLinks({
       );
       const payload = (await response.json().catch(() => null)) as {
         revokedAt?: string;
-        error?: string;
       } | null;
       if (!response.ok || !payload?.revokedAt) {
         setStatus({
           phase: "error",
-          message: payload?.error ?? "Der Link konnte nicht widerrufen werden.",
+          message: apiErrorMessage(messages, payload, t.revokeFailed),
           requiresReload: response.status === 401,
           retry: { kind: "revoke", linkId }
         });
@@ -148,11 +151,11 @@ export function ProjectShareLinks({
       );
       setRevokeCandidateId(null);
       setCreatedUrl(null);
-      setStatus({ phase: "success", message: "Der Link wurde dauerhaft widerrufen." });
+      setStatus({ phase: "success", message: t.revokedDone });
     } catch {
       setStatus({
         phase: "error",
-        message: "Die Verbindung wurde beim Widerrufen unterbrochen.",
+        message: t.revokeOffline,
         retry: { kind: "revoke", linkId }
       });
     }
@@ -179,10 +182,8 @@ export function ProjectShareLinks({
     <section className="border-t border-hairline pt-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="m-0 text-nav">Sicher teilen</p>
-          <p className="m-0 mt-1 text-caption text-graphite">
-            Fixiert diesen Stand für 90 Tage.
-          </p>
+          <p className="m-0 text-nav">{t.heading}</p>
+          <p className="m-0 mt-1 text-caption text-graphite">{t.note}</p>
         </div>
         <button
           className="inline-flex h-11 items-center justify-center rounded-pill border border-ink px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-ink/10 disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
@@ -190,20 +191,18 @@ export function ProjectShareLinks({
           onClick={() => void createLink()}
           type="button"
         >
-          {status.phase === "creating" ? "Erstellt …" : "Link erstellen"}
+          {status.phase === "creating" ? t.creating : t.create}
         </button>
       </div>
 
       {!savedVersion && (
-        <p className="m-0 mt-3 text-caption text-graphite">
-          Der Link kann erstellt werden, sobald der Arbeitsstand gespeichert ist.
-        </p>
+        <p className="m-0 mt-3 text-caption text-graphite">{t.waitForAutosave}</p>
       )}
 
       {createdUrl && (
         <div className="mt-4 rounded-card border border-hairline p-4">
           <label className="text-caption text-graphite" htmlFor="created-share-url">
-            Diesen Link jetzt sichern
+            {t.keepNow}
           </label>
           <input
             className="mt-2 min-h-11 w-full border-0 border-b border-hairline bg-transparent px-0 text-caption text-ink outline-none focus:border-ink"
@@ -217,18 +216,16 @@ export function ProjectShareLinks({
             onClick={() => void copyUrl(createdUrl)}
             type="button"
           >
-            Link kopieren
+            {t.copy}
           </button>
-          <p className="m-0 mt-3 text-caption text-graphite">
-            Der geheime Teil wird nicht gespeichert und kann später nicht erneut angezeigt werden.
-          </p>
+          <p className="m-0 mt-3 text-caption text-graphite">{t.secretNote}</p>
         </div>
       )}
 
       {links.length > 0 && (
         <details className="mt-4 border-y border-hairline">
           <summary className="cursor-pointer py-4 text-caption text-graphite transition-colors duration-state ease-signature hover:text-ink">
-            {links.length === 1 ? "1 geteilter Stand" : `${links.length} geteilte Stände`}
+            {t.count(links.length)}
           </summary>
           <ol className="divide-y divide-hairline border-t border-hairline">
             {links.map((link) => {
@@ -237,30 +234,30 @@ export function ProjectShareLinks({
                 <li className="py-4" key={link.id}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="m-0 text-caption text-ink">{state}</p>
+                      <p className="m-0 text-caption text-ink">{t[state]}</p>
                       <p className="m-0 mt-1 text-caption text-graphite">
-                        Bis {new Intl.DateTimeFormat("de-DE", {
-                          dateStyle: "medium"
-                        }).format(new Date(link.expiresAt))}
+                        {t.until(
+                          new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+                            dateStyle: "medium"
+                          }).format(new Date(link.expiresAt))
+                        )}
                       </p>
                     </div>
-                    {state === "Aktiv" && (
+                    {state === "active" && (
                       <button
                         className="shrink-0 inline-flex min-h-11 items-center text-caption text-graphite underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain disabled:cursor-wait disabled:text-ash"
                         disabled={isBusy}
                         onClick={() => setRevokeCandidateId(link.id)}
                         type="button"
                       >
-                        Widerrufen
+                        {t.revoke}
                       </button>
                     )}
                   </div>
 
                   {revokeCandidateId === link.id && (
                     <div className="mt-4 border-t border-hairline pt-4">
-                      <p className="m-0 text-caption text-graphite">
-                        Der Link funktioniert danach sofort und dauerhaft nicht mehr.
-                      </p>
+                      <p className="m-0 text-caption text-graphite">{t.revokeNote}</p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <button
                           className="inline-flex h-11 items-center justify-center rounded-pill bg-signature px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-signature-hover disabled:cursor-wait disabled:opacity-40"
@@ -269,8 +266,8 @@ export function ProjectShareLinks({
                           type="button"
                         >
                           {status.phase === "revoking" && status.linkId === link.id
-                            ? "Widerruft …"
-                            : "Jetzt widerrufen"}
+                            ? t.revoking
+                            : t.revokeNow}
                         </button>
                         <button
                           className="inline-flex h-11 items-center justify-center rounded-pill border border-ink px-5 text-nav font-label leading-none text-ink transition-colors duration-state ease-signature hover:bg-ink/10 disabled:cursor-wait disabled:border-hairline disabled:text-ash disabled:hover:bg-transparent"
@@ -278,7 +275,7 @@ export function ProjectShareLinks({
                           onClick={() => setRevokeCandidateId(null)}
                           type="button"
                         >
-                          Abbrechen
+                          {messages.common.cancel}
                         </button>
                       </div>
                     </div>
@@ -300,7 +297,7 @@ export function ProjectShareLinks({
               onClick={retryLastAction}
               type="button"
             >
-              {status.requiresReload ? "Neu laden" : "Erneut versuchen"}
+              {status.requiresReload ? messages.common.reload : messages.common.retry}
             </button>
           </div>
         )}

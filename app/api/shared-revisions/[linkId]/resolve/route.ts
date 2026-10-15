@@ -24,7 +24,7 @@ export async function POST(
   const body = resolveSchema.safeParse(await request.json().catch(() => null));
   if (!z.uuid().safeParse(linkId).success || !body.success) {
     return NextResponse.json(
-      { error: "Dieser geteilte Stand ist nicht verfügbar." },
+      { code: "shared-revision-unavailable" },
       { status: 404, headers: privateHeaders }
     );
   }
@@ -32,7 +32,7 @@ export async function POST(
   const resolved = await sharing.resolveLink({ linkId, token: body.data.token });
   if (!resolved) {
     return NextResponse.json(
-      { error: "Dieser geteilte Stand ist nicht mehr verfügbar." },
+      { code: "shared-revision-gone" },
       { status: 404, headers: privateHeaders }
     );
   }
@@ -44,7 +44,7 @@ export async function POST(
     )
   ) {
     return NextResponse.json(
-      { error: "Diese historische Produktversion kann derzeit nicht angezeigt werden." },
+      { code: "historical-version-unavailable" },
       { status: 410, headers: privateHeaders }
     );
   }

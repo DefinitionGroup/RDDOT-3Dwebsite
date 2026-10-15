@@ -24,14 +24,14 @@ export async function GET(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   const workspace = await projects.getWorkspace({
@@ -39,7 +39,7 @@ export async function GET(
     projectId
   });
   if (!workspace || workspace.lifecycle === "trashed") {
-    return NextResponse.json({ error: "Nicht gefunden." }, { status: 404 });
+    return NextResponse.json({ code: "not-found" }, { status: 404 });
   }
 
   return NextResponse.json(
@@ -58,14 +58,14 @@ export async function PUT(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   let requestBody: unknown;
@@ -73,7 +73,7 @@ export async function PUT(
     requestBody = await request.json();
   } catch {
     return NextResponse.json(
-      { error: "Die Speicheranfrage ist ungültig." },
+      { code: "invalid-save-request" },
       { status: 400 }
     );
   }
@@ -81,7 +81,7 @@ export async function PUT(
   const body = saveConfigurationSchema.safeParse(requestBody);
   if (!body.success) {
     return NextResponse.json(
-      { error: "Die Speicheranfrage ist ungültig." },
+      { code: "invalid-save-request" },
       { status: 400 }
     );
   }
@@ -89,7 +89,7 @@ export async function PUT(
   const configuration = decodeConfiguration(body.data.configurationCode);
   if (!configuration) {
     return NextResponse.json(
-      { error: "Die Konfiguration konnte nicht gelesen werden." },
+      { code: "unreadable-configuration" },
       { status: 400 }
     );
   }
@@ -106,7 +106,7 @@ export async function PUT(
     return NextResponse.json(
       {
         currentVersion: result.currentVersion,
-        error: "Dieses Projekt wurde inzwischen an anderer Stelle geändert."
+        code: "project-conflict"
       },
       { status: 409 }
     );
@@ -114,7 +114,7 @@ export async function PUT(
 
   if (result.kind === "unavailable") {
     return NextResponse.json(
-      { error: "Das Projekt wurde nicht gefunden oder kann nicht bearbeitet werden." },
+      { code: "project-not-editable" },
       { status: 404 }
     );
   }

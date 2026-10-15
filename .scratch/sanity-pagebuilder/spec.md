@@ -1,6 +1,6 @@
 # Sanity pagebuilder
 
-Status: in progress — Phases 1–6, 7a and 9a done; 7b, 8 (ADR 0013, SANITY.md, CONTRACT.md) and 9b open; Sanity project `06g3ozu4` created by Martin
+Status: in progress — Phases 1–6, 7a, 9a and the functional copy of 9b done; 7b, 8 (ADR 0013, SANITY.md, CONTRACT.md) and the rest of 9b (review, switch on functional routes, launch) open; Sanity project `06g3ozu4` created by Martin
 Branch: `cc/devstart-sanity` (from `cc/devstart-003` at `e4fd3e9`)
 Governing decisions: [ADR 0007](../../docs/adr/0007-use-sanity-only-for-scoped-editorial-content.md),
 [issue 11](../production-architecture/issues/11-define-sanity-editorial-contract.md),
@@ -338,9 +338,47 @@ detail cards ("Surcharge €580", "Suplemento 580 €"), explainer and price for
 page's language; all anchors exist. Publicly `/en`, `/es`, `/en/configure` stay 404 with no
 switcher on `/`. 100 unit tests.
 
-*9b remaining before launch:* the functional routes `/configure`, `/konto`, `/anfrage`,
-`/share` (≈200 strings, auth email in the customer's locale), the 404 page, `AppHeader`'s
-German defaults; native review of the English and Spanish copy; then `LAUNCHED_LOCALES`.
+*9b functional copy done 2026-10-15.* Every functional screen — configurator (HUD, Datenblatt,
+Edit Session, material overlay, photo card, autosave notices, versions, share links,
+gallery), shared view, account and sign-in, Anfrage with its summary and confirmation, the
+404 page and `AppHeader` — reads its words from `lib/messages/{de,en,es}.ts` (≈410 entries
+per language; German unchanged apart from "Schliessen"/"grösser" → "Schließen"/"größer").
+Changes against the plan:
+- Client components get the locale from `LocaleProvider` in the locale layout
+  (`useLocale()`, `useMessages()` in `lib/messages/locale-context.tsx`); server components
+  and the configurator shell take it from the route. Plurals are one/other functions —
+  German, English and Spanish need nothing more than `Intl.PluralRules` would give.
+- **API refusals are codes, not sentences.** Every `app/api` route answers `{ code }`
+  (`lib/api-errors.ts`, 46 codes); the screens word them with `apiErrorMessage()` in the
+  page's language. A test fails when a route answers with a code the dictionaries lack.
+- Every link, redirect, `replaceState`, return path and share link a functional screen
+  builds goes through `localizePath`, so English stays English through sign-in, saving,
+  sharing and requesting. `/konto?next=` accepts only this locale's project paths.
+- Dates and numbers format with `INTL_LOCALE` (`de-DE`, `en-GB`, `es-ES`).
+- The sign-in code email follows the page: the form sends `x-site-locale`
+  (`LOCALE_HEADER`), the OTP sender reads it from Better Auth's endpoint context; anything
+  else falls back to German.
+- Revision snapshots are still written in German on the server. Product and finish names
+  in a stored snapshot are shown in the reader's language by `localizeSnapshotLabel`;
+  snapshots created for a page (the Anfrage summary) are written in its language.
+- A guest configuration saved from `/en` or `/es` gets that language's default project
+  name ("My Signature Kitchen", "Mi cocina Signature").
+- Spanish needed one layout concession: the Datenblatt row label is "Línea" (the 72 px
+  column cannot hold "Composición"), and the module strip narrows before its measurement
+  wraps.
+*Evidence:* dev server, `/en` and `/es`: configurator (panel, Edit Session, material
+overlay, photo card), sign-in with a throwaway account (the captured code email arrived as
+"Your sign-in code for rotpunkt Signature"), guest save → project, version save, share link
+(`/en/share/…`), shared view, Anfrage form → submitted → confirmation, account with request
+list, 404 — no German word or umlaut in text, `alt`, `aria-label`, `title` or placeholder;
+`lang`, titles and every link in the page's language; 390 px without overflow. German
+screens read as before with unprefixed URLs. One bug found and fixed on the way: the Anfrage
+summary called a formatter exported from a client module. 106 unit tests, lint, types,
+production build green.
+
+*9b remaining before launch:* native review of the English and Spanish copy (editorial and
+functional); the language switch on the functional routes (configure, konto, anfrage);
+`hreflang` with 7b; then `LAUNCHED_LOCALES`.
 
 ## 6. Later, separately
 

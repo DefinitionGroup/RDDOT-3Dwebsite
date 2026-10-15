@@ -4,6 +4,7 @@ import { useProgress } from "@react-three/drei";
 import { AnimatePresence, motion, useMotionValue } from "motion/react";
 import { useRouter } from "next/navigation";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState, useTransition } from "react";
+import { Emphasized } from "@/components/design-system/emphasized";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import { preloadAppartement2Model } from "@/features/configurator/engine/appartement2-model";
@@ -66,12 +67,18 @@ import {
 import { galleryPageKey } from "@/features/photo-gallery/serialize-gallery";
 import type { GalleryResponse } from "@/features/photo-gallery/ui/gallery-types";
 import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
-import type { RevisionDisplaySnapshot } from "@/features/projects/revision-display";
+import {
+  localizeSnapshotLabel,
+  type RevisionDisplaySnapshot
+} from "@/features/projects/revision-display";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
 import { ProjectNameField } from "@/features/projects/ui/project-name-field";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
 import type { ProjectAutosaveStatus } from "@/features/projects/ui/use-project-autosave";
 import { ProjectShareLinks } from "@/features/sharing/ui/project-share-links";
+import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { apiErrorMessage, getMessages, type Messages } from "@/lib/messages";
+import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
 import { useIsDesktop } from "@/lib/use-media";
 
@@ -115,19 +122,19 @@ async function waitForPhotoJob(
   return { kind: "timeout" };
 }
 
-function describePhotoFailure(reason: string | null) {
+function describePhotoFailure(reason: string | null, t: Messages["photo"]) {
   switch (reason) {
     case "provider-disabled":
     case "provider-not-configured":
-      return "Die Fotoerzeugung ist derzeit nicht verfügbar.";
+      return t.unavailable;
     case "provider-timeout":
-      return "Die Erzeugung hat zu lange gedauert und wurde abgebrochen.";
+      return t.timedOut;
     case "provider-rate-limited":
-      return "Der Dienst ist gerade ausgelastet. Bitte versuchen Sie es in Kürze erneut.";
+      return t.rateLimited;
     case "canceled-by-owner":
-      return "Die Erzeugung wurde abgebrochen.";
+      return t.canceled;
     default:
-      return "Das Foto konnte nicht erstellt werden.";
+      return t.failed;
   }
 }
 
@@ -146,11 +153,15 @@ function stageForSection(section: DatasheetSection | null): PlanningStage {
 
 export function ConfiguratorShell({
   initialState,
-  locale = "de",
+  locale: localeProp,
   project: projectProp,
   sharedView,
   signedIn = false
 }: ConfiguratorShellProps) {
+  const pageLocale = useLocale();
+  const locale = localeProp ?? pageLocale;
+  const messages = getMessages(locale);
+  const t = messages.configurator;
   const [config, setConfig] = useState(() => normalizeConfiguratorState(initialState));
   // A Project created or renamed in this session, ahead of the server's props.
   const [projectOverride, setProjectOverride] = useState<EditableProject | null>(null);
@@ -207,8 +218,8 @@ export function ConfiguratorShell({
     : quote.currency;
   const priceText =
     displayedTotalCents === null
-      ? "Preis nicht verfügbar"
-      : new Intl.NumberFormat("de-DE", {
+      ? messages.common.priceUnavailable
+      : new Intl.NumberFormat(INTL_LOCALE[locale], {
           currency: displayedCurrency,
           maximumFractionDigits: 0,
           style: "currency"
@@ -216,9 +227,10 @@ export function ConfiguratorShell({
   const encodedConfig = encodeConfiguration(config);
   // The commercial handoff pins an immutable revision of a Project, so a
   // saved Project goes straight to the request; a guest is asked to save first.
-  const quoteRequestHref = project
-    ? `/anfrage?project=${project.id}`
-    : `/anfrage?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
+  const quoteRequestHref = localizePath(
+    locale,
+    project ? `/anfrage?project=${project.id}` : `/anfrage?${CONFIG_QUERY_PARAM}=${encodedConfig}`
+  );
   const renderActive = pathTracing || renderRequested;
   const savedVersion = autosaveStatus?.phase === "saved" ? autosaveStatus.savedVersion : null;
 
@@ -227,8 +239,8 @@ export function ConfiguratorShell({
     const path = project
       ? `/configure?project=${project.id}`
       : `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
-    window.history.replaceState(null, "", path);
-  }, [encodedConfig, project, sharedView]);
+    window.history.replaceState(null, "", localizePath(locale, path));
+  }, [encodedConfig, locale, project, sharedView]);
 
   useEffect(() => {
     const apartmentTimer = window.setTimeout(preloadAppartement2Model, 1200);
@@ -440,7 +452,7 @@ export function ConfiguratorShell({
   }
 
   async function copyShareUrl() {
-    const path = `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
+    const path = localizePath(locale, `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`);
     const shareUrl = `${window.location.origin}${path}`;
     await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
@@ -453,7 +465,7 @@ export function ConfiguratorShell({
       import: crypto.randomUUID(),
       [CONFIG_QUERY_PARAM]: configurationCode
     });
-    window.location.assign(`/konto?${query.toString()}`);
+    window.location.assign(localizePath(locale, `/konto?${query.toString()}`));
   }
 
   function restoreProjectDraft(configurationCode: string) {
@@ -511,10 +523,7 @@ export function ConfiguratorShell({
 
     const captured = await capturePhoto();
     if (!captured) {
-      setPhotoStatus({
-        phase: "error",
-        message: "Die Szene konnte nicht aufgenommen werden. Bitte versuchen Sie es erneut."
-      });
+      setPhotoStatus({ phase: "error", message: messages.photo.captureFailed });
       return;
     }
 
@@ -542,14 +551,10 @@ export function ConfiguratorShell({
       const requestPayload = (await requested.json().catch(() => null)) as {
         job?: { id: string };
         upload?: { url: string; headers: Record<string, string> };
-        error?: string;
       } | null;
 
       if (!requested.ok || !requestPayload?.job || !requestPayload.upload) {
-        return await fail(
-          requestPayload?.error ??
-            "Die Visualisierung konnte nicht angefordert werden."
-        );
+        return await fail(apiErrorMessage(messages, requestPayload, messages.photo.requestFailed));
       }
       const jobId = requestPayload.job.id;
 
@@ -558,25 +563,21 @@ export function ConfiguratorShell({
         headers: requestPayload.upload.headers,
         method: "PUT"
       });
-      if (!uploaded.ok) return await fail("Die Aufnahme konnte nicht übertragen werden.");
+      if (!uploaded.ok) return await fail(messages.photo.uploadFailed);
 
       const confirmed = await fetch(`/api/photo-jobs/${jobId}/capture`, {
         method: "POST"
       });
       if (!confirmed.ok) {
-        return await fail("Die Aufnahme wurde abgelehnt. Bitte versuchen Sie es erneut.");
+        return await fail(messages.photo.captureRejected);
       }
 
       setPhotoStatus({ phase: "working", step: "generating", preview: captured.previewUrl });
 
       const submitted = await fetch(`/api/photo-jobs/${jobId}/submit`, { method: "POST" });
-      const submitPayload = (await submitted.json().catch(() => null)) as {
-        error?: string;
-      } | null;
+      const submitPayload: unknown = await submitted.json().catch(() => null);
       if (!submitted.ok) {
-        return await fail(
-          submitPayload?.error ?? "Die Erzeugung konnte nicht gestartet werden."
-        );
+        return await fail(apiErrorMessage(messages, submitPayload, messages.photo.startFailed));
       }
 
       // The job now lives on the server; the browser only watches. Every read
@@ -584,7 +585,7 @@ export function ConfiguratorShell({
       // closing the tab loses nothing — the photo lands in the gallery anyway.
       await watchPhotoJob(target.id, jobId, captured.previewUrl, inSession);
     } catch {
-      await fail("Die Verbindung wurde unterbrochen. Bitte versuchen Sie es erneut.");
+      await fail(messages.common.connectionLostRetry);
     }
   }
 
@@ -607,12 +608,11 @@ export function ConfiguratorShell({
       });
       const payload = (await response.json().catch(() => null)) as {
         project?: { id: string; name: string; version: number; updatedAt: string };
-        error?: string;
       } | null;
       if (!response.ok || !payload?.project) {
         setPhotoStatus({
           phase: "error",
-          message: payload?.error ?? "Das Projekt konnte nicht angelegt werden."
+          message: apiErrorMessage(messages, payload, messages.photo.projectFailed)
         });
         return;
       }
@@ -630,10 +630,7 @@ export function ConfiguratorShell({
       setProjectOverride(created);
       await generatePhoto(created);
     } catch {
-      setPhotoStatus({
-        phase: "error",
-        message: "Die Verbindung wurde unterbrochen. Bitte versuchen Sie es erneut."
-      });
+      setPhotoStatus({ phase: "error", message: messages.common.connectionLostRetry });
     }
   }
 
@@ -661,11 +658,9 @@ export function ConfiguratorShell({
 
     const finished = await waitForPhotoJob(jobId);
     if (finished.kind === "timeout") {
-      return fail(
-        "Die Erzeugung dauert länger als erwartet. Das Foto erscheint in der Galerie des Projekts, sobald es fertig ist."
-      );
+      return fail(messages.photo.slow);
     }
-    if (finished.kind === "failed") return fail(describePhotoFailure(finished.reason));
+    if (finished.kind === "failed") return fail(describePhotoFailure(finished.reason, messages.photo));
 
     // Resolve a display URL through the gallery the panel already renders,
     // rather than minting a second kind of URL for this one surface.
@@ -676,7 +671,7 @@ export function ConfiguratorShell({
     const created = galleryPayload?.photos?.find(
       (photo) => photo.id === finished.generatedPhotoId
     );
-    if (!created) return fail("Das Foto wurde erstellt, ist aber gerade nicht abrufbar.");
+    if (!created) return fail(messages.photo.notRetrievable);
 
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPhotoStatus({
@@ -775,18 +770,18 @@ export function ConfiguratorShell({
   );
 
   const panelTitle = sharedView ? (
-    sharedView.displaySnapshot?.productTitle ?? "Signature Küche"
+    (sharedView.displaySnapshot
+      ? localizeSnapshotLabel(sharedView.displaySnapshot.productTitle, locale)
+      : t.productName)
   ) : (
-    <>
-      Signature <em>Küche</em>.
-    </>
+    <Emphasized text={t.panelTitle} />
   );
 
   const sharedRows = sharedView
     ? [
         {
-          label: "Gültig bis",
-          value: new Intl.DateTimeFormat(locale === "de" ? "de-DE" : locale, {
+          label: t.validUntil,
+          value: new Intl.DateTimeFormat(INTL_LOCALE[locale], {
             day: "numeric",
             month: "long",
             year: "numeric"
@@ -796,21 +791,19 @@ export function ConfiguratorShell({
     : [];
 
   const primary = sharedView
-    ? { href: "/configure", label: "Eigene Küche konfigurieren", shortLabel: "Selbst planen" }
-    : { href: quoteRequestHref, label: "Konfiguration anfragen", shortLabel: "Anfragen" };
+    ? { href: localizePath(locale, "/configure"), label: t.configureOwn, shortLabel: t.configureOwnShort }
+    : { href: quoteRequestHref, label: t.request, shortLabel: t.requestShort };
 
   const projectSection = project
     ? {
-        title: "Versionen & Freigaben",
-        summary: `${project.revisionTotalCount} · ${activeShareLinks} ${
-          activeShareLinks === 1 ? "Link" : "Links"
-        }`,
+        title: t.versionsAndLinks,
+        summary: t.versionsAndLinksSummary(project.revisionTotalCount, activeShareLinks),
         content: (
           <div className="flex flex-col gap-5">
             <div aria-live="polite" className="flex items-center justify-between gap-4">
               <ProjectNameField name={project.name} onRenamed={renameProject} projectId={project.id} />
               <p className="m-0 shrink-0 text-caption text-graphite">
-                {describeAutosave(autosaveStatus) ?? "…"}
+                {describeAutosave(autosaveStatus, locale) ?? "…"}
               </p>
             </div>
             <ProjectVersions
@@ -827,7 +820,7 @@ export function ConfiguratorShell({
             />
             <PhotoGallery
               density="compact"
-              emptyMessage="Noch keine Visualisierung für dieses Projekt."
+              emptyMessage={t.projectGalleryEmpty}
               initialNextCursor={project.gallery.nextCursor}
               initialPhotos={project.gallery.photos}
               initialTotalCount={project.gallery.totalCount}
@@ -838,23 +831,20 @@ export function ConfiguratorShell({
         )
       }
     : {
-        title: "Speichern & Teilen",
-        summary: "Gast",
+        title: t.saveAndShare,
+        summary: t.guest,
         content: (
           <div className="flex flex-col gap-4">
-            <p className="m-0 text-caption text-graphite">
-              Ihre Konfiguration wird in der URL gespeichert. Als Projekt bleibt sie mit
-              Versionen, Fotos und Anfragen bei Ihrem Konto.
-            </p>
+            <p className="m-0 text-caption text-graphite">{t.guestNote}</p>
             <div className="flex flex-wrap gap-2">
               <Pill onClick={() => saveConfigurationAsProject(encodedConfig)} variant="secondary">
-                Als Projekt speichern
+                {t.saveAsProject}
               </Pill>
               <Pill onClick={() => void copyShareUrl()} variant="ghost">
-                {copied ? "Link kopiert" : "Link kopieren"}
+                {copied ? t.linkCopied : t.copyLink}
               </Pill>
               <Pill onClick={resetConfiguration} variant="ghost">
-                Zurücksetzen
+                {t.reset}
               </Pill>
             </div>
           </div>
@@ -883,11 +873,7 @@ export function ConfiguratorShell({
   const panel = (variant: "card" | "sheet") => (
     <DatasheetPanel
       cabinetColor={cabinetColor}
-      description={
-        sharedView
-          ? "Geteilter, unveränderlicher Küchenstand ohne private Projektdaten."
-          : undefined
-      }
+      description={sharedView ? t.sharedDescription : undefined}
       extraRows={sharedRows}
       frontColor={frontColor}
       locale={locale}
@@ -905,7 +891,7 @@ export function ConfiguratorShell({
   );
 
   const hudContext = sharedView
-    ? "Geteilter Stand"
+    ? t.sharedContext
     : project?.name ?? getLocalizedLabel(RDTD_KITCHEN_PRODUCT_V2.title, locale);
 
   return (
@@ -1013,7 +999,7 @@ export function ConfiguratorShell({
               {!sharedView && (
                 <SceneActions compact={false} onEdit={enterEditSession} onPhoto={openPhoto} />
               )}
-              <SaveState text={project ? describeAutosave(autosaveStatus) : null} />
+              <SaveState text={project ? describeAutosave(autosaveStatus, locale) : null} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -1102,7 +1088,7 @@ export function ConfiguratorShell({
             type="button"
           >
             <span aria-hidden="true" className="size-1.5 rounded-pill bg-signature" />
-            Datenblatt
+            {t.datasheet}
           </button>
         </div>
       )}
@@ -1127,15 +1113,15 @@ export function ConfiguratorShell({
         >
           <span className="size-1.5 rounded-pill bg-signature" />
           {dragTarget === "start"
-            ? "Links anfügen"
+            ? t.attachLeft
             : dragTarget === "end"
-              ? "Rechts anfügen"
+              ? t.attachRight
               : getLocalizedLabel(findWallCatalogEntry(PRODUCT, drag.key).label, locale)}
         </motion.div>
       )}
 
       <p aria-live="polite" className="sr-only">
-        {isPending ? "Szene wird aktualisiert." : ""}
+        {isPending ? t.sceneUpdating : ""}
       </p>
     </main>
   );
@@ -1146,6 +1132,7 @@ function VisualizationPreloader({ active }: { active: boolean }) {
   const progress = useProgress((state) => state.progress);
   const roundedProgress = Math.max(0, Math.min(100, Math.round(progress)));
   const visible = active && isLoading;
+  const t = useMessages().configurator;
 
   return (
     <AnimatePresence>
@@ -1171,9 +1158,9 @@ function VisualizationPreloader({ active }: { active: boolean }) {
               initial={{ opacity: 0, y: 12 }}
               transition={{ delay: 0.08, duration: DURATION.reveal, ease: SIGNATURE_EASE }}
             >
-              <Label>Visualisierung</Label>
+              <Label>{t.loadingLabel}</Label>
               <h2 className="m-0 mt-5 text-heading">
-                Appartement wird <em>geladen</em>.
+                <Emphasized text={t.loadingTitle} />
               </h2>
               <div aria-hidden="true" className="mt-10 h-px overflow-hidden bg-hairline">
                 <motion.div
@@ -1183,14 +1170,12 @@ function VisualizationPreloader({ active }: { active: boolean }) {
                   transition={{ duration: 0.35, ease: SIGNATURE_EASE }}
                 />
               </div>
-              <p className="m-0 mt-4 text-body text-graphite">
-                Raum, Materialien und Licht werden vorbereitet.
-              </p>
+              <p className="m-0 mt-4 text-body text-graphite">{t.loadingBody}</p>
             </motion.div>
 
             <div className="flex items-center justify-between border-t border-hairline pt-5">
-              <Label>3D Konfigurator</Label>
-              <Label>Appartement</Label>
+              <Label>{t.loadingFooter}</Label>
+              <Label>{t.loadingScene}</Label>
             </div>
           </div>
         </motion.div>

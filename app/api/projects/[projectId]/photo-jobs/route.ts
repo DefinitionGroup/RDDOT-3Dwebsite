@@ -23,19 +23,19 @@ export async function POST(
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
     return NextResponse.json(
-      { error: "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an." },
+      { code: "session-expired" },
       { status: 401 }
     );
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   const body = requestSchema.safeParse(await request.json().catch(() => null));
   if (!body.success) {
-    return NextResponse.json({ error: "Die Anfrage ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
 
   const result = await getPhotoJobs().requestJob({
@@ -49,28 +49,28 @@ export async function POST(
       return NextResponse.json(
         {
           currentVersion: result.currentVersion,
-          error: "Dieses Projekt wurde inzwischen an anderer Stelle geändert."
+          code: "project-conflict"
         },
         { status: 409 }
       );
     case "idempotency-conflict":
       return NextResponse.json(
-        { error: "Diese Anfrage wurde bereits mit anderen Daten verwendet." },
+        { code: "request-key-reused" },
         { status: 409 }
       );
     case "quota-exceeded":
       return NextResponse.json(
-        { error: "Das Tageslimit für Visualisierungen ist erreicht." },
+        { code: "photo-daily-limit" },
         { status: 429, headers: { "retry-after": String(result.retryAfterSeconds) } }
       );
     case "unknown-preset":
       return NextResponse.json(
-        { error: "Diese Szene steht nicht zur Auswahl." },
+        { code: "scene-not-offered" },
         { status: 400 }
       );
     case "unavailable":
       return NextResponse.json(
-        { error: "Das Projekt wurde nicht gefunden oder kann nicht bearbeitet werden." },
+        { code: "project-not-editable" },
         { status: 404 }
       );
     default:
@@ -98,12 +98,12 @@ export async function GET(
 ) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {
-    return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
+    return NextResponse.json({ code: "signed-out" }, { status: 401 });
   }
 
   const { projectId } = await context.params;
   if (!z.uuid().safeParse(projectId).success) {
-    return NextResponse.json({ error: "Das Projekt ist ungültig." }, { status: 400 });
+    return NextResponse.json({ code: "invalid-project" }, { status: 400 });
   }
 
   const jobs = await getPhotoJobs().listForProject({
