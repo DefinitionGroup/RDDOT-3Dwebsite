@@ -46,19 +46,19 @@ export const LAUNCHED_LOCALES: readonly Locale[] = ["de"];
 
 /**
  * Whether this deployment opens every locale before launch: a developer's
- * machine always, a test deployment when it sets `OPEN_ALL_LOCALES=true` so
- * translations can be reviewed there. Vercel's production environment never
- * does, whatever the flag says.
+ * machine always, any other deployment only when it sets
+ * `OPEN_ALL_LOCALES=true` so translations can be reviewed there. Vercel's
+ * Production is a test environment for now (STATUS.md, Deployment), so the
+ * flag counts there too; it must be removed before real customers arrive.
  */
 export function opensAllLocales(
-  env: { NODE_ENV?: string; OPEN_ALL_LOCALES?: string; VERCEL_ENV?: string } = {
+  env: { NODE_ENV?: string; OPEN_ALL_LOCALES?: string } = {
     NODE_ENV: process.env.NODE_ENV,
-    OPEN_ALL_LOCALES: process.env.OPEN_ALL_LOCALES,
-    VERCEL_ENV: process.env.VERCEL_ENV
+    OPEN_ALL_LOCALES: process.env.OPEN_ALL_LOCALES
   }
 ) {
   if (env.NODE_ENV === "development") return true;
-  return env.OPEN_ALL_LOCALES === "true" && env.VERCEL_ENV !== "production";
+  return env.OPEN_ALL_LOCALES === "true";
 }
 
 /**

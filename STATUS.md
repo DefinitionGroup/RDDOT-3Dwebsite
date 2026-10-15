@@ -384,19 +384,36 @@ answers with the last known state when reconciliation throws, and `postbuild`
 
 ## Deployment
 
-Recorded as found on 2026-10-15; nothing on Vercel was changed.
+Updated 2026-10-16.
 
-- Nothing from `cc/devstart-sanity` is deployed: the last Vercel deployment is about 35 days
-  old.
-- Vercel has no Sanity variables (`NEXT_PUBLIC_SANITY_*`, `SANITY_API_READ_TOKEN`), so a
-  deployment of this branch would run in demo mode. The spec keeps the `production` dataset
-  and its Vercel env behind the ADR 0007 DPA review.
-- `ALLOW_DEVELOPMENT_EMAIL_CAPTURE_IN_PRODUCTION` is scoped to Preview on branch
-  `cc/devstart-003` only, so previews of this branch do not get the on-screen login code.
-- `TEST_DATABASE_URL` is also set on Production. To review: the customer-facing project
-  should not need a test database.
+- **Vercel Production is a test environment for now** (Martin, 2026-10-16). It carries test
+  settings on purpose: `TRANSACTIONAL_EMAIL_PROVIDER=development-capture`, and the Sanity
+  `development` dataset (`NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`). A
+  production build also needs `ALLOW_DEVELOPMENT_EMAIL_CAPTURE_IN_PRODUCTION=true` (without it
+  the capture adapter refuses the build) and `SANITY_API_READ_TOKEN` (the dataset is private);
+  `OPEN_ALL_LOCALES=true` opens English and Spanish there too. With the capture flag, anyone
+  holding the URL can sign in as any address with the on-screen code, against the database
+  previews also use. **Before real customers:** remove the capture flag and
+  `OPEN_ALL_LOCALES`, set a real email provider (ADR 0010), switch to the `production`
+  dataset after the DPA review, and give production its own database and storage bucket.
+  This is the release-gate item under Roadmap M2.
+- Previews: the same test settings apply to every preview branch (`OPEN_ALL_LOCALES`,
+  capture sign-in, Sanity `development` with a Viewer token). Previews are public — no Vercel
+  Authentication.
+- The project is linked to `DefinitionGroup/RDDOT-3Dwebsite` (production branch
+  `redesign/devstart`), but **Git preview deployments are switched off**
+  (`previewDeploymentsDisabled`), so pushes to feature branches build nothing. Deploy with
+  `vercel deploy` from a clean checkout of the commit. Settings scoped to a single branch do
+  not reach CLI deployments at runtime, which is why the test settings are set for all
+  previews. Turning Git previews and Deployment Protection on needs a team Owner or Member;
+  the CLI account `sanity-mngt-definition` is a Developer.
+- Latest preview: https://rddot-3-dwebsite-hlzrjxfmv-definitiongroup.vercel.app (`917f5b3`,
+  2026-10-15): sign-in with the on-screen code, `/en` and `/es` from Sanity, the language
+  dropdown and the configurator verified. Production still serves the September deployment.
+- `TEST_DATABASE_URL` is also set on Production, and `DATABASE_URL*` and `OBJECT_STORAGE_*`
+  are one value for Preview and Production.
 - Since `f29e28b` (2026-09-04) auth follows the Vercel deployment URL when `BETTER_AUTH_URL`
-  is unset: the production domain in production, the branch alias in previews.
+  is unset: the production domain in production, the deployment URL in previews.
 
 ## Open Working Tree
 
@@ -547,8 +564,9 @@ Engineering:
   output moderation gate; billed cost against the estimate; then switch generation on.
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
-- Production Vercel environment: remove `TEST_DATABASE_URL`, keep the capture flag off,
-  set the production domain. Give production its own database and its own storage bucket
+- Production Vercel environment: it runs as a test environment until then (see
+  Deployment). Remove `TEST_DATABASE_URL`, the capture flag, `OPEN_ALL_LOCALES` and the
+  `development` dataset settings; set the production domain. Give production its own database and its own storage bucket
   and least-privilege key: today `DATABASE_URL*` and every `OBJECT_STORAGE_*` variable is one
   value shared by Preview and Production, which ADR 0011 rules out.
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS
