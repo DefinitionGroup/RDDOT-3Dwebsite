@@ -12,12 +12,13 @@ The current direction is:
 - Tailwind CSS design system.
 - motion.dev for UI motion and interactions.
 - React Three Fiber, drei, and Three.js for the configurator.
-- Sanity-managed content later.
+- Sanity-managed marketing content through a pagebuilder.
 - Single-channel ecommerce first.
 - Multilingual from the start:
   - German default at `/`
   - English at `/en`
   - Spanish at `/es`
+  - `/en` and `/es` stay 404 in production until listed in `LAUNCHED_LOCALES` (`lib/i18n.ts`).
 - Ecommerce will be added later, so avoid hard-coding decisions that block cart, quote, order, checkout, or pricing integration.
 
 ## Working Rules
@@ -54,9 +55,11 @@ The current direction is:
 ## Component Boundaries
 
 - Design-system primitives live in `components/design-system`.
-- Page sections live in `components/sections`.
+- Page-builder blocks live in `blocks/<name>/` (`schema.ts`, `Component.tsx`, `demo.ts`).
+- Sanity schema, client, queries and loaders live in `sanity/`; the embedded Studio in `app/(studio)`.
+- Demo content, in the shape the queries return, lives in `content/`.
+- Locales are defined once in `lib/i18n.ts`; `proxy.ts` routes them.
 - Configurator code lives in `features/configurator`.
-- Shared static content currently lives in `lib/content.ts`.
 - The configurator should stay isolated enough to become a Sanity page-builder block.
 - Do not make page-builder or Sanity assumptions inside the 3D engine layer.
 
@@ -77,13 +80,21 @@ The current direction is:
 
 ## Sanity Direction
 
-- Sanity is not wired yet.
-- When adding Sanity, use the newest stable Sanity/next-sanity approach available at implementation time.
-- Use document-level localization for page-builder pages.
+- Sanity is wired: project `06g3ozu4`, private dataset `development` with synthetic content only. The `production` dataset waits for the ADR 0007 DPA review.
+- The Studio is embedded at `/studio` (`sanity.config.ts`, structure in `sanity/structure.ts`).
+- Without `NEXT_PUBLIC_SANITY_PROJECT_ID` the site runs in demo mode from `content/` (`sanity/env.ts`). Keep demo content working.
+- Each block is a self-contained folder in `blocks/`. Adding one: its folder, one line in `blocks/schemas.ts`, one in `blocks/registry.tsx`, a projection in `sanity/lib/queries.ts` if it resolves images or files, then `pnpm typegen`.
+- Block props are typed from TypeGen query results. `pnpm typegen` runs as `prebuild`; commit `schema.json` and `sanity.types.ts` with any schema or query change.
+- The GROQ queries are the adapter: they resolve references, images and locales into plain application models (ADR 0013, still to be written).
+- `pnpm sanity:seed` writes `content/` into `development`. It keeps existing documents unless `--replace` is passed and refuses `production`.
+- Plan and phase status: `.scratch/sanity-pagebuilder/spec.md`.
+- When changing the Sanity setup, use the newest stable Sanity/next-sanity approach available at implementation time.
+- Use document-level localization for page-builder pages (`page`, `navigation`).
 - Use field-level localized objects for small shared labels and product metadata.
 - Keep a clean adapter boundary between Sanity documents and app-level component props.
 - The product definition should remain portable to JSON or another storage backend later.
-- The configurator should be represented as a smart page-builder block.
+- Prices and product rules never live in Sanity; blocks read them through `features/configurator/catalog.ts`.
+- The configurator is the smart `configuratorBlock`: editorial presentation plus a `productKey`.
 
 ## Commerce Direction
 
@@ -141,11 +152,17 @@ pnpm build
 - `DESIGN_SYSTEM.md`: first design-system summary.
 - `features/configurator/product-definition.ts`: temporary product definition and pricing contract.
 - `features/configurator/state-codec.ts`: shareable URL state.
-- `features/configurator/adapters/sanity.ts`: Sanity adapter boundary.
+- `features/configurator/catalog.ts`: product lookup seam for blocks and Studio option lists.
 - `features/configurator/ui/configurator-shell.tsx`: configurator UI shell.
 - `features/configurator/engine/kitchen-scene.tsx`: 3D scene.
-- `app/configure/page.tsx`: configurator route.
-- `app/checkout/page.tsx`: fake checkout route.
+- `lib/i18n.ts`: locales, `LAUNCHED_LOCALES`, reserved slugs.
+- `proxy.ts`: locale routing (German unprefixed, unlaunched locales 404).
+- `blocks/schemas.ts` and `blocks/registry.tsx`: the one list of Page Blocks and their components.
+- `sanity/env.ts`: Sanity config and the demo-mode gate.
+- `sanity/lib/queries.ts` and `sanity/lib/loaders.ts`: GROQ queries and the page and site-chrome loaders.
+- `.scratch/sanity-pagebuilder/spec.md`: Sanity pagebuilder plan and phase status.
+- `app/(site)/[locale]/configure/page.tsx`: configurator route.
+- `app/(site)/[locale]/anfrage/page.tsx`: Quote Request route (`/checkout` redirects here).
 
 ## Agent skills
 

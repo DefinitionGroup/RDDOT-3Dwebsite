@@ -1,6 +1,6 @@
 # Sanity pagebuilder
 
-Status: in progress — Phase 1 done 2026-10-01; Sanity project `06g3ozu4` created by Martin
+Status: in progress — Phases 1–6, 7a and 9a done; 7b, 8 (ADR 0013, SANITY.md, CONTRACT.md) and 9b open; Sanity project `06g3ozu4` created by Martin
 Branch: `cc/devstart-sanity` (from `cc/devstart-003` at `e4fd3e9`)
 Governing decisions: [ADR 0007](../../docs/adr/0007-use-sanity-only-for-scoped-editorial-content.md),
 [issue 11](../production-architecture/issues/11-define-sanity-editorial-contract.md),
@@ -288,6 +288,11 @@ both film files load from `cdn.sanity.io`; `/studio` reaches "Choose login provi
 
 **Phase 8 — Docs and handoff.** `blocks/CONTRACT.md`, `SANITY.md` (listed as needed in
 STATUS.md), ADR 0013, update AGENTS.md ("Sanity is not wired yet") and STATUS.md.
+
+*STATUS.md and AGENTS.md done 2026-10-15:* STATUS.md reconciled at `76558b3` (Done,
+Missing, gates, deployment facts, the reversed deferral); AGENTS.md describes the real Sanity
+setup, `blocks/`, `sanity/` and `lib/i18n.ts`. Still open: ADR 0013, `SANITY.md` and
+`blocks/CONTRACT.md` (`blocks/schemas.ts` already points to the latter).
 
 **Phase 9 — English and Spanish.** Two halves, owned by different systems:
 

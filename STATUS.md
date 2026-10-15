@@ -1,10 +1,10 @@
 # rotpunkt Signature Status
 
-Last reconciled: 2026-09-03
-Working branch: `cc/devstart-003` — the main development branch from 2026-09-03, cut from
-`cc/devstart-002` at `957698f` (36 commits ahead of `redesign/devstart`). Earlier
-`cc/devstart-*` branches are frozen at their last commit; none is merged back and none
-needs to be.
+Last reconciled: 2026-10-15 (at `76558b3`)
+Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
+`cc/devstart-003` at `e4fd3e9` (67 commits ahead of `redesign/devstart`). `cc/devstart-003`
+and the earlier `cc/devstart-*` branches are frozen at their last commit; none is merged
+back and none needs to be.
 
 Design direction (decided 2026-09-02, rebuilt 2026-09-03 on the Sequel style from Refero):
 "rotpunkt after dark" — black stage, charcoal cards, three greys, white structure, signature
@@ -21,8 +21,10 @@ states. Open on the design side: Impressum/Datenschutz pages (the footer carries
 legal column until they exist) and a dark studio render for the homepage's configurator
 card (it shows the evening photo for now).
 
-Gates at reconciliation: `pnpm test` 76/76 (covers `features` and `lib`), `pnpm test:db`
-61/61 (Neon), `pnpm lint` clean, `tsc --noEmit` clean, production build green. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
+Gates at reconciliation (2026-10-15): `pnpm lint` clean, `tsc --noEmit` clean, `pnpm test`
+100/100 (covers `features` and `lib`), `pnpm test:db` 64 passed and 1 skipped (Neon),
+production build green with the `postbuild` server-bundle check passing; the site worked in
+the browser. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
 **unset** — with the local `development-capture` value it fails closed by design
 (ADR 0010). See Build & Verification Gates below.
 
@@ -30,7 +32,53 @@ Gates at reconciliation: `pnpm test` 76/76 (covers `features` and `lib`), `pnpm 
 
 Deliver a German-first, branded kitchen configurator that lets a private customer move from a shareable guest configuration to a durable Project, while preserving the approved boundaries for identity, releases, future AI photos, Quote Requests, Sanity, and commerce.
 
+Alongside it, every piece of marketing content becomes editable in Sanity, in German,
+English and Spanish: [.scratch/sanity-pagebuilder/spec.md](.scratch/sanity-pagebuilder/spec.md).
+
 ## Done
+
+- **Sanity pagebuilder and locale routing (2026-10-01 to 10-08).** Plan, decisions and the
+  evidence for each phase are in the [spec](.scratch/sanity-pagebuilder/spec.md); Phases
+  1–6, 7a and 9a are done, 7b, 8 and 9b are open (see Missing).
+  - Locale routing: every page lives under `app/(site)/[locale]/`. German has no prefix —
+    `proxy.ts` rewrites `/x` to `/de/x` and answers `/de/x` with 308 to `/x`. `/en` and `/es`
+    open only once listed in `LAUNCHED_LOCALES` (`lib/i18n.ts`, today `["de"]`); an
+    unlaunched prefix is a 404 inside the site layout. `pnpm dev` opens all three
+    (`OPEN_LOCALES`), and Editorial Preview may show them (`lib/locale-gate.ts`).
+  - Embedded Studio at `/studio` (`app/(studio)`, its own root layout without the site CSS;
+    `sanity.config.ts`), project `06g3ozu4`, private dataset `development` with synthetic
+    content only. Without `NEXT_PUBLIC_SANITY_PROJECT_ID` the site runs in demo mode from
+    `content/` and the Studio shows a setup notice (`sanity/env.ts`).
+  - Pagebuilder: one folder per block, `blocks/<name>/{schema.ts, Component.tsx, demo.ts}`,
+    listed in `blocks/schemas.ts` and `blocks/registry.tsx`, rendered by
+    `components/page-builder/page-builder.tsx` with a per-block error boundary. Eight blocks
+    make up the homepage (`heroFilmBlock`, `statementBlock`, `promisesBlock`,
+    `materialsBlock`, `configuratorBlock`, `roomStoryBlock`, `collectionsBlock`,
+    `closingBlock`); `page` and `navigation` are localized per document. The homepage and the
+    header and footer navigation come entirely from Sanity; `lib/content.ts` and
+    `components/sections/` are gone. TypeGen runs as `prebuild`; `schema.json` and
+    `sanity.types.ts` are committed.
+  - Catalog seam `features/configurator/catalog.ts`: `resolveProduct(productKey)`, the Studio
+    option lists for products and finishes, preset state and pricing. Prices never live in
+    Sanity; an unknown key drops link and price instead of guessing.
+  - `pnpm sanity:seed` (`scripts/seed-sanity.ts`) writes the content of `content/` into
+    `development` with deterministic ids, uploads the media, reads everything back through
+    the site's own queries, keeps existing documents unless `--replace` is passed and refuses
+    `production` without `--allow-production`.
+  - Presentation tool, draft mode (`/api/draft-mode/{enable,disable}`) and live preview.
+    `<SanityLive />` mounts only in draft mode and in development, so public visitors open no
+    connection to Sanity, and blocks carry `data-sanity` attributes only in preview.
+  - Tailwind scans `blocks/` (`889c51d`). The move had dropped 80 of 627 selectors and
+    collapsed the hero while the markup stayed identical; `lib/tailwind-content.test.ts`
+    guards it, and rendering checks now compare CSS and screenshots, not only markup.
+  - Language switch in the header and the phone menu (`lib/language-links.ts`,
+    `components/design-system/language-switch.tsx`). It lists only locales the visitor can
+    open, so it stays hidden publicly until English and Spanish launch.
+  - English and Spanish homepage and navigation (Phase 9a): transcreated copy in
+    `content/home/{en,es}.ts`, seeded into `development` and linked as translations; the
+    interface words on editorial pages in typed dictionaries `lib/messages/{de,en,es}.ts`.
+  - The configurator HUD chips sit on solid soot (`chip-solid`) instead of frosted glass
+    (2026-10-08).
 
 - Built the first Tailwind/Next.js design system pass from the Figma directions.
 - Design-system primitives (rebuilt 2026-09-03 for the dark system, `components/design-system`):
@@ -81,7 +129,8 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   by the persistence contract test). Gates: `pnpm test:db` 62/62 (+1 skipped).
 - Account, sign-in, Anfrage, shared-link states restyled with `components/design-system/field.tsx`
   (the one underline input) and the pill/card primitives.
-- Homepage sections (`components/sections`): `SignatureHero` (the supplied hero film, a
+- Homepage sections (built 2026-09-03 in `components/sections`, blocks under `blocks/` since
+  2026-10-02): `SignatureHero` (the supplied hero film, a
   15-second silent loop transcoded with ffmpeg into `public/video/hero-1080.mp4` (8 MB,
   ≥768 px) and `hero-720.mp4` (2 MB, phones), poster `public/images/hero-poster.jpg` from
   the same film; fade from black, still for reduced motion, "Den Film ansehen" goes
@@ -95,8 +144,9 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
   phones), `ConfiguratorTeaser` (living HUD, real default price, "Von 0 auf 100 °C in vier
   Klicks" spring counter, four-step explainer overlay), `RoomStory` ("Ihr Raum. Ihre Küche."
   rescued: Studio, Appartement, KI-Foto, Versionen & Links), `CollectionLines` (captions
-  rescued as badges), `ClosingStatement`. Copy lives in `lib/content.ts`. No
-  Impressum/Datenschutz pages exist yet, so the footer carries no legal column.
+  rescued as badges), `ClosingStatement`. The copy lived in `lib/content.ts`; it is Sanity
+  content now, with the demo copy in `content/`. No Impressum/Datenschutz pages exist yet,
+  so the footer carries no legal column.
 - Moved navigation outside the hero and converted it to a fixed floating navbar with motion-based hide/show behavior.
 - Improved hero typography animation with staggered motion.
 - Added `/configure` as the first 3D configurator route.
@@ -162,7 +212,8 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 - Existing links remain available while a Project is archived and become unavailable when it is trashed. Public resolution currently fails closed unless the revision uses the active supported Product Definition version.
 - Added `/checkout` as a fake checkout/request handoff that reads the shared configuration.
 - Added a temporary product-definition contract in `features/configurator/product-definition.ts`.
-- Added a Sanity adapter boundary in `features/configurator/adapters/sanity.ts`.
+- Added a Sanity adapter stub in `features/configurator/adapters/sanity.ts` (superseded: the
+  queries are the adapter, see Missing).
 - Updated homepage/nav CTAs to point to `/configure`.
 - Added R3F-related dependencies:
   - `@react-three/fiber`
@@ -218,10 +269,15 @@ How to reproduce the reconciliation results:
 
 ```
 pnpm lint                                  # clean
-pnpm test                                  # 47/47
-pnpm test:db                               # 40/40 (needs TEST_DATABASE_URL or Docker)
-TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green
+pnpm exec tsc --noEmit                     # clean
+pnpm test                                  # 100/100
+pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
+TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 ```
+
+With the Sanity project in `.env.local`, the build reads `06g3ozu4/development` through the
+Viewer token (`SANITY_API_READ_TOKEN`); without `NEXT_PUBLIC_SANITY_PROJECT_ID` it builds in
+demo mode.
 
 The build override is required, not optional. `.env.local` sets
 `TRANSACTIONAL_EMAIL_PROVIDER=development-capture`, and the development capture adapter
@@ -247,10 +303,26 @@ reconcile path treats a missing outcome as "unchanged" instead of throwing, the 
 answers with the last known state when reconciliation throws, and `postbuild`
 (`scripts/verify-server-bundle.mjs`) fails any build whose server bundle lacks that path.
 
+## Deployment
+
+Recorded as found on 2026-10-15; nothing on Vercel was changed.
+
+- Nothing from `cc/devstart-sanity` is deployed: the last Vercel deployment is about 35 days
+  old.
+- Vercel has no Sanity variables (`NEXT_PUBLIC_SANITY_*`, `SANITY_API_READ_TOKEN`), so a
+  deployment of this branch would run in demo mode. The spec keeps the `production` dataset
+  and its Vercel env behind the ADR 0007 DPA review.
+- `ALLOW_DEVELOPMENT_EMAIL_CAPTURE_IN_PRODUCTION` is scoped to Preview on branch
+  `cc/devstart-003` only, so previews of this branch do not get the on-screen login code.
+- `TEST_DATABASE_URL` is also set on Production. To review: the customer-facing project
+  should not need a test database.
+- Since `f29e28b` (2026-09-04) auth follows the Vercel deployment URL when `BETTER_AUTH_URL`
+  is unset: the production domain in production, the branch alias in previews.
+
 ## Open Working Tree
 
-None beyond this reconciliation itself. The development-only loopback `trustedOrigins`
-fix listed here previously landed as `56f2b37`.
+None. `next-env.d.ts` may show as modified; that is the generated-file churn under Known
+Warnings, not work.
 
 ## Deferred Decisions
 
@@ -298,21 +370,40 @@ Revisit when Project Archive/Trash/restore lands.
   `./.next/dev/types/routes.d.ts` depending on whether `next build` or `next dev` ran
   last. It is a generated file marked "should not be edited"; commit `12215a5` committed
   one side of that coin-flip. Treat a diff on this file as noise, not work.
+- `package.json` pins `next`, `react`, `react-dom` and `motion` to `latest` (and, among the
+  dev dependencies, `typescript`, `@types/node`, `@types/react`, `@types/react-dom` and
+  `eslint-config-next`). Only `pnpm-lock.yaml` holds them (today Next 16.2.10, React 19.2.7,
+  motion 12.42.2), so a lockfile refresh can move a major version without a visible diff.
+  Pin real ranges before production hardening.
+- `@portabletext/editor` (pulled in by `sanity`) asks for React ≥ 19.2.8 while the repo
+  resolves 19.2.7. Harmless so far; revisit if the rich-text input misbehaves.
 
 ## Missing
 
-- No real Sanity Studio is wired yet.
-- No Sanity project ID, dataset, API version, token handling, preview mode, or live content setup exists yet.
-- No page builder schema exists in this repo yet.
-- No document-level localization routing is implemented yet.
-- Locale routes are not implemented yet:
-  - default German at `/`
-  - English at `/en`
-  - Spanish at `/es`
-- The homepage still uses local static content from `lib/content.ts`.
-- The configurator product data is local TypeScript, not fetched from Sanity.
-- The Sanity adapter is a contract boundary only; it is not connected to a real query.
-- No Studio page-builder block exists yet for dropping the configurator into a page.
+- Sanity, spec Phase 7b: the `siteSettings` singleton, metadata from `seo` with canonical and
+  `hreflang` for existing translations, `sitemap.ts`, `robots.ts`, `redirect` documents
+  enforced in `proxy.ts`, and a signed publish webhook that revalidates the `sanity` cache
+  tag. Until the webhook exists, a deployed site shows published edits only after a rebuild.
+- Sanity, spec Phase 8: ADR 0013 (the queries are the adapter, amending ADR 0007),
+  `SANITY.md` and `blocks/CONTRACT.md`.
+- Locales, spec Phase 9b: about 200 functional German strings in `/configure`, `/konto`,
+  `/anfrage`, `/share`, the 404 page and `AppHeader`'s defaults move into the dictionaries;
+  the authentication email follows the customer's locale; Martin or a native speaker
+  reviews the English and Spanish copy; then English and Spanish join `LAUNCHED_LOCALES`.
+  Until then `/en` and `/es` are 404 in production.
+- The Presentation tool itself has not been exercised with a Studio login. Draft mode, live
+  preview and the preview data attributes were verified without it.
+- The hero film and its poster load straight from `cdn.sanity.io` in the visitor's browser
+  (images go through `/_next/image`). An item for the ADR 0007 review, which also gates the
+  `production` dataset.
+- The `richText`, `faq` and `media` blocks are not built; `richText` waits for the real
+  Impressum and Datenschutz text.
+- The `configuratorBlock` is a teaser with a deep link; the inline live-3D variant is a
+  later slice.
+- The configurator's product data stays in code by design (ADR 0007); `catalog.ts` is the
+  seam a Release Bundle replaces later. The pre-ADR 0007 stub
+  `features/configurator/adapters/sanity.ts` is imported nowhere and still waits to be
+  removed (spec §4).
 - No real product catalog, SKU model, pricing engine, cart, order, CRM, or payment integration exists yet. Quote Requests are recorded and listed but nobody is notified: the `quote-request.submitted` outbox has no consumer until the email provider lands (ADR 0010). The "selected photo" named in CONTEXT.md is not yet captured on a Quote Request, and the account list shows the first ten without a load-more.
 - The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders or browser render smoke test in CI, no engine-upgrade guard for historical manifests, and the Appartement scene has no manifest of its own (it is a placeholder awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
@@ -328,10 +419,11 @@ Revisit when Project Archive/Trash/restore lands.
 
 - Keep the site single-channel for now.
 - Treat German as the default locale and URL root.
-- Use document-level localization for page-builder pages when Sanity is added.
+- Use document-level localization for page-builder pages (`page`, `navigation`).
 - Use field-level localized labels for small shared configuration metadata.
 - Keep the configurator isolated as a smart component inside the Next.js app.
-- Make the configurator page-builder compliant so Sanity editors can drop it into pages later.
+- The configurator joins pages as `configuratorBlock`, which carries editorial presentation
+  and a `productKey`; rules and prices stay in code.
 - Keep product definitions portable:
   - Sanity can own the editorial/product metadata first.
   - The same product definition should be exportable as JSON later.
@@ -406,6 +498,14 @@ the Phase 6 legal thread (DPA, transfer mechanism). Both are decisions and procu
 builder, and Product Definition Drafts in Sanity. They open a large new surface before the
 customer journey has an ending.
 
+**Reversed 2026-10-01 for locale routing and the page builder.** With steps 1, 2, 4 and 5
+done, the customer journey has its ending, so the deferral's reason no longer held; the
+work runs on `cc/devstart-sanity` under the
+[Sanity pagebuilder spec](.scratch/sanity-pagebuilder/spec.md), which also took Sanity
+for homepage and navigation onto the engineering path. Step 3 still waits for the owned
+Appartement scene, and Product Definition Drafts in Sanity stay deferred until the Release
+Bundle module exists.
+
 ### Cross-cutting, currently unowned
 
 - Playwright coverage: homepage to configurator, color change updates URL, share URL
@@ -420,7 +520,7 @@ customer journey has an ending.
 
 - `README.md`: how to run, build, verify, and understand the project at a glance.
 - `ARCHITECTURE.md`: app architecture, route strategy, feature boundaries, Sanity/page-builder strategy, and commerce escape hatches.
-- `SANITY.md`: Studio setup, dataset strategy, schema ownership, preview/live editing, agentic workflow notes, and migration rules.
+- `SANITY.md`: Studio setup, dataset strategy, schema ownership, preview/live editing, agentic workflow notes, and migration rules (spec Phase 8, with `blocks/CONTRACT.md`).
 - `CONTENT_MODEL.md`: page-builder block model, page fields, product definition fields, localization approach, and editor rules.
 - `LOCALIZATION.md`: supported locales, default locale behavior, slug rules, fallback rules, and copy workflow.
 - `CONFIGURATOR_CONTRACT.md`: product definition shape, URL state shape, pricing assumptions, validation rules, and future JSON export contract.
