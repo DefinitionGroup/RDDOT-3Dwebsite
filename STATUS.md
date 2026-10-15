@@ -550,7 +550,11 @@ Engineering:
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
 - Production Vercel environment: remove `TEST_DATABASE_URL`, keep the capture flag off,
-  set the production domain.
+  set the production domain. Give production its own database and its own storage bucket
+  and least-privilege key: today `DATABASE_URL*` and every `OBJECT_STORAGE_*` variable is one
+  value shared by Preview and Production, which ADR 0011 rules out.
+- Storage operations from ADR 0011: backup path and a restore drill for the RustFS
+  deployment, encryption at rest and credential rotation recorded.
 - Accessibility audit and performance budgets for the 3D scene and the homepage film.
 
 *Martin:* Impressum and Datenschutz texts; the email provider choice; an owned or licensed
