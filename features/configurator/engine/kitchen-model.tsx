@@ -81,7 +81,8 @@ type KitchenModelProps = {
 };
 
 const KITCHEN_MODEL_PATH = "/models/kitchen-modules.glb";
-const MODEL_SCALE = 1.18;
+/** The kitchen is shown 18 % larger than its source metres; rooms around it follow. */
+export const KITCHEN_MODEL_SCALE = 1.18;
 
 const ALL_FINISHES = [
   ...RDTD_KITCHEN_PRODUCT_V2.cabinetColors,
@@ -114,13 +115,13 @@ const FINISH_TEXTURE_URLS = [
 
 /**
  * Physical size of one texture tile, in the composed scene's units (the
- * model is scaled by MODEL_SCALE afterwards). Fronts and cabinets share
+ * model is scaled by KITCHEN_MODEL_SCALE afterwards). Fronts and cabinets share
  * one projection so grain runs across neighbouring panels; the worktop
  * tiles larger so its veins read as stone, not print.
  */
 const TILE_M = {
-  finish: { u: 0.78 / MODEL_SCALE, v: 1.02 / MODEL_SCALE },
-  countertop: { u: 1.4 / MODEL_SCALE, v: 1.4 / MODEL_SCALE }
+  finish: { u: 0.78 / KITCHEN_MODEL_SCALE, v: 1.02 / KITCHEN_MODEL_SCALE },
+  countertop: { u: 1.4 / KITCHEN_MODEL_SCALE, v: 1.4 / KITCHEN_MODEL_SCALE }
 } as const;
 
 export function KitchenModel({
@@ -336,7 +337,7 @@ export function KitchenModel({
   };
 
   return (
-    <group scale={MODEL_SCALE}>
+    <group scale={KITCHEN_MODEL_SCALE}>
       <primitive
         object={model.scene}
         onClick={edit ? handleSceneClick : undefined}

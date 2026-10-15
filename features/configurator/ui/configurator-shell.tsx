@@ -7,7 +7,7 @@ import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState, us
 import { Emphasized } from "@/components/design-system/emphasized";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
-import { preloadAppartement2Model } from "@/features/configurator/engine/appartement2-model";
+import { preloadApartmentRoom } from "@/features/configurator/engine/apartment-room";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import type {
   EditTarget,
@@ -243,7 +243,7 @@ export function ConfiguratorShell({
   }, [encodedConfig, locale, project, sharedView]);
 
   useEffect(() => {
-    const apartmentTimer = window.setTimeout(preloadAppartement2Model, 1200);
+    const apartmentTimer = window.setTimeout(preloadApartmentRoom, 1200);
 
     return () => {
       window.clearTimeout(apartmentTimer);

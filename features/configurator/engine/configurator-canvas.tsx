@@ -211,6 +211,11 @@ function PathTracingPipeline({
   );
 }
 
+type UpdateEmitter = {
+  addEventListener(type: "update", listener: () => void): void;
+  removeEventListener(type: "update", listener: () => void): void;
+};
+
 function PathTracingSync({
   state,
   visualization
@@ -218,7 +223,20 @@ function PathTracingSync({
   state: ConfiguratorState;
   visualization: VisualizationMode;
 }) {
-  const { update } = usePathtracer();
+  const { pathtracer, update } = usePathtracer();
+  const controls = useThree((rootState) => rootState.controls) as UpdateEmitter | null;
+
+  // The path tracer reads the camera when it takes the scene and otherwise
+  // waits for a "change" event that camera-controls never sends, so a preset
+  // applied a frame later was never rendered. Follow the controls' updates.
+  useEffect(() => {
+    if (!controls) {
+      return;
+    }
+    const followCamera = () => pathtracer.updateCamera();
+    controls.addEventListener("update", followCamera);
+    return () => controls.removeEventListener("update", followCamera);
+  }, [controls, pathtracer]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(update);

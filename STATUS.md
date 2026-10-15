@@ -63,7 +63,7 @@ configuration; **Open** is not built. Details for each line are under Done and M
 | Islands: none, standard, large | Done |
 | Finishes: three carcass colours, four fronts; full-size material overlay | Done |
 | Itemised indicative price (sum of parts), live with every change | Done (prototype prices in code, ADR 0006) |
-| Views: Studio, Appartement, path-traced Rendering; cameras Room, Front, Detail; supersampled studio light | Done; the Appartement scene is an unlicensed placeholder (Release Blocker) |
+| Views: Studio, Appartement, path-traced Rendering; cameras Room, Front, Detail; supersampled studio light | Done; the Appartement room is a placeholder with no recorded licence (Release Blocker) |
 | Shareable guest URL (`?c=`), older URLs upgrade | Done |
 | Asset Manifest with release-gate test; poster fallback when 3D fails | Done |
 | Phone layout: bottom sheet, compact HUD | Done |
@@ -110,6 +110,32 @@ configuration; **Open** is not built. Details for each line are under Done and M
 
 ## Done
 
+- **Appartement exchanged for the defgrp room (2026-10-16).** The baked living room
+  (`appartement2.glb`, BlendSwap #86344) and its component are gone. The Appartement is now
+  the empty room with three tall mullioned windows from the defgrp-3d-configurator prototype
+  (`public/models/newroom/newroom.glb` there), prepared as `public/models/apartment-room.glb`:
+  plank floor, a stray candle and a coffee cup dropped, Draco-compressed, 10 MB to 1 MB
+  (a one-off glTF-Transform run: drop the nodes by material, `prune` keeping attributes,
+  `dedup`, `draco`). `features/configurator/engine/apartment-room.tsx` scales the room with
+  the kitchen and 15 % beyond, so it reads as an old building with a 3.3 m ceiling (at true
+  proportions the camera had under two metres in front of the island), turns it so the
+  windows face the fronts, and backs its 5.67 m wall onto the kitchen, which the longest
+  line fits. It is lit in real time: one RectAreaLight per window, sun and hemisphere from
+  the window side, a warm bounce panel on the back wall in raster mode, the studio HDRI as
+  fill; the kitchen keeps its cube-camera probe and the AccumulativeShadows on the shared
+  wood floor. The window view shines its own picture (the export had lost its emission
+  map). Cameras: a wider lens in the room (54°, 72° on phones), new presets (Detail looks
+  across the island to the windows on desktop, at the island corner on phones) and a
+  boundary that keeps camera and target inside the walls. Rendering fix found on the way:
+  the path tracer read the camera once, when it took the scene, and otherwise waited for
+  a `change` event camera-controls never sends, while the preset reached the rebuilt
+  controls only on the 300 ms retry; so every Rendering came from the canvas's start-up
+  camera (4.2, 2.4, 5.6), which in the room sits inside the window wall. `PathTracingSync`
+  now follows the controls' `update` events and the framing effect reruns when the
+  default controls change, so Rendering shows the chosen view in both scenes. Verified on
+  desktop and a 375 px phone in the browser pane, and raster plus path-traced in headless
+  Chrome on the GPU (Metal) against the production build. `scripts/bake-appartement2.py`
+  serves no scene any more.
 - **Sanity pagebuilder and locale routing (2026-10-01 to 10-08).** Plan, decisions and the
   evidence for each phase are in the [spec](.scratch/sanity-pagebuilder/spec.md); Phases
   1–7 and 9a are done, 8 and 9b are open (see Missing).
@@ -453,7 +479,7 @@ Revisit when Project Archive/Trash/restore lands.
   `rdtdot-photos` bucket instead (anonymous GET returns 403, verified). The `public`
   bucket itself is left as found — review what it currently serves and whether that
   exposure is intended.
-- The "Appartement" environment (source files still named `appartement2`) is a development placeholder: the source scene is BlendSwap asset #86344 ("Living-room."), CC0 but marked Fan Art with commercial use prohibited. Decided 2026-09-02 to keep it in the configurator until Martin supplies an owned or licensed .blend; the bake pipeline (`scripts/bake-appartement2.py`) is asset-agnostic — swap the scene in and re-bake before any production release. Recorded here so the Production Release Gate cannot miss it.
+- The "Appartement" environment is a development placeholder: since 2026-10-16 it is `public/models/apartment-room.glb`, prepared from `newroom.glb` in the defgrp-3d-configurator prototype. That file is a Sketchfab export (its root node is `Sketchfab_model`) whose author and licence are recorded nowhere; only its floor photo is identifiable (Pexels, and dropped anyway). Establish the licence or replace the room with an owned or licensed one before any production release. Recorded here so the Production Release Gate cannot miss it.
 
 ## Known Warnings
 
@@ -556,8 +582,8 @@ Engineering:
 - Transactional email provider adapter once chosen (ADR 0010), then the outbox consumer
   that tells rotpunkt about each Quote Request.
 - `richText` block, Impressum and Datenschutz pages, legal column in the footer.
-- Re-bake the Appartement from an owned scene (`scripts/bake-appartement2.py`) and give it
-  a manifest; until then it cannot ship.
+- Licence or replace the Appartement room (see Release Blockers) and give it a manifest;
+  until then it cannot ship.
 - Data protection: schedule the object deletion sweep or sign a retention policy so account
   deletion reaches storage; the retention sweep for abandoned and finished captures.
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the

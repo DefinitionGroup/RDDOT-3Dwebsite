@@ -22,7 +22,7 @@ import {
   ToneMappingMode
 } from "postprocessing";
 import { Suspense, useEffect, useRef, type ElementRef } from "react";
-import { RectAreaLight } from "three";
+import { Box3, RectAreaLight, Vector3 } from "three";
 import type {
   CameraView,
   ConfiguratorState,
@@ -30,7 +30,10 @@ import type {
   VisualizationMode
 } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
-import { Appartement2Model } from "@/features/configurator/engine/appartement2-model";
+import {
+  APARTMENT_CAMERA_BOUNDS,
+  ApartmentRoom
+} from "@/features/configurator/engine/apartment-room";
 import {
   KitchenModel,
   type KitchenEditProps
@@ -40,8 +43,8 @@ import { TemporalAccumulation } from "@/features/configurator/engine/temporal-ac
 import { useWoodFloorMaps, WOOD_FLOOR_TILE_M } from "@/features/configurator/engine/wood-floor";
 
 /**
- * Poly Haven "Brown Photostudio 02" (CC0), downsampled to 1k. Lights both
- * the studio and the kitchen inside the Appartement.
+ * Poly Haven "Brown Photostudio 02" (CC0), downsampled to 1k. Lights the
+ * studio, and fills the Appartement's shadows beside its window light.
  */
 const STUDIO_HDRI = "/hdri/brown-photostudio-02.hdr";
 const STUDIO_FLOOR_SIZE = 40;
@@ -61,18 +64,38 @@ const STUDIO_STAGE_Y = -0.7;
 const STUDIO_FLOOR_OFFSET = -0.04;
 const STUDIO_FLOOR_Y = STUDIO_STAGE_Y + STUDIO_FLOOR_OFFSET;
 
-// Floor level in the baked scene is y = -1.369; eye heights are relative to it.
-const apartment2CameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [1.85, 0.55, 3.4, -3.0, -0.3, 0.1],
-  front: [1.1, 0.15, 0.55, -2.63, 0.05, 0.55],
-  detail: [-0.7, 0.05, 1.9, -3.3, -0.25, 0.2]
+// The Appartement's floor is y = 0 with the kitchen at the origin, its back
+// to the wall at z = -1.8 and the curtains ahead at z = +4.7. It is shot like
+// an interior: a wider lens from the window side, above eye height. Detail
+// turns round and looks across the island's worktop to the windows.
+const apartmentCameraPresets: Record<CameraView, CameraPreset> = {
+  signature: [3.4, 2.7, 4.35, -0.5, 0.8, -1.0],
+  front: [0.3, 2.35, 4.45, 0.3, 0.9, -1.2],
+  detail: [2.4, 1.9, -0.55, -0.8, 1.05, 4.25]
 };
 
-const mobileApartment2CameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [1.2, 0.6, 4.6, -2.6, -0.3, 0.3],
-  front: [1.4, 0.25, 0.55, -2.63, -0.1, 0.55],
-  detail: [0.2, 0.15, 2.7, -3.2, -0.3, 0.2]
+// Phones see only the canvas above the sheet, and the walls keep the target
+// off the floor, so these aim low between camera and kitchen to lift it into
+// the upper half. Detail stays on the island: the window view would sit
+// under the sheet.
+const mobileApartmentCameraPresets: Record<CameraView, CameraPreset> = {
+  signature: [3.3, 2.1, 4.4, 1.1, 0.35, 1.1],
+  front: [0, 2.2, 4.45, 0, 0.4, 1.3],
+  detail: [2.9, 1.6, 3.6, 1.3, 0.35, 1.5]
 };
+
+const APARTMENT_CAMERA_BOX = new Box3(
+  new Vector3(...APARTMENT_CAMERA_BOUNDS.min),
+  new Vector3(...APARTMENT_CAMERA_BOUNDS.max)
+);
+
+/** Vertical field of view per visualization: the Appartement's wider lens. */
+function cameraFov(apartment: boolean, compact: boolean) {
+  if (apartment) {
+    return compact ? 72 : 54;
+  }
+  return compact ? 50 : 38;
+}
 
 export function KitchenScene({
   cameraView,
@@ -84,6 +107,9 @@ export function KitchenScene({
 }: KitchenSceneProps) {
   const controlsRef = useRef<ElementRef<typeof CameraControls> | null>(null);
   const width = useThree((rootState) => rootState.size.width);
+  // The controls are rebuilt once the scene's own camera becomes the default;
+  // framing follows the instance that finally drives it.
+  const defaultControls = useThree((rootState) => rootState.controls);
 
   const cabinetColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.cabinetColors, state.cabinetColorKey);
   const frontColor = findFinish(RDTD_KITCHEN_PRODUCT_V2.frontColors, state.frontColorKey);
@@ -102,28 +128,33 @@ export function KitchenScene({
   useEffect(() => {
     const presets = isApartment
       ? isCompactViewport
-        ? mobileApartment2CameraPresets
-        : apartment2CameraPresets
+        ? mobileApartmentCameraPresets
+        : apartmentCameraPresets
       : getStudioCameraPresets(isCompactViewport);
     const preset = presets[cameraView];
+    const frame = () => {
+      const controls = controlsRef.current;
+      if (!controls) {
+        return;
+      }
+      // Inside the Appartement the camera and its target stay within the walls.
+      controls.boundaryEnclosesCamera = isApartment;
+      controls.setBoundary(isApartment ? APARTMENT_CAMERA_BOX : undefined);
+      controls.setLookAt(...preset, !pathTracing);
+    };
     // A first switch into a visualization suspends on its assets, which can
     // swallow the initial setLookAt (the controls remount around it). Retry
     // on a short schedule; the damped transition makes this imperceptible.
-    controlsRef.current?.setLookAt(...preset, !pathTracing);
-    const retries = [300, 900, 1800].map((delay) =>
-      window.setTimeout(() => {
-        controlsRef.current?.setLookAt(...preset, !pathTracing);
-      }, delay)
-    );
+    frame();
+    const retries = [300, 900, 1800].map((delay) => window.setTimeout(frame, delay));
     return () => retries.forEach((timer) => window.clearTimeout(timer));
-  }, [cameraView, isApartment, isCompactViewport, pathTracing]);
-
+  }, [cameraView, defaultControls, isApartment, isCompactViewport, pathTracing]);
 
   return (
     <>
       <PerspectiveCamera
         far={50}
-        fov={isCompactViewport ? 50 : 38}
+        fov={cameraFov(isApartment, isCompactViewport)}
         makeDefault
         near={0.08}
         position={[4.2, 2.4, 5.6]}
@@ -131,20 +162,16 @@ export function KitchenScene({
       {!pathTracing && !isApartment && (
         <fog args={["#000000", 6.5, 16]} attach="fog" />
       )}
+      {!isApartment && <StudioLightRig pathTracing={pathTracing} />}
       {isApartment ? (
-        <Appartement2LightRig pathTracing={pathTracing} />
-      ) : (
-        <StudioLightRig pathTracing={pathTracing} />
-      )}
-      {isApartment ? (
-        <Environment environmentIntensity={pathTracing ? 1.0 : 0.9} files={STUDIO_HDRI} />
+        <Environment environmentIntensity={pathTracing ? 0.7 : 0.6} files={STUDIO_HDRI} />
       ) : (
         <StudioEnvironment pathTracing={pathTracing} />
       )}
 
       {isApartment ? (
         <Suspense fallback={null}>
-          <Appartement2Model
+          <ApartmentRoom
             cabinetFinish={cabinetColor}
             frontFinish={frontColor}
             pathTracing={pathTracing}
@@ -199,7 +226,7 @@ export function KitchenScene({
       <CameraControls
         dollySpeed={0.65}
         makeDefault
-        maxDistance={isApartment ? 11 : isCompactViewport ? 13 : 8.4}
+        maxDistance={isApartment ? 8 : isCompactViewport ? 13 : 8.4}
         maxPolarAngle={Math.PI / 2.08}
         minDistance={2.2}
         minPolarAngle={Math.PI / 8}
@@ -265,30 +292,6 @@ function StudioEnvironment({ pathTracing }: { pathTracing: boolean }) {
   );
 }
 
-function Appartement2LightRig({ pathTracing }: { pathTracing: boolean }) {
-  return (
-    <>
-      <hemisphereLight args={["#e8ecef", "#6d6862", 0.45]} />
-      <ambientLight color="#d9dce0" intensity={0.16} />
-      <directionalLight
-        castShadow={pathTracing}
-        color="#fff2e2"
-        intensity={pathTracing ? 1.8 : 1.55}
-        position={[0.8, 4.6, -8.5]}
-        shadow-bias={-0.0002}
-        shadow-blurSamples={24}
-        shadow-mapSize={[2048, 2048]}
-        shadow-normalBias={0.025}
-        shadow-radius={7}
-      />
-      <directionalLight
-        color="#e6ecf2"
-        intensity={pathTracing ? 0.9 : 0.4}
-        position={[5.0, 3.0, 4.2]}
-      />
-    </>
-  );
-}
 
 type StudioKitchenProps = {
   cabinetFinish: FinishOption;
@@ -302,7 +305,7 @@ type StudioKitchenProps = {
 /**
  * The kitchen reflects the studio HDRI through the scene environment; the
  * former cube-camera probe only ever saw the black stage, which is why the
- * fronts read flat. The reflection probe remains for the Appartement.
+ * fronts read flat. The Appartement keeps a probe, so fronts mirror the room.
  */
 function StudioKitchen({
   cabinetFinish,
