@@ -1,6 +1,7 @@
 # rotpunkt Signature Status
 
-Last reconciled: 2026-10-15 (at `76558b3`)
+Last reconciled: 2026-10-15 (at `76558b3`); Phase 9b, the feature inventory and the roadmap
+added the same day at `4611243`
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9` (67 commits ahead of `redesign/devstart`). `cc/devstart-003`
 and the earlier `cc/devstart-*` branches are frozen at their last commit; none is merged
@@ -22,7 +23,7 @@ legal column until they exist) and a dark studio render for the homepage's confi
 card (it shows the evening photo for now).
 
 Gates at reconciliation (2026-10-15): `pnpm lint` clean, `tsc --noEmit` clean, `pnpm test`
-100/100 (covers `features` and `lib`), `pnpm test:db` 64 passed and 1 skipped (Neon),
+106/106 after Phase 9b (covers `features` and `lib`), `pnpm test:db` 64 passed and 1 skipped (Neon),
 production build green with the `postbuild` server-bundle check passing; the site worked in
 the browser. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
 **unset** — with the local `development-capture` value it fails closed by design
@@ -34,6 +35,78 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 
 Alongside it, every piece of marketing content becomes editable in Sanity, in German,
 English and Spanish: [.scratch/sanity-pagebuilder/spec.md](.scratch/sanity-pagebuilder/spec.md).
+
+## Feature Inventory (2026-10-15)
+
+Everything the project does today, by area. **Done** works end to end and was verified in
+the browser; **Gated** is built but waits on a decision, a supply or production
+configuration; **Open** is not built. Details for each line are under Done and Missing.
+
+**Website and content (Sanity)**
+
+| Feature | State |
+| --- | --- |
+| Homepage from eight Page Blocks: film hero, statement, promises with detail cards, material cards (live surcharge, deep link), configurator teaser (live price, explainer), room story, collection lines, closing | Done |
+| Header and footer navigation from Sanity, full-screen menu on phones | Done |
+| Embedded Studio at `/studio`, `page` and `navigation` per language, demo mode without Sanity, `pnpm sanity:seed` | Done |
+| Editorial Preview: draft mode, live updates, click-to-edit markers | Done (Presentation tool not yet tried with a Studio login) |
+| Locale routing: German at `/`, English `/en`, Spanish `/es`; language switch on editorial pages | Done; English and Spanish closed in production (`LAUNCHED_LOCALES`) |
+| English and Spanish homepage and navigation | Done; native review open |
+| SEO metadata, `hreflang`, sitemap, robots, redirects, publish webhook (Phase 7b) | In progress |
+| Impressum, Datenschutz, `richText` / `faq` / `media` blocks | Open (needs Martin's legal texts) |
+
+**Configurator**
+
+| Feature | State |
+| --- | --- |
+| Straight kitchen line from wall modules (tall cabinet, appliance cabinet, cabinet 30): Edit Session with add, remove, move, swap, drag reorder, drag from the Datenblatt palette; width and per-type limits | Done |
+| Islands: none, standard, large | Done |
+| Finishes: three carcass colours, four fronts; full-size material overlay | Done |
+| Itemised indicative price (sum of parts), live with every change | Done (prototype prices in code, ADR 0006) |
+| Views: Studio, Appartement, path-traced Rendering; cameras Room, Front, Detail; supersampled studio light | Done; the Appartement scene is an unlicensed placeholder (Release Blocker) |
+| Shareable guest URL (`?c=`), older URLs upgrade | Done |
+| Asset Manifest with release-gate test; poster fallback when 3D fails | Done |
+| Phone layout: bottom sheet, compact HUD | Done |
+| Interface in German, English, Spanish (Phase 9b) | Done; language switch on functional screens open |
+
+**Customer account and projects**
+
+| Feature | State |
+| --- | --- |
+| Sign-in with a six-digit email code, no password, account created on first use | Gated: production needs a transactional email provider (ADR 0010) |
+| Save a configuration as a Project; autosave with conflict handling; browser recovery drafts | Done |
+| Versions: save, history, restore behind a safety version; rename | Done |
+| Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
+| Account area: projects, requests, visualisations | Done |
+| Archive, trash and restore of Projects | Open |
+
+**AI photos**
+
+| Feature | State |
+| --- | --- |
+| Photo of the current configuration in four scenes: capture, EU storage, Replicate (`qwen/qwen-image-2-pro`), validated result | Gated: `PHOTO_GENERATION_ENABLED` is off by decision |
+| Governance: approved prompt and model releases, per-account quota, provider budget breaker, kill switch | Done |
+| Webhook inbox, reconciliation on read, sweep endpoint | Gated: webhook URL, signing secret and sweep schedule need a deployment |
+| Galleries per Project and per account, download, delete | Done |
+| Output moderation, billed-cost evidence | Open |
+
+**Requests and commerce**
+
+| Feature | State |
+| --- | --- |
+| Quote Request on a pinned revision: contact, consent, note, reference number, listed in the account | Done |
+| Notifying rotpunkt about a new request | Open (waits on the email provider) |
+| Catalog, cart, checkout, payment, CRM | Not planned yet; boundaries in ADR 0006 |
+
+**Platform**
+
+| Feature | State |
+| --- | --- |
+| PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
+| Gates: lint, types, 106 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
+| Vercel project | Last deployment about five weeks old; no Sanity variables |
+| Dependency security: Next.js 16.2.10 has critical advisories (fixed in 16.3.6) | In progress |
+| Browser E2E tests, analytics, accessibility audit, performance budgets | Open |
 
 ## Done
 
@@ -79,6 +152,12 @@ English and Spanish: [.scratch/sanity-pagebuilder/spec.md](.scratch/sanity-pageb
     interface words on editorial pages in typed dictionaries `lib/messages/{de,en,es}.ts`.
   - The configurator HUD chips sit on solid soot (`chip-solid`) instead of frosted glass
     (2026-10-08).
+  - Functional screens in three languages (Phase 9b, `4611243`, 2026-10-15): configurator,
+    shared view, sign-in and account, Anfrage, 404 and `AppHeader` read their words from
+    `lib/messages/{de,en,es}.ts` through `LocaleProvider` / `useMessages()`. API routes
+    answer `{ code }` (`lib/api-errors.ts`) and the screens word the code; links, return
+    paths and share links keep the locale; the sign-in email follows the page
+    (`x-site-locale`). Evidence and the remaining steps are in the spec's Phase 9 section.
 
 - Built the first Tailwind/Next.js design system pass from the Figma directions.
 - Design-system primitives (rebuilt 2026-09-03 for the dark system, `components/design-system`):
@@ -386,11 +465,11 @@ Revisit when Project Archive/Trash/restore lands.
   tag. Until the webhook exists, a deployed site shows published edits only after a rebuild.
 - Sanity, spec Phase 8: ADR 0013 (the queries are the adapter, amending ADR 0007),
   `SANITY.md` and `blocks/CONTRACT.md`.
-- Locales, spec Phase 9b: about 200 functional German strings in `/configure`, `/konto`,
-  `/anfrage`, `/share`, the 404 page and `AppHeader`'s defaults move into the dictionaries;
-  the authentication email follows the customer's locale; Martin or a native speaker
-  reviews the English and Spanish copy; then English and Spanish join `LAUNCHED_LOCALES`.
-  Until then `/en` and `/es` are 404 in production.
+- Locales, rest of spec Phase 9b: Martin or a native speaker reviews the English and
+  Spanish copy (editorial and functional); the language switch joins the functional screens;
+  then English and Spanish join `LAUNCHED_LOCALES`. Until then `/en` and `/es` are 404 in
+  production. Revision snapshots are still written in German; their product and finish
+  names are translated on display only.
 - The Presentation tool itself has not been exercised with a Studio login. Draft mode, live
   preview and the preview data attributes were verified without it.
 - The hero film and its poster load straight from `cdn.sanity.io` in the visitor's browser
@@ -431,90 +510,71 @@ Revisit when Project Archive/Trash/restore lands.
 - Do not copy the `defgrp-3d-configurator` implementation directly; use it as interaction and camera inspiration only.
 - Keep the first prototype limited to one straight-line kitchen with cabinet/front color options.
 
-## Recommended Next Implementation Steps
+## Roadmap (from 2026-10-15)
 
-### Immediate (do these before starting any new track)
+This section is the plan. Each milestone lists engineering work (a Claude session can
+take it) and what only Martin can supply or decide. Earlier sequences — the 2026-09-02
+"confirmed sequence", the photo storage track, PLAN.md Phases 0–5 — are done or folded
+in below; their history is in git and in the Done section.
 
-1. ~~Verify the Edit Session tail~~ — done 2026-09-02 (see Current Slice Verified); one
-   bug found and fixed. Development continues on `cc/devstart-002` rather than merging back
-   into `redesign/devstart`.
-2. ~~Controlled paid generation~~ — done 2026-09-02, succeeded on the third run (see Done).
-   Step 1 of the confirmed sequence is closed. `PHOTO_GENERATION_ENABLED` stays off in
-   `.env.local` until the customer-facing path is wanted; turning it on is still a
-   deliberate decision.
-3. ~~Act on the design critique's P0~~ — done 2026-09-02 with the Quote Request slice
-   (ADR 0012). The remaining critique items are steps 3 and 4 of the confirmed sequence.
+### M0 — In flight
 
-### Photo storage track (in progress)
+- Dependency security: Next.js to a patched 16.x, `sharp`, `undici`, `vitest`; real version
+  ranges instead of `latest`. (Session running.)
+- Spec Phase 7b: `siteSettings`, metadata, `hreflang`, sitemap, robots, redirects, signed
+  publish webhook. (Session running.)
+- Language switch on the functional screens (configure, konto, anfrage). (Proposed.)
 
-ADR 0011 is accepted and the storage foundation is in place. What remains before
-the galleries can ship:
+### M1 — A reviewable preview
 
-1. ~~Photo Job module seam~~ — done (Phase 1, gap G5).
-2. ~~Source Capture upload flow~~ — done (Phase 2 validation path, gap G4).
-3. Retention sweep for reserved-but-never-uploaded captures and for captures whose
-   job has reached a terminal state.
-4. Confirm the physical location of `ecomstorage.rotpunkt.ai` and record it as
-   residency evidence — ADR 0011's residency claim is asserted, not yet evidenced.
-5. Object deletion stays manual **by decision, not oversight** (2026-09-01). See
-   Deferred Decisions.
-6. Turn on generation. `PHOTO_GENERATION_ENABLED` is off, so every run currently
-   fails as `provider-disabled` by design. Enabling it spends Replicate credits and is
-   a deliberate decision, not a default. See Immediate step 2.
-7. ~~PLAN.md Phase 3~~ — done 2026-09-02. Before production: set
-   `REPLICATE_WEBHOOK_SIGNING_SECRET` (from the provider's default-webhook secret
-   endpoint) and `PHOTO_WEBHOOK_URL`, and schedule `POST /api/photo-jobs/sweep` with
-   `PHOTO_SWEEP_TOKEN`. Until then jobs still complete through reconciliation on read.
+- Merge M0, run every gate, then deploy a Vercel preview of `cc/devstart-sanity` with the
+  Sanity variables for `development` and the on-screen login code for this branch. Changing
+  Vercel settings needs Martin's go-ahead.
+- Spec Phase 8: ADR 0013, `SANITY.md`, `blocks/CONTRACT.md`; delete the unused
+  `features/configurator/adapters/sanity.ts` stub.
+- Try the Presentation tool with a Studio login.
+- *Martin:* review the preview; review the English and Spanish copy.
 
-### Confirmed sequence (decided 2026-09-02)
+### M2 — German production launch (the Production Release Gate)
 
-The repo carried five overlapping plans (PLAN.md photo Phases 3–6, Track A, Track B, the
-Impeccable critique's priorities, and an external Sanity-first assessment). They are
-collapsed into one order below. This section is the roadmap; PLAN.md remains the photo
-sub-plan it references.
+Engineering:
+- Transactional email provider adapter once chosen (ADR 0010), then the outbox consumer
+  that tells rotpunkt about each Quote Request.
+- `richText` block, Impressum and Datenschutz pages, legal column in the footer.
+- Re-bake the Appartement from an owned scene (`scripts/bake-appartement2.py`) and give it
+  a manifest; until then it cannot ship.
+- Data protection: schedule the object deletion sweep or sign a retention policy so account
+  deletion reaches storage; the retention sweep for abandoned and finished captures.
+- Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
+  output moderation gate; billed cost against the estimate; then switch generation on.
+- CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
+  configurator → change → save → share → request.
+- Production Vercel environment: remove `TEST_DATABASE_URL`, keep the capture flag off,
+  set the production domain.
+- Accessibility audit and performance budgets for the 3D scene and the homepage film.
 
-1. ~~**Close the branch.**~~ Done 2026-09-02: Edit Session pass (one bug fixed) and a
-   successful paid generation, both recorded under Done and Current Slice Verified.
-2. ~~**Quote vertical slice.**~~ Done 2026-09-02 (ADR 0012, see Done). Left open by
-   design: the business notification (outbox consumer, waits on ADR 0010), the selected
-   photo on a request, and load-more in the account list.
-3. **Production 3D baseline, Track A.** ~~Retire the 27 MB `kitchen1.glb`~~ (done
-   2026-09-02), ~~turn mesh-name conventions into a real Asset Manifest~~ (done 2026-09-02,
-   with the Deterministic Visual Fallback path), replace the Fan-Art Appartement scene and
-   re-bake (decided 2026-09-02: the placeholder stays in the configurator for now; Martin
-   exchanges the source scene later), then make the best environment the default — only
-   once that scene is owned.
-4. ~~**Configurator workbench restructure.**~~ Done 2026-09-02 (see Done): Material → Aufbau →
-   Prüfen stages, the Ansicht control, labelled mobile actions, fixed price row on mobile.
-5. ~~**PLAN.md Phase 3, then Phases 4–5.**~~ Done 2026-09-02 (see Done). Left for Phase 6
-   and its evidence list: the output moderation gate (G10), billed cost against the
-   estimate (G8), browser E2E coverage, and the production configuration of webhook,
-   signing secret and sweep schedule.
+*Martin:* Impressum and Datenschutz texts; the email provider choice; an owned or licensed
+Appartement scene; the DPA and transfer reviews (Sanity, Replicate) that open the
+`production` dataset; a decision on the world-readable `public` bucket; residency evidence
+for `ecomstorage.rotpunkt.ai`; whether AI photos are part of the launch.
 
-**In parallel, off the engineering path:** Sanity for homepage and navigation only, and
-the Phase 6 legal thread (DPA, transfer mechanism). Both are decisions and procurement.
+### M3 — English and Spanish launch
 
-**Explicitly deferred:** the Sanity-first ordering, Track B's locale routing and page
-builder, and Product Definition Drafts in Sanity. They open a large new surface before the
-customer journey has an ending.
+- Native review signed off, `hreflang` live from 7b, then `LAUNCHED_LOCALES` = de, en, es
+  and a smoke test of all three.
+- Store revision snapshots language-neutral (keys, not labels) if historical versions must
+  read fully in the visitor's language.
 
-**Reversed 2026-10-01 for locale routing and the page builder.** With steps 1, 2, 4 and 5
-done, the customer journey has its ending, so the deferral's reason no longer held; the
-work runs on `cc/devstart-sanity` under the
-[Sanity pagebuilder spec](.scratch/sanity-pagebuilder/spec.md), which also took Sanity
-for homepage and navigation onto the engineering path. Step 3 still waits for the owned
-Appartement scene, and Product Definition Drafts in Sanity stay deferred until the Release
-Bundle module exists.
+### Later
 
-### Cross-cutting, currently unowned
-
-- Playwright coverage: homepage to configurator, color change updates URL, share URL
-  restores state, checkout summary matches state, owner-only Project open, re-auth
-  return, autosave/conflict recovery, recovery-draft decisions, version save and
-  deduplication, paginated history, safe restore.
-- CI that runs lint, types, unit, DB, and build on every push.
-- Accessibility audit and performance budgets (both listed under Missing, neither
-  scheduled).
+- Inline live-3D `configuratorBlock` variant; `faq` and `media` blocks.
+- Project archive, trash and restore (then revisit automatic object deletion).
+- The selected photo on a Quote Request; load-more for older requests in the account.
+- Analytics for configurator interactions.
+- Product Definition Drafts and Release Bundles; a real catalog, pricing service, cart,
+  order, payment and CRM behind the ADR 0006 boundaries.
+- Further kitchen layouts beyond the straight line.
+- The Three.js deprecations (`THREE.Clock`, `PCFSoftShadowMap`).
 
 ## Docs Still Needed
 
