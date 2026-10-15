@@ -28,8 +28,8 @@ function MenuIcon({ open }: { open: boolean }) {
  * The marketing header: transparent over the film, frosted once the page
  * scrolls. The links and the ghost pill on desktop; on phones a round menu
  * button opens the same links as a full-screen sheet. Links come from the
- * locale's navigation document; the language switch appears once more than
- * one language can be opened.
+ * locale's navigation document; the language dropdown appears, in the bar and
+ * in the sheet, once more than one language can be opened.
  */
 export function SiteHeader({
   chrome,
@@ -97,17 +97,11 @@ export function SiteHeader({
           </div>
           <div className="flex items-center gap-2">
             {/*
-             * Between lg and xl the bar cannot hold brand, links, the language row and
-             * the action: the switch turns compact and the action steps aside (the
-             * links and the page carry it). From xl on everything fits.
+             * The language dropdown from lg on. Between lg and xl the bar cannot also
+             * hold the action, so it steps aside there (the links and the page carry
+             * it); from xl on everything fits.
              */}
-            <LanguageSwitch className="mr-3 hidden xl:block" labels={languageLabels} links={languages} />
-            <LanguageSwitch
-              className="mr-1 hidden lg:block xl:hidden"
-              labels={languageLabels}
-              links={languages}
-              variant="compact"
-            />
+            <LanguageSwitch className="mr-1 hidden lg:block" labels={languageLabels} links={languages} />
             {cta && (
               <Pill
                 className={hasLanguages ? "hidden md:inline-flex lg:hidden xl:inline-flex" : "hidden md:inline-flex"}
@@ -169,7 +163,6 @@ export function SiteHeader({
               </ul>
               <div className="flex flex-col gap-6">
                 <LanguageSwitch
-                  className="-ml-3"
                   labels={languageLabels}
                   links={languages}
                   onNavigate={closeMenu}

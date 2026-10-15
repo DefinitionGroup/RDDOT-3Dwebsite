@@ -45,11 +45,27 @@ export const sanityLanguages = LOCALES.map((id) => ({ id, title: LOCALE_TITLES[i
 export const LAUNCHED_LOCALES: readonly Locale[] = ["de"];
 
 /**
- * Locales a request may open without Editorial Preview: the launched ones in
- * production, all of them on a developer's machine so translations can be
- * read before launch.
+ * Whether this deployment opens every locale before launch: a developer's
+ * machine always, a test deployment when it sets `OPEN_ALL_LOCALES=true` so
+ * translations can be reviewed there. Vercel's production environment never
+ * does, whatever the flag says.
  */
-export const OPEN_LOCALES: readonly Locale[] = process.env.NODE_ENV === "development" ? LOCALES : LAUNCHED_LOCALES;
+export function opensAllLocales(
+  env: { NODE_ENV?: string; OPEN_ALL_LOCALES?: string; VERCEL_ENV?: string } = {
+    NODE_ENV: process.env.NODE_ENV,
+    OPEN_ALL_LOCALES: process.env.OPEN_ALL_LOCALES,
+    VERCEL_ENV: process.env.VERCEL_ENV
+  }
+) {
+  if (env.NODE_ENV === "development") return true;
+  return env.OPEN_ALL_LOCALES === "true" && env.VERCEL_ENV !== "production";
+}
+
+/**
+ * Locales a request may open without Editorial Preview: the launched ones in
+ * production, all of them where `opensAllLocales()` says so.
+ */
+export const OPEN_LOCALES: readonly Locale[] = opensAllLocales() ? LOCALES : LAUNCHED_LOCALES;
 
 /**
  * First path segments the application owns. Editorial pages may not take
