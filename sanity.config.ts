@@ -3,6 +3,7 @@
 import { documentInternationalization } from "@sanity/document-internationalization";
 import { visionTool } from "@sanity/vision";
 import { defineConfig } from "sanity";
+import { internationalizedArray } from "sanity-plugin-internationalized-array";
 import { presentationTool } from "sanity/presentation";
 import { structureTool } from "sanity/structure";
 import { sanityLanguages } from "./lib/i18n";
@@ -10,6 +11,9 @@ import { apiVersion, dataset, studioProjectId } from "./sanity/env";
 import { resolve } from "./sanity/presentation/resolve";
 import { schemaTypes } from "./sanity/schemaTypes";
 import { structure } from "./sanity/structure";
+
+/** Documents that exist exactly once (per language): opened from the structure, never duplicated or deleted. */
+const FIXED_TYPES = new Set(["navigation", "siteSettings"]);
 
 export default defineConfig({
   name: "rotpunkt-signature",
@@ -21,8 +25,8 @@ export default defineConfig({
     types: schemaTypes,
     templates: (previous) => [
       // A page always starts in a language (the plugin adds page-de, page-en, page-es);
-      // navigation is one fixed document per language, opened from the structure.
-      ...previous.filter((template) => template.id !== "page" && template.schemaType !== "navigation"),
+      // navigation and the settings are fixed documents, opened from the structure.
+      ...previous.filter((template) => template.id !== "page" && !FIXED_TYPES.has(template.schemaType)),
       {
         id: "navigation-by-language",
         title: "Navigation",
@@ -33,9 +37,8 @@ export default defineConfig({
     ]
   },
   document: {
-    // Navigation documents exist once per language and are not duplicated or deleted from here.
     actions: (previous, context) =>
-      context.schemaType === "navigation"
+      FIXED_TYPES.has(context.schemaType)
         ? previous.filter(({ action }) => action !== "duplicate" && action !== "delete")
         : previous
   },
@@ -53,6 +56,12 @@ export default defineConfig({
       supportedLanguages: sanityLanguages,
       schemaTypes: ["page"],
       languageField: "language"
+    }),
+    // Field-level localization for the small shared labels in siteSettings.
+    internationalizedArray({
+      languages: sanityLanguages,
+      fieldTypes: ["string", "text"],
+      buttonAddAll: true
     }),
     visionTool({ defaultApiVersion: apiVersion })
   ]

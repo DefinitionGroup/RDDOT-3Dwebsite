@@ -48,6 +48,17 @@ export const resolve: PresentationPluginOptions["resolve"] = {
               ]
             }
           : null
+    }),
+    siteSettings: defineLocations({
+      select: { brandName: "brandName" },
+      resolve: () => ({
+        message: "Die Einstellungen gelten für jede Seite: Titel, Beschreibung, Vorschaubild, rechtliche Zeile.",
+        tone: "caution",
+        locations: LOCALES.map((locale) => ({
+          title: `Startseite · ${LOCALE_TITLES[locale]}`,
+          href: localizePath(locale, "/")
+        }))
+      })
     })
   }
 };

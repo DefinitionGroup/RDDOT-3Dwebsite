@@ -8,11 +8,14 @@
  * German comes first: demo keys are numbered in import order, and the seeded
  * German documents carry those keys.
  */
-import type { PageDocument, SiteChrome } from "@/blocks/types";
+import type { PageDocument, SiteChrome, SiteSettings } from "@/blocks/types";
 import type { Locale } from "@/lib/i18n";
 import { chromeDe, homeDe } from "./home/de";
 import { chromeEn, homeEn } from "./home/en";
 import { chromeEs, homeEs } from "./home/es";
+import { demoSettings } from "./settings";
+
+export { demoSettings };
 
 /** "demo-page-en-home" → "home": pages with the same group are translations of each other. */
 export function translationGroup(page: PageDocument) {
@@ -47,4 +50,8 @@ export function getDemoPage(locale: Locale, slug: string | null): PageDocument |
 
 export function getDemoChrome(locale: Locale): SiteChrome | null {
   return demoChrome[locale] ?? null;
+}
+
+export function getDemoSettings(locale: Locale): SiteSettings {
+  return demoSettings[locale];
 }

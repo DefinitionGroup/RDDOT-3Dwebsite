@@ -1,12 +1,14 @@
 import type { StructureResolver } from "sanity/structure";
 import { LOCALE_TITLES, LOCALES } from "@/lib/i18n";
+import { SITE_SETTINGS_ID } from "./schemaTypes/documents/site-settings";
 
 /** Types this structure places itself; everything else lands in the catch-all below. */
-const PLACED_TYPES = new Set(["page", "navigation", "translation.metadata"]);
+const PLACED_TYPES = new Set(["page", "navigation", "siteSettings", "redirect", "translation.metadata"]);
 
 /**
- * The Studio's left column: pages and navigation per language, then any other
- * document type so nothing silently disappears when the schema grows.
+ * The Studio's left column: pages and navigation per language, the one
+ * settings document, redirects, then any other document type so nothing
+ * silently disappears when the schema grows.
  */
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -63,5 +65,12 @@ export const structure: StructureResolver = (S) =>
               )
             )
         ),
+      S.listItem()
+        .id(SITE_SETTINGS_ID)
+        .title("Website-Einstellungen")
+        .schemaType("siteSettings")
+        .child(S.document().schemaType("siteSettings").documentId(SITE_SETTINGS_ID).title("Website-Einstellungen")),
+      S.divider(),
+      S.documentTypeListItem("redirect").title("Weiterleitungen"),
       ...S.documentTypeListItems().filter((item) => !PLACED_TYPES.has(item.getId() ?? ""))
     ]);

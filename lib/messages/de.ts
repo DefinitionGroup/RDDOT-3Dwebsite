@@ -50,7 +50,6 @@ export const de = {
   meta: {
     siteDescription:
       "Modulare Signature-Küchen: in 3D geplant, in Deutschland gefertigt, als Projekt gespeichert.",
-    shareDescription: "Die Küche, die bleibt. In 3D geplant, in Deutschland gefertigt.",
     configureTitle: "3D Konfigurator | rotpunkt Signature",
     configureDescription: "Konfiguriere die erste rotpunkt Signature Küche als 3D-Prototyp.",
     accountTitle: "Mein Bereich | rotpunkt Signature",

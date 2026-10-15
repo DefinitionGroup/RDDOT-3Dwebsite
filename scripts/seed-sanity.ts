@@ -1,8 +1,8 @@
 /**
  * Writes the demo content (content/demo.ts) into a Sanity dataset.
  *
- *   pnpm sanity:seed                  upload assets, add missing pages, navigation and
- *                                     translation links, verify
+ *   pnpm sanity:seed                  upload assets, add missing pages, navigation,
+ *                                     translation links and site settings, verify
  *   pnpm sanity:seed --replace        also overwrite documents that already exist
  *   pnpm sanity:seed --dry-run        print what would be written, touch nothing
  *
@@ -13,8 +13,9 @@
  *
  * The demo content is in the shape the queries *return*; this inverts it to
  * the stored shape: local files under /public become uploaded assets and
- * references, computed fields are dropped, and pages of one translation group
- * get a translation.metadata document linking them. Ids are deterministic and
+ * references, computed fields are dropped, pages of one translation group
+ * get a translation.metadata document linking them, and the per-locale site
+ * settings fold into one document with a localized value per field. Ids are deterministic and
  * assets deduplicate by content. Documents that already exist are kept, since
  * editors may have changed them; --replace overwrites them deliberately.
  * Afterwards it reads everything back through the site's own queries: what it
@@ -24,10 +25,11 @@ import { createReadStream, existsSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { getCliClient } from "sanity/cli";
-import { demoChrome, demoPages, translationGroup } from "../content/demo";
+import { demoChrome, demoPages, demoSettings, translationGroup } from "../content/demo";
 import { LOCALES } from "../lib/i18n";
 import { apiVersion } from "../sanity/env";
-import { HOME_PAGE_QUERY, NAVIGATION_QUERY, PAGE_QUERY } from "../sanity/lib/queries";
+import { SITE_SETTINGS_ID } from "../sanity/schemaTypes/documents/site-settings";
+import { HOME_PAGE_QUERY, NAVIGATION_QUERY, PAGE_QUERY, SITE_SETTINGS_QUERY } from "../sanity/lib/queries";
 
 const dryRun = process.argv.includes("--dry-run");
 const allowProduction = process.argv.includes("--allow-production");
@@ -173,6 +175,27 @@ function navigationDocuments(): StoredDocument[] {
   });
 }
 
+/** One siteSettings document from the per-locale demo copies: shared fields once, labels per language. */
+function siteSettingsDocument(assetIds: Map<string, string>): StoredDocument {
+  const base = demoSettings.de;
+  const localized = (type: "String" | "Text", field: "seoTitle" | "seoDescription" | "legalLine") =>
+    LOCALES.flatMap((locale) => {
+      const value = demoSettings[locale][field];
+      return value
+        ? [{ _key: locale, _type: `internationalizedArray${type}Value`, language: locale, value }]
+        : [];
+    });
+  return {
+    _id: SITE_SETTINGS_ID,
+    _type: "siteSettings",
+    brandName: base.brandName,
+    seoTitle: localized("String", "seoTitle"),
+    seoDescription: localized("Text", "seoDescription"),
+    legalLine: localized("String", "legalLine"),
+    ...(base.shareImage ? { shareImage: toStored(base.shareImage, assetIds) } : {})
+  };
+}
+
 /* --------------------------------------------------------------- verify */
 
 /** Asset identity differs between demo and Sanity; compare what matters: dimensions and type. */
@@ -216,6 +239,12 @@ async function verify(written: Set<string>) {
       differs(`navigation-${locale}`, `navigation ${locale}`);
     }
   }
+  for (const locale of LOCALES) {
+    const stored = await client.fetch(SITE_SETTINGS_QUERY, { locale }, { perspective: "published" });
+    if (!isDeepStrictEqual(comparable(stored), comparable(JSON.parse(JSON.stringify(demoSettings[locale]))))) {
+      differs(SITE_SETTINGS_ID, `site settings ${locale}`);
+    }
+  }
   if (kept.length) console.log(`note    kept documents differ from the demo content (edited in the Studio?): ${kept.join(", ")}`);
   if (failures.length) throw new Error(`Read-back differs from the demo content: ${failures.join(", ")}`);
   console.log("verify  everything written reads back identical to the demo content");
@@ -235,12 +264,17 @@ async function main() {
 
   const images = new Set<string>();
   const files = new Set<string>();
-  collectAssets([demoPages, Object.values(demoChrome)], images, files);
+  collectAssets([demoPages, Object.values(demoChrome), Object.values(demoSettings)], images, files);
   const assetIds = new Map<string, string>();
   for (const url of images) assetIds.set(url, await upload("image", url));
   for (const url of files) assetIds.set(url, await upload("file", url));
 
-  const documents = [...pageDocuments(assetIds), ...navigationDocuments(), ...translationDocuments()];
+  const documents = [
+    ...pageDocuments(assetIds),
+    ...navigationDocuments(),
+    ...translationDocuments(),
+    siteSettingsDocument(assetIds)
+  ];
   if (dryRun) {
     console.log(JSON.stringify(documents, null, 2));
     return;

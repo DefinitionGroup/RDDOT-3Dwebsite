@@ -18,12 +18,17 @@ function isLocal(source: NonNullable<ImageSource>) {
   return !isSanityConfigured || source.asset?._id.startsWith("demo-");
 }
 
-/** The image's URL with the editor's crop applied, for next/image or a video poster. */
-export function imageUrl(source: ImageSource, options: { width?: number } = {}) {
+/**
+ * The image's URL with the editor's crop applied, for next/image, a video
+ * poster or a share image. With both sides given it is cut to that format
+ * around the editor's focal point.
+ */
+export function imageUrl(source: ImageSource, options: { width?: number; height?: number } = {}) {
   if (!source?.asset) return undefined;
   if (isLocal(source)) return source.asset.url;
   let image = builder.image(source as SanityImageSource);
   if (options.width) image = image.width(options.width);
+  if (options.height) image = image.height(options.height).fit("crop");
   return image.url();
 }
 

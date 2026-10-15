@@ -52,7 +52,7 @@ configuration; **Open** is not built. Details for each line are under Done and M
 | Editorial Preview: draft mode, live updates, click-to-edit markers | Done (Presentation tool not yet tried with a Studio login) |
 | Locale routing: German at `/`, English `/en`, Spanish `/es`; language switch on editorial pages | Done; English and Spanish closed in production (`LAUNCHED_LOCALES`) |
 | English and Spanish homepage and navigation | Done; native review open |
-| SEO metadata, `hreflang`, sitemap, robots, redirects, publish webhook (Phase 7b) | In progress |
+| Site settings, SEO metadata, canonical, `hreflang`, sitemap, robots, redirects, signed publish webhook (Phase 7b) | Done; webhook and Sanity variables not yet on Vercel |
 | Impressum, Datenschutz, `richText` / `faq` / `media` blocks | Open (needs Martin's legal texts) |
 
 **Configurator**
@@ -112,7 +112,7 @@ configuration; **Open** is not built. Details for each line are under Done and M
 
 - **Sanity pagebuilder and locale routing (2026-10-01 to 10-08).** Plan, decisions and the
   evidence for each phase are in the [spec](.scratch/sanity-pagebuilder/spec.md); Phases
-  1–6, 7a and 9a are done, 7b, 8 and 9b are open (see Missing).
+  1–7 and 9a are done, 8 and 9b are open (see Missing).
   - Locale routing: every page lives under `app/(site)/[locale]/`. German has no prefix —
     `proxy.ts` rewrites `/x` to `/de/x` and answers `/de/x` with 308 to `/x`. `/en` and `/es`
     open only once listed in `LAUNCHED_LOCALES` (`lib/i18n.ts`, today `["de"]`); an
@@ -459,10 +459,9 @@ Revisit when Project Archive/Trash/restore lands.
 
 ## Missing
 
-- Sanity, spec Phase 7b: the `siteSettings` singleton, metadata from `seo` with canonical and
-  `hreflang` for existing translations, `sitemap.ts`, `robots.ts`, `redirect` documents
-  enforced in `proxy.ts`, and a signed publish webhook that revalidates the `sanity` cache
-  tag. Until the webhook exists, a deployed site shows published edits only after a rebuild.
+- Sanity on Vercel: the variables and the publish webhook of spec Phase 7b (the list is in
+  the spec). Until the webhook is configured, a deployed site shows published edits only
+  after a rebuild; redirects take up to a minute per server instance.
 - Sanity, spec Phase 8: ADR 0013 (the queries are the adapter, amending ADR 0007),
   `SANITY.md` and `blocks/CONTRACT.md`.
 - Locales, rest of spec Phase 9b: Martin or a native speaker reviews the English and
@@ -521,15 +520,14 @@ in below; their history is in git and in the Done section.
 
 - Dependency security: Next.js to a patched 16.x, `sharp`, `undici`, `vitest`; real version
   ranges instead of `latest`. (Session running.)
-- Spec Phase 7b: `siteSettings`, metadata, `hreflang`, sitemap, robots, redirects, signed
-  publish webhook. (Session running.)
 - Language switch on the functional screens (configure, konto, anfrage). (Proposed.)
 
 ### M1 — A reviewable preview
 
 - Merge M0, run every gate, then deploy a Vercel preview of `cc/devstart-sanity` with the
-  Sanity variables for `development` and the on-screen login code for this branch. Changing
-  Vercel settings needs Martin's go-ahead.
+  Sanity variables for `development`, `SANITY_REVALIDATE_SECRET` and its webhook (spec 7b),
+  and the on-screen login code for this branch. Changing Vercel settings needs Martin's
+  go-ahead.
 - Spec Phase 8: ADR 0013, `SANITY.md`, `blocks/CONTRACT.md`; delete the unused
   `features/configurator/adapters/sanity.ts` stub.
 - Try the Presentation tool with a Studio login.
@@ -564,8 +562,8 @@ for `ecomstorage.rotpunkt.ai`; whether AI photos are part of the launch.
 
 ### M3 — English and Spanish launch
 
-- Native review signed off, `hreflang` live from 7b, then `LAUNCHED_LOCALES` = de, en, es
-  and a smoke test of all three.
+- Native review signed off, then `LAUNCHED_LOCALES` = de, en, es (`hreflang`, sitemap and
+  robots follow it) and a smoke test of all three.
 - Store revision snapshots language-neutral (keys, not labels) if historical versions must
   read fully in the visitor's language.
 

@@ -28,6 +28,11 @@ const pageContentFragment = /* groq */ `content[]{
   _type == "collectionsBlock" => { ..., items[]{ ..., image ${imageFragment} } }
 }`;
 
+/** The page's linked translations that exist in the current perspective. */
+const translationsFragment = /* groq */ `"translations": *[_type == "translation.metadata" && references(^._id)][0]
+    .translations[]{ "language": value->language, "slug": value->slug.current, "isHomepage": value->isHomepage }
+    [defined(language)]`;
+
 const pageProjection = /* groq */ `{
   _id,
   title,
@@ -35,9 +40,7 @@ const pageProjection = /* groq */ `{
   language,
   isHomepage,
   seo{ title, description, image ${imageFragment} },
-  "translations": *[_type == "translation.metadata" && references(^._id)][0]
-    .translations[]{ "language": value->language, "slug": value->slug.current, "isHomepage": value->isHomepage }
-    [defined(language)],
+  ${translationsFragment},
   ${pageContentFragment}
 }`;
 
@@ -58,4 +61,35 @@ export const NAVIGATION_QUERY = defineQuery(
 /** A page by its slug in one locale. Never falls back to another language (ADR 0007). */
 export const PAGE_QUERY = defineQuery(
   `*[_type == "page" && language == $locale && slug.current == $slug && isHomepage != true][0]${pageProjection}`
+);
+
+/**
+ * Site-wide defaults in one locale. A label missing in that locale is null and
+ * the code default applies; another language never stands in (ADR 0007).
+ */
+export const SITE_SETTINGS_QUERY = defineQuery(
+  `*[_type == "siteSettings" && _id == "siteSettings"][0]{
+    brandName,
+    "seoTitle": seoTitle[language == $locale][0].value,
+    "seoDescription": seoDescription[language == $locale][0].value,
+    shareImage ${imageFragment},
+    "legalLine": legalLine[language == $locale][0].value
+  }`
+);
+
+/** Every addressable page in the given locales, for the sitemap. */
+export const SITEMAP_QUERY = defineQuery(
+  `*[_type == "page" && language in $locales && (isHomepage == true || defined(slug.current))]
+    | order(language asc, isHomepage desc, slug.current asc){
+    language,
+    "slug": slug.current,
+    isHomepage,
+    _updatedAt,
+    ${translationsFragment}
+  }`
+);
+
+/** Every published redirect; proxy.ts builds its lookup table from them. */
+export const REDIRECTS_QUERY = defineQuery(
+  `*[_type == "redirect" && defined(from) && defined(to)] | order(_createdAt asc){ from, to, permanent }`
 );

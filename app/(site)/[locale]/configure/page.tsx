@@ -19,7 +19,12 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: PageProps<"/[locale]/configure">): Promise<Metadata> {
   const locale = (await visibleLocale((await params).locale)) ?? DEFAULT_LOCALE;
   const t = getMessages(locale).meta;
-  return { title: t.configureTitle, description: t.configureDescription };
+  // One address however the configuration in the query string differs.
+  return {
+    title: t.configureTitle,
+    description: t.configureDescription,
+    alternates: { canonical: localizePath(locale, "/configure") }
+  };
 }
 
 type ConfigurePageProps = {

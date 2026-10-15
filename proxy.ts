@@ -1,5 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import { DEFAULT_LOCALE, isLocale, isOpenLocale } from "@/lib/i18n";
+import { matchRedirect } from "@/lib/redirects";
+import { redirectTable } from "@/sanity/lib/redirect-table";
 
 // Any path no route serves; it lands in `[...slug]`, which calls notFound().
 const NOT_LAUNCHED_SEGMENT = "_locale-not-launched";
@@ -8,17 +10,21 @@ const NOT_LAUNCHED_SEGMENT = "_locale-not-launched";
 const DRAFT_MODE_COOKIE = "__prerender_bypass";
 
 /**
- * Locale routing. Every page lives under `app/(site)/[locale]`, but German
- * URLs carry no prefix: `/configure` is served from `/de/configure`, and
- * `/de/configure` redirects to `/configure` so each page has one address.
- * Launched English and Spanish pass through with their prefix; a locale that
- * has not launched is a 404.
+ * Editorial redirects first (the `redirect` documents, from a table held in
+ * memory), then locale routing. Every page lives under `app/(site)/[locale]`,
+ * but German URLs carry no prefix: `/configure` is served from
+ * `/de/configure`, and `/de/configure` redirects to `/configure` so each page
+ * has one address. Launched English and Spanish pass through with their
+ * prefix; a locale that has not launched is a 404.
  */
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export async function proxy(request: NextRequest, event: NextFetchEvent) {
+  const { pathname, search } = request.nextUrl;
   const first = pathname.split("/")[1] ?? "";
 
   if (first === "api" || first === "studio") return NextResponse.next();
+
+  const redirect = matchRedirect(await redirectTable((promise) => event.waitUntil(promise)), pathname, search);
+  if (redirect) return NextResponse.redirect(new URL(redirect.location, request.url), redirect.status);
 
   if (first === DEFAULT_LOCALE) {
     const url = request.nextUrl.clone();

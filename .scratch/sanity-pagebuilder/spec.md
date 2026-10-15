@@ -1,6 +1,6 @@
 # Sanity pagebuilder
 
-Status: in progress — Phases 1–6, 7a, 9a and the functional copy of 9b done; 7b, 8 (ADR 0013, SANITY.md, CONTRACT.md) and the rest of 9b (review, switch on functional routes, launch) open; Sanity project `06g3ozu4` created by Martin
+Status: in progress — Phases 1–7, 9a and the functional copy of 9b done; 8 (ADR 0013, SANITY.md, CONTRACT.md) and the rest of 9b (review, switch on functional routes, launch) open; Sanity project `06g3ozu4` created by Martin
 Branch: `cc/devstart-sanity` (from `cc/devstart-003` at `e4fd3e9`)
 Governing decisions: [ADR 0007](../../docs/adr/0007-use-sanity-only-for-scoped-editorial-content.md),
 [issue 11](../production-architecture/issues/11-define-sanity-editorial-contract.md),
@@ -286,6 +286,93 @@ found nowhere in `.next/server` or `.next/static`) renders `/` with status 200, 
 identical to demo mode except Sanity's blur placeholders on two images; all 8 images and
 both film files load from `cdn.sanity.io`; `/studio` reaches "Choose login provider".
 
+*7b done 2026-10-15 — site settings, SEO, sitemap, robots, redirects, publish webhook.*
+- `siteSettings` (`sanity/schemaTypes/documents/site-settings.ts`): one fixed document
+  (`siteSettings`, "Website-Einstellungen" in the structure, no duplicate or delete, not in
+  "new document"). Brand name once; default SEO title, default description and the legal
+  footer line localized per field through `sanity-plugin-internationalized-array`
+  (`internationalizedArrayString` / `…Text`, queried `field[language == $locale][0].value`).
+  Launched languages are required, the others a warning. Share image with hotspot. A missing
+  label is null and the code default applies (`lib/site.ts`, `lib/messages` meta) — never
+  another language. Presentation shows it on every locale's homepage.
+- Metadata (`lib/page-metadata.ts`): the locale layout sets defaults from the settings
+  (functional screens keep their own titles); Editorial Pages set title = SEO title, else the
+  default title on the homepage, else "Title | Brand"; description and share image (cut to
+  1200 × 630 around the hotspot) fall back page → settings → code. Canonical is the page's own
+  public URL; `/configure` gets one too, so `?config=` variants collapse. Metadata reads use
+  `stega: false` (new `ReadOptions` on the loaders). `noindex` in Editorial Preview unchanged.
+- `hreflang` (`lib/seo.ts`, tested): the page and each linked translation that exists **and**
+  whose locale is in `LAUNCHED_LOCALES`, in locale order, `x-default` → the German page; none
+  while fewer than two remain. So today, with German alone, there are no alternates at all.
+- Origin (`lib/site.ts`): `NEXT_PUBLIC_SITE_URL`, else Vercel's
+  `VERCEL_PROJECT_PRODUCTION_URL` (previews name production as canonical), else localhost.
+- `app/sitemap.ts`: published Editorial Pages in launched locales (`SITEMAP_QUERY`, published
+  perspective, no stega, `sanity` tag) plus `/configure` per launched locale, each with its
+  hreflang list and the page's `_updatedAt`. `app/robots.ts`: allow all, disallow `/api/`,
+  `/studio` and per launched locale `/konto`, `/anfrage`, `/share/`; names the sitemap.
+- `redirect` (`from`, `to`, `permanent` = 308, else 307), enforced first in `proxy.ts`. The
+  table (`sanity/lib/redirect-table.ts`) lives in the proxy's memory: one Map lookup per
+  request; refreshed in the background (`waitUntil`) when older than 60 s (5 s in dev); only an
+  instance's first request waits, at most 1.5 s; a failed refresh keeps the last table. So
+  Sanity sees one query per minute per instance and a new redirect needs up to a minute; the
+  webhook does not reach the proxy's memory. `lib/redirects.ts` (tested) matches decoded,
+  case-insensitive, trailing slash ignored, keeps the visitor's query unless the target has
+  one, follows chains to the end (permanent only if every hop is) and drops loops. The Studio
+  refuses sources the proxy could never see or must not take: `/`, a locale root, `/de/…`,
+  file paths (`.html` — the proxy matcher skips them), app segments (`/configure`, `/konto`,
+  `/studio`, …), duplicates; targets must be `/…` or `http(s)://…` and not the source.
+- `POST /api/webhooks/sanity`: `parseBody` from `next-sanity/webhook` verifies the
+  `sanity-webhook-signature` with `SANITY_REVALIDATE_SECRET`, then
+  `revalidateTag("sanity", { expire: 0 })` (Next 16: immediate expiry for webhooks).
+  Unsigned or forged: 401 `{ code: "invalid-delivery" }`; no secret configured: 404. Public
+  visitors still open no connection to Sanity (`SanityLive` only in preview and dev).
+- Seed: `siteSettings` from `content/settings.ts` (per-locale demo copies folded into one
+  document), read back per locale. Schema deployed to `06g3ozu4/development` (22 types incl.
+  `siteSettings`, `redirect`, `internationalizedArrayString`); seed created `siteSettings`,
+  kept the 7 existing documents, verify identical.
+
+*Evidence (2026-10-15):* `pnpm lint` (0 errors; 1 warning in the untouched
+`exit-preview.tsx` from the newer `eslint-config-next`), `tsc --noEmit`, `pnpm test` (125
+tests, 19 new for redirects and hreflang), `sanity schema validate` 0/0 and
+`TRANSACTIONAL_EMAIL_PROVIDER= pnpm build` green. Production build against `development`
+on `next start`:
+- `/`: title "rotpunkt Signature – Küchen, auf den Punkt.", the German default description,
+  canonical = origin, `og:locale` de_DE, `og:image` the Sanity share image at 1200 × 630, legal
+  line "© 2026 rotpunkt Signature" in the footer, no `hreflang` (only German launched),
+  `x-nextjs-cache: HIT`. `/configure` canonical `/configure`. `/en`, `/es`, `/en/configure` 404;
+  `/de/configure` 308 → `/configure`.
+- `/robots.txt` and `/sitemap.xml` static; sitemap lists `/` (lastmod from Sanity) and
+  `/configure`, nothing English or Spanish.
+- Test redirects (two documents, deleted afterwards, 0 redirects and 0 drafts left):
+  `/konfigurator` 308 → `/configure`, with `?utm_source=print` kept; `/Test-Umleitung` 307 →
+  `/#material`, query inserted before the hash; `/KONFIGURATOR/` reaches `/configure` after
+  Next's own trailing-slash hop.
+- Webhook: unsigned 401, wrong secret 401, a signature for another body 401, no secret
+  configured 404. Revalidation end to end: the German default title changed in the dataset →
+  `/` still served the old title from cache (HIT) → signed delivery 200
+  `{"revalidated":["sanity"]}` after ~3 s (`parseBody` waits for consistency) → `/` MISS with
+  the new title, `/configure`'s `og:title` too → title restored, delivered again, restored on
+  the page.
+- Launch simulation (`LAUNCHED_LOCALES` = de, en, es for one local build, reverted): `/`,
+  `/en`, `/es` each carry `hreflang` de → `/`, en → `/en`, es → `/es`, x-default → `/`, their
+  own title, description, canonical and `og:locale` with the other two as alternates; the
+  sitemap lists all three homepages and the three configurators with `xhtml:link` alternates;
+  robots disallows the private paths per locale.
+- Demo mode (no Sanity env): same title, share image from `/public`, legal line, sitemap.
+- Footer checked at 1440 px and 390 px: legal line under the wordmark / under the footer
+  note, no horizontal overflow, no console errors. Neither token in `.next/static` or
+  `.next/server`; the proxy trace pulls in no React or Portable Text.
+
+*For Vercel (not set — Martin decides, `production` waits for the DPA review):*
+`NEXT_PUBLIC_SANITY_PROJECT_ID=06g3ozu4`, `NEXT_PUBLIC_SANITY_DATASET` (`development` for a
+test deployment, `production` after the review), `NEXT_PUBLIC_SANITY_API_VERSION=2026-10-01`,
+`SANITY_API_READ_TOKEN` (a Viewer token for that dataset), `SANITY_REVALIDATE_SECRET` (random,
+identical to the webhook's secret), `NEXT_PUBLIC_SITE_URL` once the domain is decided. In Sanity
+(API → Webhooks): URL `https://<domain>/api/webhooks/sanity`, the same dataset, trigger on
+create/update/delete, filter `_type in ["page", "navigation", "siteSettings", "redirect",
+"translation.metadata"]`, projection `{_id, _type}`, POST, drafts and versions off, the secret
+above. Plus a CORS origin with credentials for the deployed Studio.
+
 **Phase 8 — Docs and handoff.** `blocks/CONTRACT.md`, `SANITY.md` (listed as needed in
 STATUS.md), ADR 0013, update AGENTS.md ("Sanity is not wired yet") and STATUS.md.
 
@@ -378,13 +465,13 @@ production build green.
 
 *9b remaining before launch:* native review of the English and Spanish copy (editorial and
 functional); the language switch on the functional routes (configure, konto, anfrage);
-`hreflang` with 7b; then `LAUNCHED_LOCALES`.
+then `LAUNCHED_LOCALES` (`hreflang`, sitemap and robots follow it on their own, 7b).
 
 ## 6. Later, separately
 
 - `inline` configurator block (§4).
-- `production` dataset and Vercel env, after the DPA review; revalidation webhook with
-  signature check; daily encrypted EU exports with 30-day retention (ADR 0007).
+- `production` dataset and Vercel env, after the DPA review, including the publish webhook
+  of 7b; daily encrypted EU exports with 30-day retention (ADR 0007).
 - Product Definition Drafts in Sanity — needs the Release Candidate / Release Bundle module
   first.
 - Nice-to-haves from the survey: DD's "import blocks from another page" input, 1SP's

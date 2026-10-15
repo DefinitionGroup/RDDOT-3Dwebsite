@@ -12,7 +12,8 @@ type CurrentPage = {
   translations: Translation[] | null;
 };
 
-const pathOf = (locale: Locale, page: { isHomepage: boolean | null; slug: string | null }) =>
+/** A page's public path in its locale: `/` for the homepage, `/en/kitchens` for a slug. */
+export const pagePath = (locale: Locale, page: { isHomepage: boolean | null; slug: string | null }) =>
   localizePath(locale, page.isHomepage || !page.slug ? "/" : `/${page.slug}`);
 
 /**
@@ -25,8 +26,8 @@ export function languageLinks(page: CurrentPage, visible: readonly Locale[]): La
   const locales = LOCALES.filter((locale) => visible.includes(locale));
   if (locales.length < 2) return [];
   return locales.map((locale) => {
-    if (locale === page.locale) return { locale, href: pathOf(locale, page), current: true };
+    if (locale === page.locale) return { locale, href: pagePath(locale, page), current: true };
     const translation = page.translations?.find((entry) => entry.language === locale);
-    return { locale, href: translation ? pathOf(locale, translation) : localizePath(locale, "/"), current: false };
+    return { locale, href: translation ? pagePath(locale, translation) : localizePath(locale, "/"), current: false };
   });
 }

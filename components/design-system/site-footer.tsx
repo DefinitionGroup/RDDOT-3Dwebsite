@@ -5,8 +5,19 @@ import { Label } from "@/components/design-system/label";
 import { localizePath, type Locale } from "@/lib/i18n";
 import { getMessages } from "@/lib/messages";
 
-/** Brand, link columns and one line; the content comes from the locale's navigation document. */
-export function SiteFooter({ chrome, locale }: { chrome: SiteChrome | null; locale: Locale }) {
+/**
+ * Brand, link columns and one line from the locale's navigation document;
+ * below them the legal line from the site settings.
+ */
+export function SiteFooter({
+  chrome,
+  legalLine,
+  locale
+}: {
+  chrome: SiteChrome | null;
+  legalLine: string | null;
+  locale: Locale;
+}) {
   return (
     <footer className="signature-container mt-24 border-t border-hairline pb-12 pt-8 md:mt-32 md:pb-12 md:pt-10">
       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between md:gap-12">
@@ -29,6 +40,7 @@ export function SiteFooter({ chrome, locale }: { chrome: SiteChrome | null; loca
         </div>
         {chrome?.footerNote && <Label>{chrome.footerNote}</Label>}
       </div>
+      {legalLine && <p className="m-0 mt-10 text-[0.75rem] text-graphite md:mt-12">{legalLine}</p>}
     </footer>
   );
 }

@@ -3,7 +3,7 @@ import { SiteFooter } from "@/components/design-system/site-footer";
 import { SiteHeader } from "@/components/design-system/site-header";
 import type { Locale } from "@/lib/i18n";
 import type { LanguageLink } from "@/lib/language-links";
-import { loadSiteChrome } from "@/sanity/lib/loaders";
+import { loadSiteChrome, loadSiteSettings } from "@/sanity/lib/loaders";
 
 /** Header, main and footer of an Editorial Page, with the locale's navigation and language switch. */
 export async function SiteFrame({
@@ -15,12 +15,12 @@ export async function SiteFrame({
   languages: LanguageLink[];
   locale: Locale;
 }) {
-  const chrome = await loadSiteChrome(locale);
+  const [chrome, settings] = await Promise.all([loadSiteChrome(locale), loadSiteSettings(locale)]);
   return (
     <>
       <SiteHeader chrome={chrome} languages={languages} locale={locale} />
       <main>{children}</main>
-      <SiteFooter chrome={chrome} locale={locale} />
+      <SiteFooter chrome={chrome} legalLine={settings?.legalLine ?? null} locale={locale} />
     </>
   );
 }

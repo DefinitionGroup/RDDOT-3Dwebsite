@@ -39,7 +39,6 @@ export const es = {
   },
   meta: {
     siteDescription: "Cocinas Signature modulares: planificadas en 3D, fabricadas en Alemania, guardadas como proyecto.",
-    shareDescription: "La cocina que perdura. Planificada en 3D, fabricada en Alemania.",
     configureTitle: "Configurador 3D | rotpunkt Signature",
     configureDescription: "Configure la primera cocina rotpunkt Signature como prototipo 3D.",
     accountTitle: "Mi cuenta | rotpunkt Signature",

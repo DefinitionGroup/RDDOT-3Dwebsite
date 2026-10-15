@@ -39,7 +39,6 @@ export const en = {
   },
   meta: {
     siteDescription: "Modular Signature kitchens: planned in 3D, made in Germany, saved as a project.",
-    shareDescription: "The kitchen that stays. Planned in 3D, made in Germany.",
     configureTitle: "3D configurator | rotpunkt Signature",
     configureDescription: "Configure the first rotpunkt Signature kitchen as a 3D prototype.",
     accountTitle: "My account | rotpunkt Signature",

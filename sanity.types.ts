@@ -251,6 +251,64 @@ export type LinkField = {
   href: string;
 };
 
+export type Redirect = {
+  _id: string;
+  _type: "redirect";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  from: string;
+  to: string;
+  permanent?: boolean;
+};
+
+export type SiteSettings = {
+  _id: string;
+  _type: "siteSettings";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  brandName: string;
+  legalLine?: InternationalizedArrayString;
+  seoTitle?: InternationalizedArrayString;
+  seoDescription?: InternationalizedArrayText;
+  shareImage?: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    _type: "image";
+  };
+};
+
+export type SanityImageCrop = {
+  _type: "sanity.imageCrop";
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
+
+export type SanityImageHotspot = {
+  _type: "sanity.imageHotspot";
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+};
+
+export type InternationalizedArrayText = Array<
+  {
+    _key: string;
+  } & InternationalizedArrayTextValue
+>;
+
+export type InternationalizedArrayString = Array<
+  {
+    _key: string;
+  } & InternationalizedArrayStringValue
+>;
+
 export type Navigation = {
   _id: string;
   _type: "navigation";
@@ -277,6 +335,18 @@ export type Navigation = {
     _key: string;
   }>;
   footerNote?: string;
+};
+
+export type InternationalizedArrayTextValue = {
+  _type: "internationalizedArrayTextValue";
+  value?: string;
+  language: string;
+};
+
+export type InternationalizedArrayStringValue = {
+  _type: "internationalizedArrayStringValue";
+  value?: string;
+  language: string;
 };
 
 export type TranslationMetadata = {
@@ -345,22 +415,6 @@ export type Page = {
         _key: string;
       } & ClosingBlock)
   >;
-};
-
-export type SanityImageCrop = {
-  _type: "sanity.imageCrop";
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-};
-
-export type SanityImageHotspot = {
-  _type: "sanity.imageHotspot";
-  x: number;
-  y: number;
-  height: number;
-  width: number;
 };
 
 export type Slug = {
@@ -482,14 +536,20 @@ export type AllSanitySchemaTypes =
   | VideoLoop
   | Seo
   | LinkField
+  | Redirect
+  | SiteSettings
+  | SanityImageCrop
+  | SanityImageHotspot
+  | InternationalizedArrayText
+  | InternationalizedArrayString
   | Navigation
+  | InternationalizedArrayTextValue
+  | InternationalizedArrayStringValue
   | TranslationMetadata
   | InternationalizedArrayReference
   | PageReference
   | InternationalizedArrayReferenceValue
   | Page
-  | SanityImageCrop
-  | SanityImageHotspot
   | Slug
   | SanityImagePaletteSwatch
   | SanityImagePalette
@@ -1043,12 +1103,61 @@ export type PAGE_QUERY_RESULT = {
   > | null;
 } | null;
 
+// Source: sanity/lib/queries.ts
+// Variable: SITE_SETTINGS_QUERY
+// Query: *[_type == "siteSettings" && _id == "siteSettings"][0]{    brandName,    "seoTitle": seoTitle[language == $locale][0].value,    "seoDescription": seoDescription[language == $locale][0].value,    shareImage {  ...,  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }},    "legalLine": legalLine[language == $locale][0].value  }
+export type SITE_SETTINGS_QUERY_RESULT = {
+  brandName: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  shareImage: {
+    asset: {
+      _id: string;
+      url: string;
+      lqip: string | null;
+      dimensions: SanityImageDimensions | null;
+    } | null;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    _type: "image";
+  } | null;
+  legalLine: string | null;
+} | null;
+
+// Source: sanity/lib/queries.ts
+// Variable: SITEMAP_QUERY
+// Query: *[_type == "page" && language in $locales && (isHomepage == true || defined(slug.current))]    | order(language asc, isHomepage desc, slug.current asc){    language,    "slug": slug.current,    isHomepage,    _updatedAt,    "translations": *[_type == "translation.metadata" && references(^._id)][0]    .translations[]{ "language": value->language, "slug": value->slug.current, "isHomepage": value->isHomepage }    [defined(language)]  }
+export type SITEMAP_QUERY_RESULT = Array<{
+  language: "de" | "en" | "es";
+  slug: string | null;
+  isHomepage: boolean | null;
+  _updatedAt: string;
+  translations: Array<{
+    language: "de" | "en" | "es";
+    slug: string | null;
+    isHomepage: boolean | null;
+  }> | null;
+}>;
+
+// Source: sanity/lib/queries.ts
+// Variable: REDIRECTS_QUERY
+// Query: *[_type == "redirect" && defined(from) && defined(to)] | order(_createdAt asc){ from, to, permanent }
+export type REDIRECTS_QUERY_RESULT = Array<{
+  from: string;
+  to: string;
+  permanent: boolean | null;
+}>;
+
 // Query TypeMap
 declare global {
   interface SanityQueries {
     '*[_type == "page" && language == $locale && isHomepage == true][0]{\n  _id,\n  title,\n  "slug": slug.current,\n  language,\n  isHomepage,\n  seo{ title, description, image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  "translations": *[_type == "translation.metadata" && references(^._id)][0]\n    .translations[]{ "language": value->language, "slug": value->slug.current, "isHomepage": value->isHomepage }\n    [defined(language)],\n  content[]{\n  ...,\n  _type == "heroFilmBlock" => {\n    ...,\n    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n  },\n  _type == "statementBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "materialsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } },\n  _type == "configuratorBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "roomStoryBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "collectionsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } }\n}\n}': HOME_PAGE_QUERY_RESULT;
     '*[_type == "navigation" && language == $locale][0]{\n    items[]{ _key, label, href, quiet },\n    cta,\n    footerColumns[]{ _key, title, links[]{ _key, label, href } },\n    footerNote\n  }': NAVIGATION_QUERY_RESULT;
     '*[_type == "page" && language == $locale && slug.current == $slug && isHomepage != true][0]{\n  _id,\n  title,\n  "slug": slug.current,\n  language,\n  isHomepage,\n  seo{ title, description, image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  "translations": *[_type == "translation.metadata" && references(^._id)][0]\n    .translations[]{ "language": value->language, "slug": value->slug.current, "isHomepage": value->isHomepage }\n    [defined(language)],\n  content[]{\n  ...,\n  _type == "heroFilmBlock" => {\n    ...,\n    film{ "desktop": desktop.asset->{ _id, url, mimeType }, "mobile": mobile.asset->{ _id, url, mimeType }, poster {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} }\n  },\n  _type == "statementBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "materialsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } },\n  _type == "configuratorBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "roomStoryBlock" => { ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} },\n  _type == "collectionsBlock" => { ..., items[]{ ..., image {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n} } }\n}\n}': PAGE_QUERY_RESULT;
+    '*[_type == "siteSettings" && _id == "siteSettings"][0]{\n    brandName,\n    "seoTitle": seoTitle[language == $locale][0].value,\n    "seoDescription": seoDescription[language == $locale][0].value,\n    shareImage {\n  ...,\n  asset->{ _id, url, "lqip": metadata.lqip, "dimensions": metadata.dimensions }\n},\n    "legalLine": legalLine[language == $locale][0].value\n  }': SITE_SETTINGS_QUERY_RESULT;
+    '*[_type == "page" && language in $locales && (isHomepage == true || defined(slug.current))]\n    | order(language asc, isHomepage desc, slug.current asc){\n    language,\n    "slug": slug.current,\n    isHomepage,\n    _updatedAt,\n    "translations": *[_type == "translation.metadata" && references(^._id)][0]\n    .translations[]{ "language": value->language, "slug": value->slug.current, "isHomepage": value->isHomepage }\n    [defined(language)]\n  }': SITEMAP_QUERY_RESULT;
+    '*[_type == "redirect" && defined(from) && defined(to)] | order(_createdAt asc){ from, to, permanent }': REDIRECTS_QUERY_RESULT;
   }
 }
 // Lets @sanity/client releases that predate the global registry read it too
