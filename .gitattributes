@@ -1,2 +1,4 @@
-*.glb filter=lfs diff=lfs merge=lfs -text
-*.hdr filter=lfs diff=lfs merge=lfs -text
+# Models and HDRIs are plain Git files: a few MB in all, and Vercel's Git
+# builds served them as Git LFS pointers. Binary: no line-ending or text diff.
+*.glb binary
+*.hdr binary

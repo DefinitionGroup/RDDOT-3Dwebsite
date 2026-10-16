@@ -481,6 +481,9 @@ Updated 2026-10-16.
 - Latest preview: https://rddot-3-dwebsite-hlzrjxfmv-definitiongroup.vercel.app (`917f5b3`,
   2026-10-15): sign-in with the on-screen code, `/en` and `/es` from Sanity, the language
   dropdown and the configurator verified. Production still serves the September deployment.
+- GLB and HDR files are plain Git files since 2026-10-16 (about 5.8 MB in all). They were in
+  Git LFS, and Vercel's Git builds served them as 132-byte pointers (Git LFS is off in the
+  project), so production showed the 3D fallback. Older commits keep their LFS pointers.
 - `TEST_DATABASE_URL` is also set on Production, and `DATABASE_URL*` and `OBJECT_STORAGE_*`
   are one value for Preview and Production.
 - Since `f29e28b` (2026-09-04) auth follows the Vercel deployment URL when `BETTER_AUTH_URL`
