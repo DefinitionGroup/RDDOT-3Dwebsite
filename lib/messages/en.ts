@@ -72,6 +72,11 @@ export const en = {
       apartment: "Apartment",
       loft: "Loft"
     },
+    outlooks: {
+      label: "Outlook",
+      street: "Street",
+      skyline: "Skyline"
+    },
     cameras: {
       label: "Camera",
       signature: "Room",

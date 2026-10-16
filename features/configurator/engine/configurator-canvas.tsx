@@ -9,6 +9,7 @@ import type { WebGLPathTracer } from "three-gpu-pathtracer";
 import type {
   CameraView,
   ConfiguratorState,
+  LoftOutlook,
   VisualizationMode
 } from "@/features/configurator/types";
 import type { SceneCaptureRef } from "@/features/configurator/photo/use-scene-capture";
@@ -20,6 +21,8 @@ type ConfiguratorCanvasProps = {
   captureRef?: SceneCaptureRef;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
+  /** What the Loft's glass looks out on. */
+  outlook?: LoftOutlook;
   /** Progressive path-traced rendering in place of the raster pipeline. */
   pathTracing?: boolean;
   state: ConfiguratorState;
@@ -103,6 +106,7 @@ function SceneCanvas({
   captureRef,
   edit,
   onCameraInteraction,
+  outlook = "street",
   pathTracing = false,
   state,
   visualization
@@ -127,6 +131,7 @@ function SceneCanvas({
           cameraView={cameraView}
           edit={edit}
           onCameraInteraction={onCameraInteraction}
+          outlook={outlook}
           pathTracing={pathTracing}
           state={state}
           visualization={visualization}
@@ -141,6 +146,7 @@ type RenderPipelineProps = {
   cameraView: CameraView;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
+  outlook: LoftOutlook;
   pathTracing: boolean;
   state: ConfiguratorState;
   visualization: VisualizationMode;
@@ -150,6 +156,7 @@ function RenderPipeline({
   cameraView,
   edit,
   onCameraInteraction,
+  outlook,
   pathTracing,
   state,
   visualization
@@ -162,6 +169,7 @@ function RenderPipeline({
       <KitchenScene
         cameraView={cameraView}
         edit={edit}
+        outlook={outlook}
         pathTracing={false}
         state={state}
         visualization={visualization}
@@ -174,6 +182,7 @@ function RenderPipeline({
       cameraView={cameraView}
       compact={isCompactViewport}
       onCameraInteraction={onCameraInteraction}
+      outlook={outlook}
       state={state}
       visualization={visualization}
     />
@@ -184,6 +193,7 @@ function PathTracingPipeline({
   cameraView,
   compact,
   onCameraInteraction,
+  outlook,
   state,
   visualization
 }: Omit<RenderPipelineProps, "pathTracing"> & { compact: boolean }) {
@@ -203,6 +213,7 @@ function PathTracingPipeline({
       <KitchenScene
         cameraView={cameraView}
         onCameraInteraction={onCameraInteraction}
+        outlook={outlook}
         pathTracing
         state={state}
         visualization={visualization}

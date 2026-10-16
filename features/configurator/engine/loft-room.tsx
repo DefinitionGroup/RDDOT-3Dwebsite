@@ -19,11 +19,16 @@ import {
   type MaterialTuning
 } from "@/features/configurator/engine/room-kitchen";
 import { useWoodFloorMaps, WOOD_FLOOR_TILE_M } from "@/features/configurator/engine/wood-floor";
-import type { ConfiguratorState, FinishOption } from "@/features/configurator/types";
+import type {
+  ConfiguratorState,
+  FinishOption,
+  LoftOutlook
+} from "@/features/configurator/types";
 
 type LoftRoomProps = {
   cabinetFinish: FinishOption;
   frontFinish: FinishOption;
+  outlook?: LoftOutlook;
   pathTracing?: boolean;
   reflectionProbe?: boolean;
   reflectionResolution?: number;
@@ -37,8 +42,8 @@ type LoftRoomProps = {
  * kitchen stands, the unfinished zone behind the back wall closed off with
  * new walls and ceiling, real materials in place of the export's wire
  * colours, heavy meshes decimated and joined per material, Draco (0.9 MB).
- * The dining table, its chairs and the record sideboard stay. Berlin shows
- * through the glass.
+ * The dining table, its chairs and the record sideboard stay. The glass
+ * looks out on a city street or a skyline.
  *
  * The GLB is authored in the kitchen's source metres, Y-up: the kitchen
  * backs onto the left wall at z = -1.517 with its line centred at x = 0, so
@@ -50,18 +55,22 @@ const LOFT_ROOM_MODEL_PATH = "/models/loft-room.glb";
 const S = KITCHEN_MODEL_SCALE;
 
 /**
- * Poly Haven "Potsdamer Platz" (CC0, Greg Zaal), its tonemapped JPG cut to
- * 4K: the scene background, seen only through the glass. 8K would hold
- * about 170 MB of GPU memory once three turns it into a cube map.
+ * The views out of the glass: Poly Haven panoramas (CC0), their tonemapped
+ * JPGs cut to 4K and shown as the scene background only. 8K would hold
+ * about 170 MB of GPU memory once three turns one into a cube map.
+ *
+ * - street: "Potsdamer Platz", Berlin, overcast, at street level.
+ * - skyline: "Joburg Central Sunset", Johannesburg from a rooftop at dusk.
+ *
+ * `yaw` turns each panorama so its towers stand in the facade's windows.
+ * `intensity` is well above 1: tone mapping pulls the JPGs' whites to grey,
+ * and the light outside should read brighter than the room, as it does. The
+ * window panels take the colour of the light outside.
  */
-const CITY_VIEW_URL = "/hdri/potsdamer-platz.jpg";
-/** Turns the panorama so the towers stand in the facade's windows. */
-const CITY_VIEW_YAW = 4.15;
-/**
- * Well above 1: tone mapping pulls the JPG's whites to grey, and the
- * daylight outside should read brighter than the room, as it does.
- */
-const CITY_VIEW_INTENSITY = 3;
+const OUTLOOKS: Record<LoftOutlook, { url: string; yaw: number; intensity: number; light: string }> = {
+  street: { url: "/hdri/potsdamer-platz.jpg", yaw: 4.15, intensity: 3, light: "#f4f6f8" },
+  skyline: { url: "/hdri/johannesburg-skyline.jpg", yaw: 3.75, intensity: 2.6, light: "#ffe9d8" }
+};
 
 /** The room's inner faces in its GLB metres. */
 const ROOM = {
@@ -143,6 +152,7 @@ const castsShadow = (mesh: Mesh) => mesh.name.startsWith("furniture__");
 export function LoftRoom({
   cabinetFinish,
   frontFinish,
+  outlook = "street",
   pathTracing = false,
   reflectionProbe = true,
   reflectionResolution = 256,
@@ -154,9 +164,9 @@ export function LoftRoom({
 
   return (
     <group>
-      <CityView />
+      <CityView outlook={outlook} />
       <primitive object={roomScene} scale={S} />
-      <FacadeDaylight pathTracing={pathTracing} />
+      <FacadeDaylight color={OUTLOOKS[outlook].light} pathTracing={pathTracing} />
       <WoodFloor pathTracing={pathTracing} />
       {!pathTracing && (
         // Soft accumulated shadows of the kitchen and the furniture, cast by
@@ -187,6 +197,8 @@ export function LoftRoom({
       <RoomKitchen
         cabinetFinish={cabinetFinish}
         frontFinish={frontFinish}
+        // A new view outside is a new picture to mirror.
+        probeKey={outlook}
         reflectionProbe={reflectionProbe}
         reflectionResolution={reflectionResolution}
         state={state}
@@ -200,13 +212,13 @@ export function LoftRoom({
  * sky-coloured hemisphere, and a low sun from the facade side that rakes
  * across the fronts.
  */
-function FacadeDaylight({ pathTracing }: { pathTracing: boolean }) {
+function FacadeDaylight({ color, pathTracing }: { color: string; pathTracing: boolean }) {
   return (
     <>
       <hemisphereLight args={["#eef2f5", "#7a6a58", 0.45]} />
       {WINDOW_LIGHTS.map((light, index) => (
         <rectAreaLight
-          color="#f4f6f8"
+          color={color}
           height={light.height}
           intensity={pathTracing ? 8 : 4}
           key={index}
@@ -235,8 +247,9 @@ function FacadeDaylight({ pathTracing }: { pathTracing: boolean }) {
  * drei reads any .jpg as an HDR gain map, so the panorama loads as a plain
  * texture and is handed over ready-mapped.
  */
-function CityView() {
-  const source = useLoader(TextureLoader, CITY_VIEW_URL);
+function CityView({ outlook }: { outlook: LoftOutlook }) {
+  const view = OUTLOOKS[outlook];
+  const source = useLoader(TextureLoader, view.url);
   const panorama = useMemo(() => {
     const texture = source.clone();
     texture.mapping = EquirectangularReflectionMapping;
@@ -250,8 +263,8 @@ function CityView() {
   return (
     <Environment
       background="only"
-      backgroundIntensity={CITY_VIEW_INTENSITY}
-      backgroundRotation={[0, CITY_VIEW_YAW, 0]}
+      backgroundIntensity={view.intensity}
+      backgroundRotation={[0, view.yaw, 0]}
       map={panorama}
     />
   );
@@ -290,5 +303,5 @@ const MATERIAL_TUNING: MaterialTuning = {
 
 export function preloadLoftRoom() {
   useGLTF.preload(LOFT_ROOM_MODEL_PATH, ROOM_DRACO_PATH);
-  useLoader.preload(TextureLoader, CITY_VIEW_URL);
+  Object.values(OUTLOOKS).forEach((view) => useLoader.preload(TextureLoader, view.url));
 }

@@ -21,12 +21,13 @@ import {
   SMAAPreset,
   ToneMappingMode
 } from "postprocessing";
-import { Suspense, useEffect, useRef, type ElementRef } from "react";
+import { Suspense, useEffect, useRef, type ComponentType, type ElementRef } from "react";
 import { Box3, RectAreaLight, Vector3 } from "three";
 import type {
   CameraView,
   ConfiguratorState,
   FinishOption,
+  LoftOutlook,
   VisualizationMode
 } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
@@ -54,6 +55,7 @@ type KitchenSceneProps = {
   cameraView: CameraView;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
+  outlook: LoftOutlook;
   pathTracing: boolean;
   state: ConfiguratorState;
   visualization: VisualizationMode;
@@ -113,11 +115,22 @@ function boundsBox(bounds: CameraBounds) {
   return new Box3(new Vector3(...bounds.min), new Vector3(...bounds.max));
 }
 
+/** What every room is given; a room reads only what it needs. */
+type RoomProps = {
+  cabinetFinish: FinishOption;
+  frontFinish: FinishOption;
+  outlook: LoftOutlook;
+  pathTracing: boolean;
+  reflectionProbe: boolean;
+  reflectionResolution: number;
+  state: ConfiguratorState;
+};
+
 /** Each room: its component, its framings, and the box the camera stays in. */
 const ROOMS: Record<
   Exclude<VisualizationMode, "studio">,
   {
-    Room: typeof ApartmentRoom;
+    Room: ComponentType<RoomProps>;
     presets: Record<CameraView, CameraPreset>;
     compactPresets: Record<CameraView, CameraPreset>;
     cameraBox: Box3;
@@ -149,6 +162,7 @@ export function KitchenScene({
   cameraView,
   edit,
   onCameraInteraction,
+  outlook,
   pathTracing,
   state,
   visualization
@@ -164,13 +178,15 @@ export function KitchenScene({
   const isCompactViewport = width < 720;
   const room = visualization === "studio" ? null : ROOMS[visualization];
   const isRoom = room !== null;
-  const reflectionResolution = isCompactViewport ? 128 : 256;
+  // Polished room finishes show the probe's texels; it is captured only once.
+  const reflectionResolution = isCompactViewport ? 256 : 512;
   const layoutKey = `${state.wallModules.join(",")}|${state.islandSize}`;
   const accumulationKey = [
     layoutKey,
     state.cabinetColorKey,
     state.frontColorKey,
     visualization,
+    outlook,
     edit ? `edit:${String(edit.selected)}:${edit.drag?.key ?? ""}:${edit.dragTarget ?? ""}` : ""
   ].join("|");
 
@@ -223,6 +239,7 @@ export function KitchenScene({
           <room.Room
             cabinetFinish={cabinetColor}
             frontFinish={frontColor}
+            outlook={outlook}
             pathTracing={pathTracing}
             reflectionProbe={!pathTracing}
             reflectionResolution={reflectionResolution}

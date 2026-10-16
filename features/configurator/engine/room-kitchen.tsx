@@ -1,13 +1,16 @@
 "use client";
 
-import { CubeCamera, useGLTF } from "@react-three/drei";
-import { useEffect, useMemo } from "react";
+import { useCubeCamera, useGLTF } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import {
   Mesh,
   MeshStandardMaterial,
   type BufferGeometry,
+  type Group,
   type Material,
-  type Object3D
+  type Object3D,
+  type Texture
 } from "three";
 import { KitchenModel } from "@/features/configurator/engine/kitchen-model";
 import type { ConfiguratorState, FinishOption } from "@/features/configurator/types";
@@ -16,9 +19,19 @@ export const ROOM_DRACO_PATH = "/draco/gltf/";
 
 const REFLECTION_PROBE_Y = 1.25;
 
+/**
+ * How much brighter the view outside is in the probe than to the eye. The
+ * panoramas are tonemapped JPGs, about as bright as the lit walls, where
+ * real daylight is an order of magnitude brighter; in reflections the
+ * windows should read as the light they are.
+ */
+const PROBE_DAYLIGHT_GAIN = 10;
+
 type RoomKitchenProps = {
   cabinetFinish: FinishOption;
   frontFinish: FinishOption;
+  /** The probe captures once; a new key captures the room again. */
+  probeKey?: string;
   reflectionProbe: boolean;
   reflectionResolution: number;
   state?: ConfiguratorState;
@@ -31,6 +44,7 @@ type RoomKitchenProps = {
 export function RoomKitchen({
   cabinetFinish,
   frontFinish,
+  probeKey,
   reflectionProbe,
   reflectionResolution,
   state
@@ -39,19 +53,55 @@ export function RoomKitchen({
     return <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} state={state} />;
   }
   return (
-    <CubeCamera frames={1} position={[0, REFLECTION_PROBE_Y, 0]} resolution={reflectionResolution}>
+    <ReflectionProbe key={probeKey} resolution={reflectionResolution}>
       {(environmentMap) => (
-        // CubeCamera moves its children with the probe; cancel that lift.
-        <group position={[0, -REFLECTION_PROBE_Y, 0]}>
-          <KitchenModel
-            cabinetFinish={cabinetFinish}
-            environmentMap={environmentMap}
-            frontFinish={frontFinish}
-            state={state}
-          />
-        </group>
+        <KitchenModel
+          cabinetFinish={cabinetFinish}
+          environmentMap={environmentMap}
+          frontFinish={frontFinish}
+          state={state}
+        />
       )}
-    </CubeCamera>
+    </ReflectionProbe>
+  );
+}
+
+/**
+ * drei's CubeCamera, captured once per mount with the view outside raised
+ * by PROBE_DAYLIGHT_GAIN. Its children are hidden while it captures.
+ */
+function ReflectionProbe({
+  children,
+  resolution
+}: {
+  children: (environmentMap: Texture) => ReactNode;
+  resolution: number;
+}) {
+  const { camera, fbo, update } = useCubeCamera({ resolution });
+  const contents = useRef<Group>(null);
+  const captured = useRef(false);
+
+  useFrame(({ scene }) => {
+    if (captured.current || !contents.current) return;
+    // The first frame runs before the scene's matrices are; place the probe.
+    camera.updateWorldMatrix(true, false);
+    const intensity = scene.backgroundIntensity;
+    scene.backgroundIntensity = intensity * PROBE_DAYLIGHT_GAIN;
+    contents.current.visible = false;
+    update();
+    contents.current.visible = true;
+    scene.backgroundIntensity = intensity;
+    captured.current = true;
+  });
+
+  return (
+    <group position={[0, REFLECTION_PROBE_Y, 0]}>
+      <primitive object={camera} />
+      {/* Cancel the probe's lift for the contents. */}
+      <group position={[0, -REFLECTION_PROBE_Y, 0]} ref={contents}>
+        {children(fbo.texture)}
+      </group>
+    </group>
   );
 }
 

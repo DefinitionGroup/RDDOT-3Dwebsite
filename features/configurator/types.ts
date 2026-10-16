@@ -155,3 +155,6 @@ export type ConfiguratorQuote = {
 export type CameraView = "signature" | "front" | "detail";
 
 export type VisualizationMode = "studio" | "apartment" | "loft";
+
+/** What the Loft's glass looks out on. */
+export type LoftOutlook = "street" | "skyline";

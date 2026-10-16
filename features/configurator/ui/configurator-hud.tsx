@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { GlassSegments } from "@/components/design-system/glass";
 import { Label } from "@/components/design-system/label";
-import type { CameraView, VisualizationMode } from "@/features/configurator/types";
+import type { CameraView, LoftOutlook, VisualizationMode } from "@/features/configurator/types";
 import { localizePath } from "@/lib/i18n";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
@@ -18,6 +18,8 @@ const PLANNING_STAGES: PlanningStage[] = ["material", "layout", "review"];
 const CAMERA_VIEWS: CameraView[] = ["signature", "front", "detail"];
 
 const VISUALIZATIONS: VisualizationMode[] = ["studio", "apartment", "loft"];
+
+const LOFT_OUTLOOKS: LoftOutlook[] = ["street", "skyline"];
 
 function AccountIcon() {
   return (
@@ -108,6 +110,30 @@ export function ViewSegments({
       layoutGroup={`view-${size}`}
       onChange={(id) => onSelect(id as VisualizationMode)}
       segments={VISUALIZATIONS.map((id) => ({ id, label: t[id] }))}
+      size={size}
+      tone="solid"
+    />
+  );
+}
+
+/** The Loft's view out of its windows: Berlin's street or a skyline at dusk. */
+export function OutlookSegments({
+  active,
+  onSelect,
+  size
+}: {
+  active: LoftOutlook;
+  onSelect: (outlook: LoftOutlook) => void;
+  size: "card" | "compact";
+}) {
+  const t = useMessages().configurator.outlooks;
+  return (
+    <GlassSegments
+      activeId={active}
+      ariaLabel={t.label}
+      layoutGroup={`outlook-${size}`}
+      onChange={(id) => onSelect(id as LoftOutlook)}
+      segments={LOFT_OUTLOOKS.map((id) => ({ id, label: t[id] }))}
       size={size}
       tone="solid"
     />

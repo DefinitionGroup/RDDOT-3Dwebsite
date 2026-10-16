@@ -94,11 +94,14 @@ a {
     font-weight: var(--font-weight-label);
   }
 
-  /* Exactly one serif word per headline: <em> is that word. */
+  /* Exactly one serif word per headline: <em> is that word. It keeps the
+     face's own spacing: Instrument Serif is narrow already, and the
+     headlines' negative tracking (down to -0.05em) squeezed it. */
   em {
     font-family: var(--font-serif), "Times New Roman", Georgia, serif;
     font-style: italic;
     font-weight: 400;
+    letter-spacing: 0;
   }
 
   a {

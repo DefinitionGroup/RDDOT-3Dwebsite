@@ -130,7 +130,25 @@ configuration; **Open** is not built. Details for each line are under Done and M
   ~170 MB of GPU memory as a cube map), set as the scene background only, turned so the
   towers stand in the facade and raised to intensity 3 so the daylight outshines the room.
   It is a street-level panorama, so the windows show the plaza and the towers' lower
-  floors rather than a skyline. The reflection probe
+  floors. A small Straße · Skyline switch under the view control (phones: under it, a row
+  down) swaps in "Joburg Central Sunset" (CC0, Dimitrios Savva and Greg Zaal; 4K JPG,
+  `public/hdri/johannesburg-skyline.jpg`) with warmer window light.
+- **Kitchen reflections in the rooms (2026-10-16).** The probe was capturing the room, but a
+  0.4 clearcoat lent the fronts under 2 % reflectance, and the panoramas are about as bright
+  as the walls, so nothing showed. In the rooms (the probe's presence decides) the surfaces
+  now mirror the room as their kind allows (`ROOM_FINISHES` in `kitchen-model.tsx`): satin
+  fronts and the quartz worktop polished like lacquer (full coat over a near-smooth base,
+  IOR 2.2), veneers under a clear varnish that keeps their grain, matt finishes (Graphit,
+  Fenix) only a soft blurred sheen so they still read as matt. The probe
+  (`ReflectionProbe` in `room-kitchen.tsx`, replacing drei's CubeCamera, 512 px on desktop,
+  256 on phones) captures the view outside ten times brighter, as daylight is against a
+  room, and again when the outlook changes. Measured against the first Loft build, in
+  Detail the worktop and island sides brighten by a p95 of 24 to 36 of 255 levels where
+  they face the glass; the tall Porzellan fronts carry the windows as soft streaks. The
+  studio keeps its tuned look. Two headless captures came out black and did not reproduce
+  in three reruns of the same sequence (no context loss); watch for it on real devices.
+- **Italic serif spacing (2026-10-16).** `em` sets `letter-spacing: 0`: Instrument Serif
+  is narrow already and inherited the headlines' tracking (down to -0.05em on the hero). The reflection probe
   and the room-scene preparation are shared with the Appartement in `room-kitchen.tsx`;
   `kitchen-scene.tsx` keeps one table of rooms (component, presets, camera box).
   Verified in the browser pane against the production build: desktop 1440 px (all three

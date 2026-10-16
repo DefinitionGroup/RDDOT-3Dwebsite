@@ -206,16 +206,16 @@ export function KitchenModel({
       countertop: new MeshPhysicalMaterial({
         bumpMap: microSurfaceTexture,
         bumpScale: 0.0012,
-        clearcoat: 0.22,
-        clearcoatRoughness: 0.28,
         color: "#ffffff",
         envMap: environmentMap ?? null,
         envMapIntensity: 1.0,
         map: texturesByUrl.get(SURFACE_TEXTURES.quartz) ?? null,
         metalness: 0,
-        roughness: 1,
         roughnessMap: texturesByUrl.get(SURFACE_TEXTURES.quartzRoughness) ?? null,
-        specularIntensity: 0.7
+        // Polished quartz in a room.
+        ...(environmentMap
+          ? ROOM_FINISHES.satin
+          : { clearcoat: 0.22, clearcoatRoughness: 0.28, roughness: 1, specularIntensity: 0.7 })
       }),
       plinth: new MeshPhysicalMaterial({
         color: "#24221f",
@@ -350,6 +350,29 @@ export function KitchenModel({
   );
 }
 
+/**
+ * Inside a room the kitchen gets a probe of the room itself. The studio's
+ * soft coats blur that to nothing against white walls (a coat of 0.4 lent
+ * well under 2 % reflectance), so in a room the surfaces mirror it as their
+ * kind allows: satin fronts and the quartz worktop polished like lacquer,
+ * a full coat over a near-smooth, dense base; veneers under a clear varnish
+ * that keeps their grain; matt finishes only a soft, blurred sheen, so they
+ * still read as matt. The studio keeps its tuned look.
+ */
+type RoomFinish = {
+  clearcoat: number;
+  clearcoatRoughness: number;
+  ior?: number;
+  roughness?: number;
+  specularIntensity: number;
+};
+
+const ROOM_FINISHES: Record<FinishOption["material"], RoomFinish> = {
+  satin: { clearcoat: 1, clearcoatRoughness: 0.03, ior: 2.2, roughness: 0.06, specularIntensity: 1 },
+  structured: { clearcoat: 0.8, clearcoatRoughness: 0.12, specularIntensity: 1 },
+  matte: { clearcoat: 0.6, clearcoatRoughness: 0.3, specularIntensity: 1 }
+};
+
 function createFinishMaterial(
   finish: FinishOption,
   texturesByUrl: Map<string, Texture>,
@@ -365,6 +388,7 @@ function createFinishMaterial(
     ? texturesByUrl.get(finish.roughnessMapUrl) ?? null
     : null;
   const profile = getFinishProfile(finish, surface, Boolean(map));
+  const roomFinish = environmentMap ? ROOM_FINISHES[finish.material] : null;
 
   const color = map
     ? new Color("#ffffff")
@@ -373,20 +397,20 @@ function createFinishMaterial(
   return new MeshPhysicalMaterial({
     bumpMap: normalMap ? null : microSurfaceTexture,
     bumpScale: normalMap ? 0 : profile.bumpScale,
-    clearcoat: profile.clearcoat,
-    clearcoatRoughness: profile.clearcoatRoughness,
+    clearcoat: roomFinish?.clearcoat ?? profile.clearcoat,
+    clearcoatRoughness: roomFinish?.clearcoatRoughness ?? profile.clearcoatRoughness,
     color,
     envMap: environmentMap ?? null,
     envMapIntensity: profile.envMapIntensity,
-    ior: 1.46,
+    ior: roomFinish?.ior ?? 1.46,
     map,
     normalMap,
     normalScale: new Vector2(profile.normalScale, profile.normalScale),
     // With a roughness map the texel value carries the finish; without it the
     // scalar does.
-    roughness: roughnessMap ? 0.68 : profile.roughness,
+    roughness: roomFinish?.roughness ?? (roughnessMap ? 0.68 : profile.roughness),
     roughnessMap,
-    specularIntensity: profile.specularIntensity
+    specularIntensity: roomFinish?.specularIntensity ?? profile.specularIntensity
   });
 }
 

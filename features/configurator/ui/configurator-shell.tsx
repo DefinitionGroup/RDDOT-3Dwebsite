@@ -35,6 +35,7 @@ import type {
   CameraView,
   ConfiguratorState,
   LocaleCode,
+  LoftOutlook,
   VisualizationMode,
   WallModuleKey
 } from "@/features/configurator/types";
@@ -43,6 +44,7 @@ import {
   HudAccountLink,
   HudBrand,
   HudPrice,
+  OutlookSegments,
   SaveState,
   SceneActions,
   StageSegments,
@@ -172,6 +174,7 @@ export function ConfiguratorShell({
   const [isPanelOpen, setPanelOpen] = useState(true);
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [visualization, setVisualization] = useState<VisualizationMode>("studio");
+  const [outlook, setOutlook] = useState<LoftOutlook>("street");
   const [openSection, setOpenSection] = useState<DatasheetSection | null>("material");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -860,6 +863,7 @@ export function ConfiguratorShell({
           cameraView={cameraView}
           captureRef={captureRef}
           edit={canvasEdit}
+          outlook={outlook}
           state={effectiveConfig}
           visualization={visualization}
         />
@@ -887,10 +891,18 @@ export function ConfiguratorShell({
         </div>
       </div>
 
-      {/* HUD · view (desktop) */}
+      {/* HUD · view (desktop), the Loft's outlook small beneath it, flush with "Loft" */}
       {isDesktop && (
-        <div className="pointer-events-auto absolute left-10 top-24 z-20">
-          <ViewSegments active={visualization} onSelect={setVisualization} size="hud" />
+        <div className="pointer-events-none absolute left-10 top-24 z-20 flex flex-col items-end gap-2">
+          <div className="pointer-events-auto">
+            <ViewSegments active={visualization} onSelect={setVisualization} size="hud" />
+          </div>
+          <OutlookControl
+            active={outlook}
+            onSelect={setOutlook}
+            size="card"
+            visible={visualization === "loft"}
+          />
         </div>
       )}
 
@@ -898,6 +910,18 @@ export function ConfiguratorShell({
       {!sharedView && !isDesktop && (
         <div className="pointer-events-auto absolute left-5 top-[76px] z-20">
           <StageSegments active={stage} onSelect={selectStage} size="compact" />
+        </div>
+      )}
+
+      {/* HUD · the Loft's outlook (phones): under the view control, a row below the decisions */}
+      {!isDesktop && (
+        <div className="pointer-events-none absolute right-5 top-[132px] z-20">
+          <OutlookControl
+            active={outlook}
+            onSelect={setOutlook}
+            size="compact"
+            visible={visualization === "loft"}
+          />
         </div>
       )}
 
@@ -1067,6 +1091,35 @@ export function ConfiguratorShell({
         {isPending ? t.sceneUpdating : ""}
       </p>
     </main>
+  );
+}
+
+/** The outlook switch rises in under the view control while the Loft is shown. */
+function OutlookControl({
+  active,
+  onSelect,
+  size,
+  visible
+}: {
+  active: LoftOutlook;
+  onSelect: (outlook: LoftOutlook) => void;
+  size: "card" | "compact";
+  visible: boolean;
+}) {
+  return (
+    <AnimatePresence initial={false}>
+      {visible && (
+        <motion.div
+          animate={{ opacity: 1, y: 0 }}
+          className="pointer-events-auto"
+          exit={{ opacity: 0, y: -6 }}
+          initial={{ opacity: 0, y: -6 }}
+          transition={{ duration: DURATION.accordion, ease: SIGNATURE_EASE }}
+        >
+          <OutlookSegments active={active} onSelect={onSelect} size={size} />
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
