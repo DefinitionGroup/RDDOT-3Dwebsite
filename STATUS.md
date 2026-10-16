@@ -63,7 +63,7 @@ configuration; **Open** is not built. Details for each line are under Done and M
 | Islands: none, standard, large | Done |
 | Finishes: three carcass colours, four fronts; full-size material overlay | Done |
 | Itemised indicative price (sum of parts), live with every change | Done (prototype prices in code, ADR 0006) |
-| Views: Studio, Appartement, path-traced Rendering; cameras Room, Front, Detail; supersampled studio light | Done; the Appartement room is a placeholder with no recorded licence (Release Blocker) |
+| Views: Studio, Appartement, Loft; cameras Room, Front, Detail; supersampled studio light | Done; both rooms are placeholders with no recorded licence (Release Blocker). The path-traced Rendering has no button since the Loft took its place |
 | Shareable guest URL (`?c=`), older URLs upgrade | Done |
 | Asset Manifest with release-gate test; poster fallback when 3D fails | Done |
 | Phone layout: bottom sheet, compact HUD | Done |
@@ -110,6 +110,33 @@ configuration; **Open** is not built. Details for each line are under Done and M
 
 ## Done
 
+- **Loft view in place of Rendering (2026-10-16).** The Ansicht control reads Studio ·
+  Appartement · Loft on desktop and phones; the Rendering segment and the shell's path-tracing
+  trigger are gone, the path tracer itself stays in `configurator-canvas.tsx` (an optional
+  `pathTracing` prop) for a later entry point. The Loft is the 3ds Max OBJ
+  "57-estancia_comedor" (160 MB, centimetres, wire colours only), prepared by
+  `scripts/prepare-loft-room.py` as `public/models/loft-room.glb` (0.9 MB Draco, 168k
+  triangles): the living half where the kitchen stands (sofa, carpet, coffee table,
+  armchair, wall shelves) is dropped, the unfinished zone behind the back wall closed off
+  with new walls and ceiling, every object given a real material by name, heavy meshes
+  decimated and joined per material. The dining table, six chairs and the record sideboard
+  stay. The GLB is authored in the kitchen's source metres, so `loft-room.tsx` only scales
+  it by `KITCHEN_MODEL_SCALE`: the kitchen backs onto the left wall (5.3 m, the longest line
+  fits) with a full-height glass facade of six windows at its side. Lit like the
+  Appartement: one RectAreaLight per pair of windows square to the leaning facade, sun and
+  hemisphere from the glass; the furniture casts into the AccumulativeShadows, the shell
+  does not. Through the glass lies Berlin: Poly Haven's "Potsdamer Platz" (CC0, Greg Zaal),
+  its tonemapped JPG cut to 4K (`public/hdri/potsdamer-platz.jpg`, 1 MB; 8K would hold
+  ~170 MB of GPU memory as a cube map), set as the scene background only, turned so the
+  towers stand in the facade and raised to intensity 3 so the daylight outshines the room.
+  It is a street-level panorama, so the windows show the plaza and the towers' lower
+  floors rather than a skyline. The reflection probe
+  and the room-scene preparation are shared with the Appartement in `room-kitchen.tsx`;
+  `kitchen-scene.tsx` keeps one table of rooms (component, presets, camera box).
+  Verified in the browser pane against the production build: desktop 1440 px (all three
+  cameras, a front change re-renders the scene, no console errors) and a 390 px phone (the
+  three-way control fits, no horizontal overflow; the portrait framing is as tight as the
+  Appartement's).
 - **Appartement exchanged for the defgrp room (2026-10-16).** The baked living room
   (`appartement2.glb`, BlendSwap #86344) and its component are gone. The Appartement is now
   the empty room with three tall mullioned windows from the defgrp-3d-configurator prototype
@@ -480,6 +507,7 @@ Revisit when Project Archive/Trash/restore lands.
   bucket itself is left as found — review what it currently serves and whether that
   exposure is intended.
 - The "Appartement" environment is a development placeholder: since 2026-10-16 it is `public/models/apartment-room.glb`, prepared from `newroom.glb` in the defgrp-3d-configurator prototype. That file is a Sketchfab export (its root node is `Sketchfab_model`) whose author and licence are recorded nowhere; only its floor photo is identifiable (Pexels, and dropped anyway). Establish the licence or replace the room with an owned or licensed one before any production release. Recorded here so the Production Release Gate cannot miss it.
+- The "Loft" environment is a development placeholder too: `public/models/loft-room.glb` is prepared from "57-estancia_comedor_obj.zip" (a 3ds Max 2019 OBJ export, no author or licence inside). Establish its source and licence, or replace it, before any production release.
 
 ## Known Warnings
 
@@ -582,8 +610,8 @@ Engineering:
 - Transactional email provider adapter once chosen (ADR 0010), then the outbox consumer
   that tells rotpunkt about each Quote Request.
 - `richText` block, Impressum and Datenschutz pages, legal column in the footer.
-- Licence or replace the Appartement room (see Release Blockers) and give it a manifest;
-  until then it cannot ship.
+- Licence or replace the Appartement and Loft rooms (see Release Blockers) and give them
+  manifests; until then they cannot ship.
 - Data protection: schedule the object deletion sweep or sign a retention policy so account
   deletion reaches storage; the retention sweep for abandoned and finished captures.
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the

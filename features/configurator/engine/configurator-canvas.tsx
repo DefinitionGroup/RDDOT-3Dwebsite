@@ -20,7 +20,8 @@ type ConfiguratorCanvasProps = {
   captureRef?: SceneCaptureRef;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
-  pathTracing: boolean;
+  /** Progressive path-traced rendering in place of the raster pipeline. */
+  pathTracing?: boolean;
   state: ConfiguratorState;
   visualization: VisualizationMode;
 };
@@ -102,7 +103,7 @@ function SceneCanvas({
   captureRef,
   edit,
   onCameraInteraction,
-  pathTracing,
+  pathTracing = false,
   state,
   visualization
 }: ConfiguratorCanvasProps) {

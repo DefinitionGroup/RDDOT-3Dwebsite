@@ -70,7 +70,7 @@ export const es = {
       label: "Vista",
       studio: "Estudio",
       apartment: "Apartamento",
-      render: "Render"
+      loft: "Loft"
     },
     cameras: {
       label: "Cámara",

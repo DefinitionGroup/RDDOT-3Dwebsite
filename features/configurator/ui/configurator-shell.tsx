@@ -8,6 +8,7 @@ import { Emphasized } from "@/components/design-system/emphasized";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import { preloadApartmentRoom } from "@/features/configurator/engine/apartment-room";
+import { preloadLoftRoom } from "@/features/configurator/engine/loft-room";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import type {
   EditTarget,
@@ -175,8 +176,6 @@ export function ConfiguratorShell({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const [isPhotoOpen, setPhotoOpen] = useState(false);
-  const [pathTracing, setPathTracing] = useState(false);
-  const [renderRequested, setRenderRequested] = useState(false);
   const [photoPresetKey, setPhotoPresetKey] = useState(PHOTO_PRESETS[0].key);
   const [photoStatus, setPhotoStatus] = useState<PhotoStatus>({ phase: "idle" });
   const [editSession, setEditSession] = useState<{
@@ -231,7 +230,6 @@ export function ConfiguratorShell({
     locale,
     project ? `/anfrage?project=${project.id}` : `/anfrage?${CONFIG_QUERY_PARAM}=${encodedConfig}`
   );
-  const renderActive = pathTracing || renderRequested;
   const savedVersion = autosaveStatus?.phase === "saved" ? autosaveStatus.savedVersion : null;
 
   useEffect(() => {
@@ -243,10 +241,13 @@ export function ConfiguratorShell({
   }, [encodedConfig, locale, project, sharedView]);
 
   useEffect(() => {
-    const apartmentTimer = window.setTimeout(preloadApartmentRoom, 1200);
+    const roomsTimer = window.setTimeout(() => {
+      preloadApartmentRoom();
+      preloadLoftRoom();
+    }, 1200);
 
     return () => {
-      window.clearTimeout(apartmentTimer);
+      window.clearTimeout(roomsTimer);
     };
   }, []);
 
@@ -284,27 +285,8 @@ export function ConfiguratorShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  useEffect(() => {
-    if (!renderRequested) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setPathTracing(true);
-      setRenderRequested(false);
-    }, 80);
-
-    return () => window.clearTimeout(timeout);
-  }, [renderRequested]);
-
-  function stopRender() {
-    setRenderRequested(false);
-    setPathTracing(false);
-  }
-
   function enterEditSession() {
     if (sharedView || editSession) return;
-    stopRender();
     setPhotoOpen(false);
     setVisualization("studio");
     setCameraView("front");
@@ -412,20 +394,9 @@ export function ConfiguratorShell({
 
   function updateConfig(next: Partial<ConfiguratorState>) {
     if (sharedView) return;
-    stopRender();
     startTransition(() => {
       setConfig((current) => normalizeConfiguratorState({ ...current, ...next }));
     });
-  }
-
-  function selectCameraView(view: CameraView) {
-    stopRender();
-    setCameraView(view);
-  }
-
-  function selectVisualization(mode: VisualizationMode) {
-    stopRender();
-    setVisualization(mode);
   }
 
   function selectStage(stage: PlanningStage) {
@@ -471,25 +442,13 @@ export function ConfiguratorShell({
   function restoreProjectDraft(configurationCode: string) {
     const restored = decodeConfiguration(configurationCode);
     if (!restored) return false;
-    stopRender();
     setConfig(restored);
     return true;
   }
 
   function openPhoto() {
-    stopRender();
     setPhotoStatus({ phase: "idle" });
     setPhotoOpen(true);
-  }
-
-  function togglePathTracing() {
-    setPhotoOpen(false);
-    if (renderActive) {
-      stopRender();
-      return;
-    }
-
-    setRenderRequested(true);
   }
 
   /**
@@ -712,7 +671,7 @@ export function ConfiguratorShell({
   }
 
   const canvasEdit: KitchenEditProps | undefined =
-    editSession && visualization === "studio" && !pathTracing
+    editSession && visualization === "studio"
       ? {
           selected: editSession.selected,
           canAddStart: canAddModule(editSession.draft.wallModules),
@@ -901,8 +860,6 @@ export function ConfiguratorShell({
           cameraView={cameraView}
           captureRef={captureRef}
           edit={canvasEdit}
-          onCameraInteraction={stopRender}
-          pathTracing={pathTracing}
           state={effectiveConfig}
           visualization={visualization}
         />
@@ -923,14 +880,7 @@ export function ConfiguratorShell({
             <HudPrice>{priceText}</HudPrice>
           ) : (
             <div className="pointer-events-auto">
-              <ViewSegments
-                active={visualization}
-                onRender={togglePathTracing}
-                onSelect={selectVisualization}
-                renderActive={renderActive}
-                size="compact"
-                withRender={false}
-              />
+              <ViewSegments active={visualization} onSelect={setVisualization} size="compact" />
             </div>
           )}
           {!sharedView && isDesktop && <HudAccountLink />}
@@ -940,14 +890,7 @@ export function ConfiguratorShell({
       {/* HUD · view (desktop) */}
       {isDesktop && (
         <div className="pointer-events-auto absolute left-10 top-24 z-20">
-          <ViewSegments
-            active={visualization}
-            onRender={togglePathTracing}
-            onSelect={selectVisualization}
-            renderActive={renderActive}
-            size="hud"
-            withRender
-          />
+          <ViewSegments active={visualization} onSelect={setVisualization} size="hud" />
         </div>
       )}
 
@@ -995,7 +938,7 @@ export function ConfiguratorShell({
               key="nav"
               transition={{ duration: DURATION.accordion, ease: SIGNATURE_EASE }}
             >
-              <CameraSegments active={cameraView} onSelect={selectCameraView} size="hud" />
+              <CameraSegments active={cameraView} onSelect={setCameraView} size="hud" />
               {!sharedView && (
                 <SceneActions compact={false} onEdit={enterEditSession} onPhoto={openPhoto} />
               )}
@@ -1010,7 +953,7 @@ export function ConfiguratorShell({
       {!isDesktop && !editSession && !sheetExpanded && (
         <div className="pointer-events-none absolute inset-x-5 bottom-[calc(45svh+0.75rem)] z-20 flex items-center justify-between gap-2">
           <div className="pointer-events-auto">
-            <CameraSegments active={cameraView} onSelect={selectCameraView} size="compact" />
+            <CameraSegments active={cameraView} onSelect={setCameraView} size="compact" />
           </div>
           {!sharedView && (
             <SceneActions compact onEdit={enterEditSession} onPhoto={openPhoto} />

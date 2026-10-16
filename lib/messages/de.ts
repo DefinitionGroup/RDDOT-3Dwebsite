@@ -81,7 +81,7 @@ export const de = {
       label: "Ansicht",
       studio: "Studio",
       apartment: "Appartement",
-      render: "Rendering"
+      loft: "Loft"
     },
     cameras: {
       label: "Kamera",

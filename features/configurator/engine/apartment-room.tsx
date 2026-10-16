@@ -1,19 +1,15 @@
 "use client";
 
-import { AccumulativeShadows, CubeCamera, RandomizedLight, useGLTF } from "@react-three/drei";
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { AccumulativeShadows, RandomizedLight, useGLTF } from "@react-three/drei";
+import { useLayoutEffect, useRef } from "react";
+import type { RectAreaLight } from "three";
+import { KITCHEN_MODEL_SCALE } from "@/features/configurator/engine/kitchen-model";
 import {
-  Mesh,
-  MeshStandardMaterial,
-  type BufferGeometry,
-  type Material,
-  type Object3D,
-  type RectAreaLight
-} from "three";
-import {
-  KITCHEN_MODEL_SCALE,
-  KitchenModel
-} from "@/features/configurator/engine/kitchen-model";
+  ROOM_DRACO_PATH,
+  RoomKitchen,
+  useRoomScene,
+  type MaterialTuning
+} from "@/features/configurator/engine/room-kitchen";
 import { useWoodFloorMaps, WOOD_FLOOR_TILE_M } from "@/features/configurator/engine/wood-floor";
 import type { ConfiguratorState, FinishOption } from "@/features/configurator/types";
 
@@ -121,8 +117,6 @@ const WINDOW_LIGHTS = SOURCE_WINDOWS.map((opening) => {
   };
 });
 
-const REFLECTION_PROBE_Y = 1.25;
-
 export function ApartmentRoom({
   cabinetFinish,
   frontFinish,
@@ -131,20 +125,14 @@ export function ApartmentRoom({
   reflectionResolution = 256,
   state
 }: ApartmentRoomProps) {
-  const gltf = useGLTF(APARTMENT_ROOM_MODEL_PATH, "/draco/gltf/");
-  const room = useMemo(() => prepareRoom(gltf.scene), [gltf.scene]);
-
-  useEffect(() => {
-    return () => {
-      room.ownedMaterials.forEach((material) => material.dispose());
-      room.ownedGeometries.forEach((geometry) => geometry.dispose());
-    };
-  }, [room]);
+  // The shell, the curtain and the radiators would shade the whole floor
+  // from the randomized lights above; only the kitchen casts.
+  const roomScene = useRoomScene(APARTMENT_ROOM_MODEL_PATH, MATERIAL_TUNING);
 
   return (
     <group>
       <primitive
-        object={room.scene}
+        object={roomScene}
         position={ROOM_POSITION}
         rotation={ROOM_ROTATION}
         scale={S}
@@ -179,27 +167,13 @@ export function ApartmentRoom({
           />
         </AccumulativeShadows>
       )}
-      {reflectionProbe ? (
-        <CubeCamera
-          frames={1}
-          position={[0, REFLECTION_PROBE_Y, 0]}
-          resolution={reflectionResolution}
-        >
-          {(environmentMap) => (
-            // CubeCamera moves its children with the probe; cancel that lift.
-            <group position={[0, -REFLECTION_PROBE_Y, 0]}>
-              <KitchenModel
-                cabinetFinish={cabinetFinish}
-                environmentMap={environmentMap}
-                frontFinish={frontFinish}
-                state={state}
-              />
-            </group>
-          )}
-        </CubeCamera>
-      ) : (
-        <KitchenModel cabinetFinish={cabinetFinish} frontFinish={frontFinish} state={state} />
-      )}
+      <RoomKitchen
+        cabinetFinish={cabinetFinish}
+        frontFinish={frontFinish}
+        reflectionProbe={reflectionProbe}
+        reflectionResolution={reflectionResolution}
+        state={state}
+      />
     </group>
   );
 }
@@ -280,8 +254,7 @@ function WoodFloor({ pathTracing }: { pathTracing: boolean }) {
   );
 }
 
-/** Per-material adjustments, keyed by the source material names. */
-const MATERIAL_TUNING: Record<string, (material: MeshStandardMaterial) => void> = {
+const MATERIAL_TUNING: MaterialTuning = {
   // Matt wall paint, not satin.
   walls: (material) => {
     material.roughness = 0.92;
@@ -300,41 +273,6 @@ const MATERIAL_TUNING: Record<string, (material: MeshStandardMaterial) => void> 
   }
 };
 
-function prepareRoom(sourceScene: Object3D) {
-  const scene = sourceScene.clone(true);
-  const ownedMaterials: Material[] = [];
-  const ownedGeometries: BufferGeometry[] = [];
-  const materialCopies = new Map<Material, Material>();
-
-  scene.traverse((object) => {
-    if (!(object instanceof Mesh)) {
-      return;
-    }
-    // Own copies, so tuning never leaks into the useGLTF cache and the path
-    // tracer can merge attributes without touching the cached geometry.
-    object.geometry = object.geometry.clone();
-    ownedGeometries.push(object.geometry);
-
-    const source = object.material as Material;
-    let material = materialCopies.get(source);
-    if (!material) {
-      material = source.clone();
-      if (material instanceof MeshStandardMaterial) {
-        MATERIAL_TUNING[source.name]?.(material);
-      }
-      materialCopies.set(source, material);
-      ownedMaterials.push(material);
-    }
-    object.material = material;
-    // The shell, the curtain and the radiators would shade the whole floor
-    // from the randomized lights above; only the kitchen casts.
-    object.castShadow = false;
-    object.receiveShadow = true;
-  });
-
-  return { scene, ownedMaterials, ownedGeometries };
-}
-
 export function preloadApartmentRoom() {
-  useGLTF.preload(APARTMENT_ROOM_MODEL_PATH, "/draco/gltf/");
+  useGLTF.preload(APARTMENT_ROOM_MODEL_PATH, ROOM_DRACO_PATH);
 }

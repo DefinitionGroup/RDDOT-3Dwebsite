@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, Pencil, ScanLine } from "lucide-react";
+import { Camera, Pencil } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/design-system/brand-logo";
@@ -17,7 +17,7 @@ const PLANNING_STAGES: PlanningStage[] = ["material", "layout", "review"];
 
 const CAMERA_VIEWS: CameraView[] = ["signature", "front", "detail"];
 
-type ViewId = VisualizationMode | "render";
+const VISUALIZATIONS: VisualizationMode[] = ["studio", "apartment", "loft"];
 
 function AccountIcon() {
   return (
@@ -93,44 +93,21 @@ export function StageSegments({
 
 export function ViewSegments({
   active,
-  onRender,
   onSelect,
-  renderActive,
-  size,
-  withRender
+  size
 }: {
   active: VisualizationMode;
-  onRender: () => void;
   onSelect: (mode: VisualizationMode) => void;
-  renderActive: boolean;
   size: "hud" | "compact";
-  withRender: boolean;
 }) {
   const t = useMessages().configurator.views;
-  const segments: { id: ViewId; label: string; icon?: ReactNode }[] = [
-    { id: "studio", label: t.studio },
-    { id: "apartment", label: t.apartment }
-  ];
-  if (withRender) {
-    segments.push({
-      id: "render",
-      label: t.render,
-      icon: <ScanLine aria-hidden="true" size={12} strokeWidth={1.5} />
-    });
-  }
   return (
     <GlassSegments
-      activeId={renderActive ? "render" : active}
+      activeId={active}
       ariaLabel={t.label}
       layoutGroup={`view-${size}`}
-      onChange={(id) => {
-        if (id === "render") {
-          onRender();
-          return;
-        }
-        onSelect(id as VisualizationMode);
-      }}
-      segments={segments}
+      onChange={(id) => onSelect(id as VisualizationMode)}
+      segments={VISUALIZATIONS.map((id) => ({ id, label: t[id] }))}
       size={size}
       tone="solid"
     />
