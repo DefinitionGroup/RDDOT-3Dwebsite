@@ -119,6 +119,20 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The journey to a Quote Request, browser-tested (2026-10-22).** Scripted in headless
+  Chrome on the GPU against the dev server with throwaway accounts (`qa-journey-…@example.com`;
+  four Quote Requests now sit in the shared development database, which nobody is notified
+  about). At 1440 px: a guest's non-default kitchen saved through sign-in; the Project's
+  "Konfiguration anfragen" opened `/anfrage?project=…` with those finishes and the Richtpreis
+  in the summary; the request was confirmed with a reference and listed in `/konto`. The
+  session cleared while the form was filled in: submitting said "Ihre Sitzung ist
+  abgelaufen." with a sign-in link, the sign-in returned to the same request, and a second
+  request went through with its own reference; both are listed in the account. A saved
+  Project opened without a session asked for sign-in and reopened with its finishes. At
+  500 px the guest save, the request and the account listing passed again without
+  overflow. Nothing in the flow broke; what it found is under Known Defects (the typed
+  request lost after re-sign-in, no email prefill, a submit before hydration), Known
+  Warnings (one hydration mismatch) and Roadmap M2 (the sign-in code limit per address).
 - **Only the launched site may be indexed (2026-10-22).** The Vercel test environment
   answered every crawler with an open `robots.txt`, a sitemap and no `noindex`. Now
   `lib/search-indexing.ts` decides once per deployment: indexing needs a production build
@@ -146,9 +160,10 @@ built. Details for each line are under Done, Known Defects and Missing.
   import error, and the Project opened with those finishes (11.127 €); the same script
   against the old code timed out on bare `/konto` with no Project. At 500 px the bottom-sheet
   save reached the sign-in with the intent intact and the back link restored the guest's
-  kitchen, no overflow (sign-in itself not run there: `BETTER_AUTH_URL` pins the dev origin
-  to port 3000, which another project held). After the import the account page still lists
-  the Project rather than opening it in the configurator; that is unchanged.
+  kitchen, no overflow (the sign-in at 500 px followed in the journey test below; the dev
+  server accepts any loopback origin, so its port does not matter). After the import the
+  account page still lists the Project rather than opening it in the configurator; that is
+  unchanged.
 - **Loft view in place of Rendering (2026-10-16).** The Ansicht control reads Studio ·
   Appartement · Loft on desktop and phones; the Rendering segment and the shell's path-tracing
   trigger are gone, the path tracer itself stays in `configurator-canvas.tsx` (an optional
@@ -591,6 +606,17 @@ configuration at sign-in, is fixed (Done, 2026-10-22).
   Entscheidungen", "drei Entscheidungen" and "in vier Klicks" explain the same flow three
   ways.
 
+Found by the journey test of 2026-10-22:
+
+- **A request typed before the session expired is lost.** After "Ihre Sitzung ist
+  abgelaufen." and the sign-in, `/anfrage` opens with an empty form: name, phone, note and
+  consent have to be entered again (`quote-request-form.tsx` keeps them only in state).
+- **The request form does not offer the account's email.** A signed-in person types the
+  address they just signed in with.
+- **A sign-in submitted before the page's script has loaded posts natively** to `/konto?`
+  and drops a pending save (`account-access.tsx` forms have no action). Rare on a fast
+  connection; seen in the test when it typed faster than the dev server compiled.
+
 ## Deferred Decisions
 
 **Automatic object deletion is deliberately not scheduled** (decided 2026-09-01).
@@ -639,6 +665,9 @@ Revisit when Project Archive/Trash/restore lands.
   (`Connection terminated due to connection timeout`) on 2026-10-22; the retry a minute
   later worked. A customer sees "Das hat noch nicht funktioniert". Worth a longer connect
   timeout or one retry before production.
+- One React hydration-mismatch error ("attributes of the server rendered HTML didn't match")
+  appeared once during the 500 px journey on the dev server; loading each page of that
+  journey directly, signed in and out, showed none.
 - `pnpm audit --prod` (2026-10-22): 1 critical and 1 high in `dompurify` ≤ 3.4.16, 1 high and
   4 moderate and 1 low in `vite` 8.3.0–8.3.2, 1 high in `braces`, moderate `uuid` and
   `sprintf-js`, 1 more low in `dompurify`. Every path runs through `sanity > @sanity/cli`
@@ -722,9 +751,9 @@ in below; their history is in git and in the Done section.
 
 The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 
-- The guest "Als Projekt speichern" handoff through sign-in is fixed (2026-10-22). Still to
-  run in the browser: saved Project → Quote Request after it, and an expired session in the
-  middle; then make the path the Playwright smoke test (M2).
+- The journey from a guest kitchen through sign-in to a Quote Request, with sessions
+  expiring on the way, is fixed and browser-tested (2026-10-22, see Done); its script is the
+  starting point for the Playwright smoke test (M2).
 - Noindex on every deployment but the launched site is live (2026-10-22, `1aee72f`), and the
   test environment runs it. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
   `false` (or accept the budget breaker as the bound).
@@ -760,6 +789,10 @@ Engineering:
   request consent, marketing copy that matches the offer.
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
+- The sign-in code limit counts per client address: 3 code requests per 10 minutes
+  (`create-auth.ts`). Everyone behind one address shares them — a showroom's tablets, an
+  office, a mobile network's shared address — so the fourth person there is told "Zu viele
+  Versuche". Key the limit on the email as well, or raise it, before launch.
 - Production Vercel environment: it runs as a test environment until then (see
   Deployment). Remove `TEST_DATABASE_URL`, the capture flag, `OPEN_ALL_LOCALES` and the
   `development` dataset settings; set the production domain and the function region
