@@ -15,6 +15,7 @@ export const API_ERROR_CODES = [
   "invalid-save-request",
   "invalid-project-name",
   "invalid-name",
+  "invalid-profile",
   "invalid-revision",
   "invalid-link",
   "invalid-job",

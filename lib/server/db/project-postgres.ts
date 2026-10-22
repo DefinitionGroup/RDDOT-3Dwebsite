@@ -130,18 +130,36 @@ export function createPostgresProjectModule(
       let query = database
         .withSchema("app")
         .selectFrom("project")
-        .select(["id", "name", "lifecycle", "updatedAt"])
-        .where("ownerId", "=", ownerId)
-        .where("lifecycle", "!=", "trashed");
+        .innerJoin(
+          "workingConfiguration",
+          "workingConfiguration.projectId",
+          "project.id"
+        )
+        .select([
+          "project.id",
+          "project.name",
+          "project.lifecycle",
+          "project.updatedAt",
+          "workingConfiguration.normalizedConfiguration",
+          "workingConfiguration.productDefinitionVersion"
+        ])
+        .where("project.ownerId", "=", ownerId)
+        .where("project.lifecycle", "!=", "trashed");
 
       if (!input.includeArchived) {
-        query = query.where("lifecycle", "=", "active");
+        query = query.where("project.lifecycle", "=", "active");
       }
 
-      const rows = await query.orderBy("updatedAt", "desc").execute();
+      const rows = await query.orderBy("project.updatedAt", "desc").execute();
       return rows.map((row) => ({
-        ...row,
-        updatedAt: new Date(row.updatedAt)
+        id: row.id,
+        name: row.name,
+        lifecycle: row.lifecycle,
+        updatedAt: new Date(row.updatedAt),
+        workingConfiguration: {
+          configuration: parseConfiguration(row.normalizedConfiguration),
+          productDefinitionVersion: row.productDefinitionVersion
+        }
       }));
     },
 

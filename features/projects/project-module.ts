@@ -30,6 +30,11 @@ export type ProjectSummary = {
   name: string;
   lifecycle: "active" | "archived" | "trashed";
   updatedAt: Date;
+  /** What the account's project card shows: finishes, layout and Richtpreis. */
+  workingConfiguration: {
+    configuration: AnyConfiguratorState;
+    productDefinitionVersion: string;
+  };
 };
 
 export type ConfigurationRevisionSummary = {

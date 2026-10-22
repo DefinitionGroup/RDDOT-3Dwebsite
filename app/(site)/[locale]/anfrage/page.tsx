@@ -23,6 +23,7 @@ import {
 } from "@/features/quote-requests/ui/configuration-summary";
 import { QuoteRequestForm } from "@/features/quote-requests/ui/quote-request-form";
 import { customerSessions } from "@/lib/server/auth/customer-session";
+import { customerProfiles } from "@/lib/server/customer-accounts/profiles";
 import { projects } from "@/lib/server/projects/projects";
 import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n";
 import { screenLanguageLinks } from "@/lib/language-links";
@@ -86,10 +87,10 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
   } else if (!projectId) {
     content = <SaveFirst guestCode={guestCode} locale={locale} />;
   } else {
-    const workspace = await projects.getWorkspace({
-      ownerId: session.customerAccountId,
-      projectId
-    });
+    const [workspace, profile] = await Promise.all([
+      projects.getWorkspace({ ownerId: session.customerAccountId, projectId }),
+      customerProfiles.getProfile({ ownerId: session.customerAccountId })
+    ]);
     if (!workspace || workspace.lifecycle !== "active") {
       content = <Unavailable locale={locale} />;
     } else {
@@ -98,6 +99,7 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16">
           <QuoteRequestForm
             expectedVersion={workspace.workingConfiguration.version}
+            initialContact={{ name: profile.name, email: session.email, phone: profile.phone }}
             projectId={workspace.id}
             projectName={workspace.name}
           />

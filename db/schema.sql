@@ -1,6 +1,6 @@
 \restrict dbmate
 
--- Dumped from database version 18.6 (c5250a2)
+-- Dumped from database version 18.6 (fd34222)
 -- Dumped by pg_dump version 18.6
 
 SET statement_timeout = 0;
@@ -110,6 +110,23 @@ CREATE TABLE app.customer_account (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT customer_account_status_check CHECK ((status = ANY (ARRAY['active'::text, 'pending-deletion'::text])))
+);
+
+
+--
+-- Name: customer_profile; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.customer_profile (
+    customer_account_id uuid NOT NULL,
+    name text DEFAULT ''::text NOT NULL,
+    phone text DEFAULT ''::text NOT NULL,
+    postal_code text DEFAULT ''::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT customer_profile_name_check CHECK ((char_length(name) <= 120)),
+    CONSTRAINT customer_profile_phone_check CHECK (((phone = ''::text) OR ((char_length(phone) >= 3) AND (char_length(phone) <= 40)))),
+    CONSTRAINT customer_profile_postal_code_check CHECK (((postal_code = ''::text) OR (postal_code ~ '^[A-Z0-9][A-Z0-9 -]{1,8}[A-Z0-9]$'::text)))
 );
 
 
@@ -559,6 +576,14 @@ ALTER TABLE ONLY app.configuration_revision
 
 ALTER TABLE ONLY app.customer_account
     ADD CONSTRAINT customer_account_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: customer_profile customer_profile_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.customer_profile
+    ADD CONSTRAINT customer_profile_pkey PRIMARY KEY (customer_account_id);
 
 
 --
@@ -1040,6 +1065,14 @@ ALTER TABLE ONLY app.configuration_revision
 
 
 --
+-- Name: customer_profile customer_profile_customer_account_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.customer_profile
+    ADD CONSTRAINT customer_profile_customer_account_id_fkey FOREIGN KEY (customer_account_id) REFERENCES app.customer_account(id) ON DELETE CASCADE;
+
+
+--
 -- Name: generated_photo generated_photo_photo_job_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -1171,4 +1204,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260902200000'),
     ('20260902230000'),
     ('20260903100000'),
-    ('20260904120000');
+    ('20260904120000'),
+    ('20261023090000');

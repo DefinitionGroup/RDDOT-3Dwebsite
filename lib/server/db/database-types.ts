@@ -17,6 +17,15 @@ export type CustomerAccountTable = {
   updatedAt: Timestamp;
 };
 
+export type CustomerProfileTable = {
+  customerAccountId: string;
+  name: string;
+  phone: string;
+  postalCode: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
+
 export type AuthIdentityTable = {
   id: string;
   customerAccountId: string;
@@ -219,6 +228,7 @@ export type DevelopmentEmailCaptureTable = {
 
 export type Database = {
   customerAccount: CustomerAccountTable;
+  customerProfile: CustomerProfileTable;
   authIdentity: AuthIdentityTable;
   project: ProjectTable;
   workingConfiguration: WorkingConfigurationTable;

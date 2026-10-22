@@ -29,7 +29,8 @@ export function createBetterAuthCustomerSessionResolver(input: {
       return {
         customerAccountId,
         sessionId: session.session.id,
-        expiresAt: new Date(session.session.expiresAt)
+        expiresAt: new Date(session.session.expiresAt),
+        email: session.user.email
       };
     }
   };

@@ -29,10 +29,13 @@ type Outcome =
  */
 export function QuoteRequestForm({
   expectedVersion,
+  initialContact,
   projectId,
   projectName
 }: {
   expectedVersion: number;
+  /** What the account already knows: the profile's name and phone, the sign-in email. */
+  initialContact?: { name: string; email: string; phone: string };
   projectId: string;
   projectName: string;
 }) {
@@ -47,9 +50,9 @@ export function QuoteRequestForm({
   const prefersReducedMotion = useReducedMotion();
   const idempotencyKey = useRef<string | null>(null);
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState(initialContact?.name ?? "");
+  const [email, setEmail] = useState(initialContact?.email ?? "");
+  const [phone, setPhone] = useState(initialContact?.phone ?? "");
   const [note, setNote] = useState("");
   const [consent, setConsent] = useState(false);
   const [isPending, setIsPending] = useState(false);

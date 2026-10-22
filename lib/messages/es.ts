@@ -445,7 +445,22 @@ export const es = {
     configure: "Configurar una cocina",
     lastChanged: (date: string) => `Última modificación: ${date}`,
     open: "Abrir",
-    sessionUntil: (dateTime: string) => `Sesión protegida hasta el ${dateTime} h.`
+    sessionUntil: (dateTime: string) => `Sesión protegida hasta el ${dateTime} h.`,
+    signedInAs: (email: string) => `Sesión iniciada como ${email}`,
+    sectionsLabel: "Secciones",
+    newProject: "Nuevo proyecto",
+    finishes: (cabinet: string, front: string) => `Cuerpo ${cabinet} · Frente ${front}`,
+    profile: "Perfil",
+    profileBody: "Lo que indique aquí lo incluimos en sus solicitudes. Todos los datos son opcionales.",
+    name: "Nombre",
+    phone: "Teléfono",
+    postalCode: "Código postal",
+    postalCodeHint: "para su región de planificación",
+    optional: "opcional",
+    saveProfile: "Guardar perfil",
+    savingProfile: "Guardando …",
+    profileSaved: "Guardado.",
+    profileFailed: "No se ha podido guardar el perfil. Inténtelo de nuevo."
   },
   apiErrors: {
     "session-expired": "Su sesión ha caducado. Vuelva a iniciar sesión.",
@@ -458,6 +473,8 @@ export const es = {
     "invalid-save-request": "La solicitud de guardado no es válida.",
     "invalid-project-name": "El nombre de un proyecto tiene entre 1 y 120 caracteres.",
     "invalid-name": "El nombre nuevo no es válido.",
+    "invalid-profile":
+      "Revise sus datos: un teléfono de 3 a 40 caracteres y un código postal de 3 a 10 letras o cifras.",
     "invalid-revision": "La versión no es válida.",
     "invalid-link": "El enlace no es válido.",
     "invalid-job": "El encargo no es válido.",

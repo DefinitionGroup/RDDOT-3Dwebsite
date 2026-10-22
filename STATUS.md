@@ -28,7 +28,7 @@ card (it shows the evening photo for now).
 
 Gates at reconciliation (2026-10-22): `pnpm lint` 0 errors and 1 warning
 (`components/page-builder/exit-preview.tsx`, `window.location.assign` to an internal page),
-`tsc --noEmit` clean, `pnpm test` 138/138 in 25 files (covers `features` and `lib`),
+`tsc --noEmit` clean, `pnpm test` 144/144 in 27 files (covers `features` and `lib`),
 production build green with the `postbuild` server-bundle check passing. `pnpm test:db` was
 not rerun (its harness can migrate the remote test database); its last result is 64 passed
 and 1 skipped (2026-10-15). `pnpm audit --prod` reports one high advisory with no fixed
@@ -85,7 +85,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Save a configuration as a Project, also by a signed-out guest through sign-in; autosave with conflict handling; browser recovery drafts | Done (the guest handoff fixed 2026-10-22) |
 | Versions: save, history, restore behind a safety version; rename | Done |
 | Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
-| Account area: projects, requests, visualisations | Done |
+| Account area on the whole screen: project cards with finishes and Richtpreis, requests, visualisations, profile (name, phone, postcode) that fills the request form | Done (A1, A2, 2026-10-23) |
 | Archive, trash and restore of Projects | Open |
 
 **AI photos**
@@ -111,7 +111,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Feature | State |
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
-| Gates: lint, types, 138 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
+| Gates: lint, types, 144 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
 | Vercel project | Production builds `redesign/devstart` from Git, at `dd3560f` since 2026-10-23, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
@@ -119,6 +119,31 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Account page and profile (account management A1 and A2, 2026-10-23).** Signed in,
+  `/konto` no longer keeps the sign-in layout: `AppHeader` across the full width, a title
+  row with the person's initials (`profileInitials`, no avatar upload) and name or email,
+  a section column on desktop (a scrolling row on phones) for Projekte, Anfragen,
+  Visualisierungen and Profil, and the sections beside it. Projects are cards in a grid: a
+  material picture of the kitchen (four fronts in the front finish, joints and plinth in
+  the carcass finish), layout, finishes, Richtpreis and last change
+  (`features/customer-accounts/account-projects.ts`; `listProjects` now returns each
+  working configuration). "Neues Projekt" is the page's one red action. Signed out, the
+  sign-in keeps its photo. The profile (name, phone, postcode, each optional) lives in the
+  new `app.customer_profile` (migration `20261023090000`, applied to the shared Neon
+  database; deleted with the account), behind `CustomerProfileModule` and `PUT
+  /api/account/profile` (`invalid-profile` in all three languages). The signed-in session
+  now carries the sign-in email; the request form starts with the profile's name and
+  phone and that email. Requests do not carry the postcode yet: the planning team sees it
+  once the notification consumer exists. Checked: 6 new unit tests, the profile contract
+  against the database (4) and the project persistence suite, lint, types, build; in
+  headless Chrome on the dev server, signed in as a test account, at 1440 px, 390 px and in
+  English: no photo signed in, cards with the material picture, a refused postcode
+  explained, the profile saved and reloaded, initials and title following the name, the
+  request form prefilled, nothing past the right edge on the phone (the first phone run
+  clipped the column; a grid without `minmax(0,1fr)` let the scrolling section row widen
+  it, and the scroll-width test missed it because `body` hides horizontal overflow), no
+  console errors. The project card does not show a Generated Photo yet: presigned photo
+  URLs expire and would need the gallery's refresh.
 - **Language switch on the configurator, account and request screens (2026-10-23).** The
   editorial pages' dropdown (`LanguageSwitch`) now sits in `AppHeader` (account, request)
   and in the configurator: in the desktop top bar between price and account, on a solid
@@ -505,7 +530,7 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean
-pnpm test                                  # 138/138
+pnpm test                                  # 144/144
 pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 ```
@@ -651,11 +676,10 @@ configuration at sign-in, is fixed (Done, 2026-10-22).
 
 Found by the journey test of 2026-10-22:
 
-- **A request typed before the session expired is lost.** After "Ihre Sitzung ist
-  abgelaufen." and the sign-in, `/anfrage` opens with an empty form: name, phone, note and
-  consent have to be entered again (`quote-request-form.tsx` keeps them only in state).
-- **The request form does not offer the account's email.** A signed-in person types the
-  address they just signed in with.
+- **A request typed before the session expired loses its note and consent.** After "Ihre
+  Sitzung ist abgelaufen." and the sign-in, `/anfrage` opens a fresh form. Since A2
+  (2026-10-23) name, email and phone come back from the profile; the note and the consent
+  box have to be entered again (`quote-request-form.tsx` keeps them only in state).
 - **A sign-in submitted before the page's script has loaded posts natively** to `/konto?`
   and drops a pending save (`account-access.tsx` forms have no action). Rare on a fast
   connection; seen in the test when it typed faster than the dev server compiled.
@@ -848,10 +872,10 @@ Engineering:
   deployment, encryption at rest and credential rotation recorded.
 - Accessibility audit and performance budgets for the 3D scene and the homepage film.
 - Account management, Slice A (accepted 2026-10-23,
-  [spec](.scratch/account-management/spec.md)): A1 the account page on the whole screen,
-  A2 profile basics (name, phone, postcode; initials, no avatar upload) prefilled into
-  requests, A3 archive/trash/restore/duplicate for Projects, A4 "download my data" and
-  "delete my account", which also settles how deletion reaches stored photos.
+  [spec](.scratch/account-management/spec.md)): A1 the account page on the whole screen
+  and A2 profile basics are done (see Done); open are A3 archive/trash/restore/duplicate for
+  Projects and A4 "download my data" and "delete my account", which also settles how
+  deletion reaches stored photos.
 
 *Martin:* Impressum and Datenschutz texts; the email provider choice; owned or licensed
 Appartement and Loft scenes; the DPA and transfer reviews (Sanity, Replicate, and Vercel

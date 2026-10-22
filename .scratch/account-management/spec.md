@@ -1,6 +1,6 @@
 # Account management
 
-Status: accepted 2026-10-23 — Slice A in M2, Slice B after launch; A1 and A2 in progress
+Status: accepted 2026-10-23 — Slice A in M2, Slice B after launch; A1 and A2 done, A3 and A4 open
 Created: 2026-10-23
 
 Turn `/konto` from a sign-in screen with lists beside a photo into the customer's own
@@ -51,12 +51,15 @@ Projekt).
 
 ## Slice A — needed before real customers (Roadmap M2)
 
-**A1 Account page layout.** The signed-in workspace as described above, desktop and phone.
+**A1 Account page layout.** Done 2026-10-23 (see STATUS); the card shows the material
+picture, not yet a Generated Photo, because presigned photo URLs expire and would need the
+gallery's refresh. The signed-in workspace as described above, desktop and phone.
 No new data: projects show finishes and Richtpreis from their working configuration (the
 account list loads only names and dates today, so the list query grows); the picture is
 the latest Generated Photo when there is one, otherwise the finish swatches.
 
-**A2 Profile basics.** Name, phone and postcode (each optional), stored application-side in a new
+**A2 Profile basics.** Done 2026-10-23 (see STATUS); requests do not carry the postcode
+yet. Name, phone and postcode (each optional), stored application-side in a new
 `app.customer_profile` (ADR 0001: the Customer Account, not the auth provider, owns it).
 Shown on the account; offered on the request form, which also takes the sign-in email
 (the open board item "Offer the account's email on the request form" becomes part of this).

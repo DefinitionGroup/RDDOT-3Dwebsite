@@ -444,7 +444,22 @@ export const en = {
     configure: "Configure a kitchen",
     lastChanged: (date: string) => `Last changed on ${date}`,
     open: "Open",
-    sessionUntil: (dateTime: string) => `Session protected until ${dateTime}.`
+    sessionUntil: (dateTime: string) => `Session protected until ${dateTime}.`,
+    signedInAs: (email: string) => `Signed in as ${email}`,
+    sectionsLabel: "Sections",
+    newProject: "New project",
+    finishes: (cabinet: string, front: string) => `Carcass ${cabinet} · Front ${front}`,
+    profile: "Profile",
+    profileBody: "What you enter here is filled into your requests. Everything is optional.",
+    name: "Name",
+    phone: "Phone",
+    postalCode: "Postcode",
+    postalCodeHint: "for your planning region",
+    optional: "optional",
+    saveProfile: "Save profile",
+    savingProfile: "Saving …",
+    profileSaved: "Saved.",
+    profileFailed: "The profile could not be saved. Please try again."
   },
   apiErrors: {
     "session-expired": "Your session has expired. Please sign in again.",
@@ -457,6 +472,8 @@ export const en = {
     "invalid-save-request": "The save request is invalid.",
     "invalid-project-name": "A project name has 1 to 120 characters.",
     "invalid-name": "The new name is invalid.",
+    "invalid-profile":
+      "Please check your details: a phone number of 3 to 40 characters, a postcode of 3 to 10 letters or digits.",
     "invalid-revision": "The version is invalid.",
     "invalid-link": "The link is invalid.",
     "invalid-job": "The job is invalid.",

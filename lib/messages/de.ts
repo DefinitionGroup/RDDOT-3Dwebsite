@@ -464,7 +464,22 @@ export const de = {
     configure: "Küche konfigurieren",
     lastChanged: (date: string) => `Zuletzt geändert am ${date}`,
     open: "Öffnen",
-    sessionUntil: (dateTime: string) => `Sitzung geschützt bis ${dateTime} Uhr.`
+    sessionUntil: (dateTime: string) => `Sitzung geschützt bis ${dateTime} Uhr.`,
+    signedInAs: (email: string) => `Angemeldet als ${email}`,
+    sectionsLabel: "Bereiche",
+    newProject: "Neues Projekt",
+    finishes: (cabinet: string, front: string) => `Korpus ${cabinet} · Front ${front}`,
+    profile: "Profil",
+    profileBody: "Was Sie hier eintragen, setzen wir in Ihre Anfragen ein. Alle Angaben sind freiwillig.",
+    name: "Name",
+    phone: "Telefon",
+    postalCode: "Postleitzahl",
+    postalCodeHint: "für Ihre Planungsregion",
+    optional: "optional",
+    saveProfile: "Profil speichern",
+    savingProfile: "Wird gespeichert …",
+    profileSaved: "Gespeichert.",
+    profileFailed: "Das Profil konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
   },
   apiErrors: {
     "session-expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -477,6 +492,8 @@ export const de = {
     "invalid-save-request": "Die Speicheranfrage ist ungültig.",
     "invalid-project-name": "Ein Projektname hat 1 bis 120 Zeichen.",
     "invalid-name": "Der neue Name ist ungültig.",
+    "invalid-profile":
+      "Bitte prüfen Sie Ihre Angaben: Telefon mit 3 bis 40 Zeichen, Postleitzahl mit 3 bis 10 Buchstaben oder Ziffern.",
     "invalid-revision": "Die Version ist ungültig.",
     "invalid-link": "Der Link ist ungültig.",
     "invalid-job": "Der Auftrag ist ungültig.",

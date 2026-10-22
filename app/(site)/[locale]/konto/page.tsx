@@ -4,12 +4,14 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/design-system/app-header";
 import { BrandLogo } from "@/components/design-system/brand-logo";
+import { describeAccountProject } from "@/features/customer-accounts/account-projects";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
 import { readSaveIntent, saveIntentPath } from "@/features/customer-accounts/save-intent";
 import { AccountWorkspace } from "@/features/customer-accounts/ui/account-workspace";
 import { CONFIG_QUERY_PARAM } from "@/features/configurator/state-codec";
 import { isDevelopmentEmailCaptureActive } from "@/features/transactional-email/adapters/development-capture";
 import { customerSessions } from "@/lib/server/auth/customer-session";
+import { customerProfiles } from "@/lib/server/customer-accounts/profiles";
 import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
 import { projects } from "@/lib/server/projects/projects";
@@ -60,17 +62,50 @@ export default async function AccountPage({ params: routeParams, searchParams }:
     return localizePath(target, `/konto?next=${encodeURIComponent(localizePath(target, unlocalizePath(returnTo)))}`);
   });
   const session = await customerSessions.resolve(await headers());
-  const [accountProjects, gallery, requests] = session
-    ? await Promise.all([
-        projects.listProjects({ ownerId: session.customerAccountId }),
-        loadInitialGallery({ ownerId: session.customerAccountId }),
-        quoteRequests.listForAccount({ ownerId: session.customerAccountId, limit: 10 })
-      ])
-    : [
-        [],
-        { photos: [], totalCount: 0, nextCursor: null },
-        { items: [], totalCount: 0, nextCursor: null }
-      ];
+  const header = (className?: string) => (
+    <AppHeader
+      action={{
+        // Backing out of a pending save returns to that configuration, not the default kitchen.
+        href: localizePath(
+          locale,
+          saveIntent
+            ? `/configure?${CONFIG_QUERY_PARAM}=${encodeURIComponent(saveIntent.configurationCode)}`
+            : "/configure"
+        ),
+        label: messages.appHeader.toConfigurator
+      }}
+      className={className}
+      languages={languages}
+      locale={locale}
+      showAccount={false}
+    />
+  );
+
+  // Signed in, the account is a workspace: the whole width, no picture beside it.
+  if (session) {
+    const [accountProjects, gallery, requests, profile] = await Promise.all([
+      projects.listProjects({ ownerId: session.customerAccountId }),
+      loadInitialGallery({ ownerId: session.customerAccountId }),
+      quoteRequests.listForAccount({ ownerId: session.customerAccountId, limit: 10 }),
+      customerProfiles.getProfile({ ownerId: session.customerAccountId })
+    ]);
+    return (
+      <main className="min-h-svh bg-canvas px-5 py-6 text-ink sm:px-10 lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
+        {header("mx-auto max-w-6xl")}
+        <div className="mx-auto mt-12 max-w-6xl pb-16 lg:mt-16">
+          <AccountWorkspace
+            email={session.email}
+            expiresAt={session.expiresAt.toISOString()}
+            gallery={gallery}
+            pendingImport={saveIntent}
+            profile={profile}
+            projects={accountProjects.map((project) => describeAccountProject(project, locale))}
+            quoteRequests={serializeQuoteRequestPage(requests)}
+          />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="grid min-h-svh bg-canvas text-ink lg:grid-cols-[minmax(0,1.08fr)_minmax(28rem,0.92fr)]">
@@ -95,40 +130,13 @@ export default async function AccountPage({ params: routeParams, searchParams }:
       </section>
 
       <section className="flex min-h-[69svh] flex-col px-5 py-6 sm:px-10 lg:min-h-svh lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
-        <AppHeader
-          action={{
-            // Backing out of a pending save returns to that configuration, not the default kitchen.
-            href: localizePath(
-              locale,
-              saveIntent
-                ? `/configure?${CONFIG_QUERY_PARAM}=${encodeURIComponent(saveIntent.configurationCode)}`
-                : "/configure"
-            ),
-            label: messages.appHeader.toConfigurator
-          }}
-          languages={languages}
-          locale={locale}
-          showAccount={false}
-        />
+        {header()}
 
         <div className="flex flex-1 items-center py-10">
-          {session ? (
-            <AccountWorkspace
-              expiresAt={session.expiresAt.toISOString()}
-              gallery={gallery}
-              pendingImport={saveIntent}
-              projects={accountProjects.map((project) => ({
-                ...project,
-                updatedAt: project.updatedAt.toISOString()
-              }))}
-              quoteRequests={serializeQuoteRequestPage(requests)}
-            />
-          ) : (
-            <AccountAccess
-              developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
-              returnTo={saveIntent ? saveIntentPath(locale, saveIntent) : returnTo}
-            />
-          )}
+          <AccountAccess
+            developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
+            returnTo={saveIntent ? saveIntentPath(locale, saveIntent) : returnTo}
+          />
         </div>
       </section>
     </main>
