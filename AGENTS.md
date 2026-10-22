@@ -18,7 +18,7 @@ The current direction is:
   - German default at `/`
   - English at `/en`
   - Spanish at `/es`
-  - `/en` and `/es` stay 404 in production until listed in `LAUNCHED_LOCALES` (`lib/i18n.ts`).
+  - `/en` and `/es` stay 404 in production until listed in `LAUNCHED_LOCALES` (`lib/i18n.ts`). `OPEN_ALL_LOCALES=true` opens them anyway; Vercel Production and previews set it while Production serves as a test environment.
 - Ecommerce will be added later, so avoid hard-coding decisions that block cart, quote, order, checkout, or pricing integration.
 
 ## Working Rules
@@ -33,6 +33,7 @@ The current direction is:
 - Run `pnpm lint` after code changes.
 - Run `pnpm build` after route, server/client boundary, or TypeScript-heavy changes.
 - For 3D/frontend visual changes, verify in a browser on desktop and mobile.
+- Pushing `redesign/devstart` deploys Vercel Production through Git; feature branches build Git previews. Production is a public test environment for now (`STATUS.md` → Deployment).
 
 ## Frontend Design Rules
 
@@ -66,11 +67,11 @@ The current direction is:
 ## Configurator Rules
 
 - Keep the current prototype limited to:
-  - one straight-line kitchen layout
-  - cabinet/korpus color
-  - front color
-- The current 3D scene loads `public/models/kitchen-line.glb`.
-- The current GLB uses generic mesh names and one shared material, so material assignment is heuristic.
+  - one straight-line kitchen built from wall modules (tall cabinet, appliance cabinet, cabinet 30) with an optional island (standard or large)
+  - cabinet/korpus finish
+  - front finish
+- The kitchen loads `public/models/kitchen-modules.glb`, segmented prefabs composed from module placements. Each mesh node's role, prefab and material slot come from the Asset Manifest `features/configurator/modules/kitchen-asset-manifest.json` (ADR 0009); an unmapped node throws. Rebuild it with `pnpm assets:manifest`; `asset-manifest.test.ts` fails on any drift from the GLB.
+- The Appartement and Loft rooms (`public/models/apartment-room.glb`, `loft-room.glb`) are placeholders with no recorded licence (`STATUS.md` → Release Blockers).
 - Prefer production GLB assets with named nodes/material slots for cabinet bodies, fronts, handles, countertop, appliances, and room surfaces.
 - Product metadata belongs in the product-definition contract first.
 - URL state must remain shareable and backward-compatible where possible.
@@ -100,7 +101,7 @@ The current direction is:
 
 ## Commerce Direction
 
-- Current checkout is fake and only validates the handoff from configuration to request/order intent.
+- There is no checkout. A saved Project ends in a Quote Request (`/anfrage`, ADR 0012) pinned to an immutable revision with a server-computed Price Indication; `/checkout` redirects there. Nothing notifies rotpunkt of a request yet: the outbox entry waits on the email provider (ADR 0010).
 - Future commerce should support:
   - product catalog
   - price calculation
@@ -145,8 +146,12 @@ These warnings are not build blockers right now, but should be revisited before 
 ```bash
 pnpm exec next dev -p 3001
 pnpm lint
-pnpm build
+pnpm exec tsc --noEmit
+pnpm test
+TRANSACTIONAL_EMAIL_PROVIDER= pnpm build
 ```
+
+A plain `pnpm build` fails locally: `.env.local` selects the development email capture, which refuses to run in a production build (ADR 0010). `pnpm test:db` can migrate the configured remote test database.
 
 ## Important Files
 
@@ -156,7 +161,8 @@ pnpm build
 - `features/configurator/state-codec.ts`: shareable URL state.
 - `features/configurator/catalog.ts`: product lookup seam for blocks and Studio option lists.
 - `features/configurator/ui/configurator-shell.tsx`: configurator UI shell.
-- `features/configurator/engine/kitchen-scene.tsx`: 3D scene.
+- `features/configurator/engine/kitchen-scene.tsx`: 3D scene and its table of rooms.
+- `features/configurator/modules/kitchen-asset-manifest.json`: kitchen Asset Manifest.
 - `lib/i18n.ts`: locales, `LAUNCHED_LOCALES`, reserved slugs.
 - `proxy.ts`: locale routing (German unprefixed, unlaunched locales 404).
 - `blocks/schemas.ts` and `blocks/registry.tsx`: the one list of Page Blocks and their components.

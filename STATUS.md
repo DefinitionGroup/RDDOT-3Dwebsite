@@ -1,11 +1,14 @@
 # rotpunkt Signature Status
 
-Last reconciled: 2026-10-15 (at `76558b3`); Phase 9b, the feature inventory and the roadmap
-added the same day at `4611243`
+Last reconciled: 2026-10-22 (at `0c9b45e`, no commits since 2026-10-16), against the
+website assessment of 2026-10-16 (`.scratch/website-assessment-2026-10-16/assessment.md`,
+untracked) and a recheck of the gates and the live deployment.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
-`cc/devstart-003` at `e4fd3e9` (67 commits ahead of `redesign/devstart`). `cc/devstart-003`
-and the earlier `cc/devstart-*` branches are frozen at their last commit; none is merged
-back and none needs to be.
+`cc/devstart-003` at `e4fd3e9`. `origin/redesign/devstart`, the Vercel production branch,
+was pushed to the same commit `0c9b45e` on 2026-10-16, so production builds this branch.
+The local `redesign/devstart` ref is stale at `12215a5`. `cc/devstart-003` and the earlier
+`cc/devstart-*` branches are frozen at their last commit; none is merged back and none
+needs to be.
 
 Design direction (decided 2026-09-02, rebuilt 2026-09-03 on the Sequel style from Refero):
 "rotpunkt after dark" — black stage, charcoal cards, three greys, white structure, signature
@@ -22,12 +25,15 @@ states. Open on the design side: Impressum/Datenschutz pages (the footer carries
 legal column until they exist) and a dark studio render for the homepage's configurator
 card (it shows the evening photo for now).
 
-Gates at reconciliation (2026-10-15): `pnpm lint` clean, `tsc --noEmit` clean, `pnpm test`
-106/106 after Phase 9b (covers `features` and `lib`), `pnpm test:db` 64 passed and 1 skipped (Neon),
-production build green with the `postbuild` server-bundle check passing; the site worked in
-the browser. The build only passes with `TRANSACTIONAL_EMAIL_PROVIDER`
-**unset** — with the local `development-capture` value it fails closed by design
-(ADR 0010). See Build & Verification Gates below.
+Gates at reconciliation (2026-10-22): `pnpm lint` 0 errors and 1 warning
+(`components/page-builder/exit-preview.tsx`, `window.location.assign` to an internal page),
+`tsc --noEmit` clean, `pnpm test` 128/128 in 23 files (covers `features` and `lib`),
+production build green with the `postbuild` server-bundle check passing. `pnpm test:db` was
+not rerun (its harness can migrate the remote test database); its last result is 64 passed
+and 1 skipped (2026-10-15). `pnpm audit --prod` reports 1 critical, 3 high, 6 moderate and
+2 low advisories, all through `sanity > @sanity/cli` (see Known Warnings). The build only
+passes with `TRANSACTIONAL_EMAIL_PROVIDER` **unset** — with the local `development-capture`
+value it fails closed by design (ADR 0010). See Build & Verification Gates below.
 
 ## Current Goal
 
@@ -36,11 +42,12 @@ Deliver a German-first, branded kitchen configurator that lets a private custome
 Alongside it, every piece of marketing content becomes editable in Sanity, in German,
 English and Spanish: [.scratch/sanity-pagebuilder/spec.md](.scratch/sanity-pagebuilder/spec.md).
 
-## Feature Inventory (2026-10-15)
+## Feature Inventory (2026-10-15, reconciled 2026-10-22)
 
 Everything the project does today, by area. **Done** works end to end and was verified in
 the browser; **Gated** is built but waits on a decision, a supply or production
-configuration; **Open** is not built. Details for each line are under Done and Missing.
+configuration; **Defect** is built but breaks on a path customers take; **Open** is not
+built. Details for each line are under Done, Known Defects and Missing.
 
 **Website and content (Sanity)**
 
@@ -50,9 +57,9 @@ configuration; **Open** is not built. Details for each line are under Done and M
 | Header and footer navigation from Sanity, full-screen menu on phones | Done |
 | Embedded Studio at `/studio`, `page` and `navigation` per language, demo mode without Sanity, `pnpm sanity:seed` | Done |
 | Editorial Preview: draft mode, live updates, click-to-edit markers | Done (Presentation tool not yet tried with a Studio login) |
-| Locale routing: German at `/`, English `/en`, Spanish `/es`; language switch on editorial pages | Done; English and Spanish closed in production (`LAUNCHED_LOCALES`) |
+| Locale routing: German at `/`, English `/en`, Spanish `/es`; language switch on editorial pages | Done; English and Spanish are not in `LAUNCHED_LOCALES`, but Vercel Production opens them while it serves as a test environment (`OPEN_ALL_LOCALES`) |
 | English and Spanish homepage and navigation | Done; native review open |
-| Site settings, SEO metadata, canonical, `hreflang`, sitemap, robots, redirects, signed publish webhook (Phase 7b) | Done; webhook and Sanity variables not yet on Vercel |
+| Site settings, SEO metadata, canonical, `hreflang`, sitemap, robots, redirects, signed publish webhook (Phase 7b) | Done; the Sanity variables are on Vercel (since 2026-10-15), the webhook is not: without `SANITY_REVALIDATE_SECRET` the route answers 404, so published edits reach the site only with a redeploy |
 | Impressum, Datenschutz, `richText` / `faq` / `media` blocks | Open (needs Martin's legal texts) |
 
 **Configurator**
@@ -62,7 +69,7 @@ configuration; **Open** is not built. Details for each line are under Done and M
 | Straight kitchen line from wall modules (tall cabinet, appliance cabinet, cabinet 30): Edit Session with add, remove, move, swap, drag reorder, drag from the Datenblatt palette; width and per-type limits | Done |
 | Islands: none, standard, large | Done |
 | Finishes: three carcass colours, four fronts; full-size material overlay | Done |
-| Itemised indicative price (sum of parts), live with every change | Done (prototype prices in code, ADR 0006) |
+| Itemised indicative price (sum of parts), live with every change | Done (prototype prices in code, ADR 0006); the homepage material cards show the surcharge before VAT while the configurator total includes it (Known Defects) |
 | Views: Studio, Appartement, Loft; cameras Room, Front, Detail; supersampled studio light | Done; both rooms are placeholders with no recorded licence (Release Blocker). The path-traced Rendering has no button since the Loft took its place |
 | Shareable guest URL (`?c=`), older URLs upgrade | Done |
 | Asset Manifest with release-gate test; poster fallback when 3D fails | Done |
@@ -74,7 +81,7 @@ configuration; **Open** is not built. Details for each line are under Done and M
 | Feature | State |
 | --- | --- |
 | Sign-in with a six-digit email code, no password, account created on first use | Gated: production needs a transactional email provider (ADR 0010) |
-| Save a configuration as a Project; autosave with conflict handling; browser recovery drafts | Done |
+| Save a configuration as a Project; autosave with conflict handling; browser recovery drafts | Done when already signed in. **Defect** for a signed-out guest: sign-in lands on bare `/konto` and the configuration is not saved (Known Defects) |
 | Versions: save, history, restore behind a safety version; rename | Done |
 | Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
 | Account area: projects, requests, visualisations | Done |
@@ -84,7 +91,7 @@ configuration; **Open** is not built. Details for each line are under Done and M
 
 | Feature | State |
 | --- | --- |
-| Photo of the current configuration in four scenes: capture, EU storage, Replicate (`qwen/qwen-image-2-pro`), validated result | Gated: `PHOTO_GENERATION_ENABLED` is off by decision |
+| Photo of the current configuration in four scenes: capture, EU storage, Replicate (`qwen/qwen-image-2-pro`), validated result | Gated: off for launch by decision. The local `.env.local` sets `PHOTO_GENERATION_ENABLED=true`; Vercel sets the variable on Preview and Production, value not read (2026-10-22) |
 | Governance: approved prompt and model releases, per-account quota, provider budget breaker, kill switch | Done |
 | Webhook inbox, reconciliation on read, sweep endpoint | Gated: webhook URL, signing secret and sweep schedule need a deployment |
 | Galleries per Project and per account, download, delete | Done |
@@ -103,10 +110,11 @@ configuration; **Open** is not built. Details for each line are under Done and M
 | Feature | State |
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
-| Gates: lint, types, 106 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
-| Vercel project | Last deployment about five weeks old; no Sanity variables |
-| Dependency security: Next.js 16.2.10 has critical advisories (fixed in 16.3.6) | In progress |
-| Browser E2E tests, analytics, accessibility audit, performance budgets | Open |
+| Gates: lint, types, 128 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
+| Vercel project | Production builds `redesign/devstart` from Git, at `0c9b45e` since 2026-10-16, and serves as a test environment (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
+| Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
+| Sanity CLI advisories: 1 critical, 3 high (dompurify, vite, braces) under `sanity > @sanity/cli` | Open; build-time tooling, not served to visitors; installed `sanity` 6.17.0, latest 6.20.0 |
+| Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
 
 ## Done
 
@@ -183,7 +191,8 @@ configuration; **Open** is not built. Details for each line are under Done and M
   serves no scene any more.
 - **Sanity pagebuilder and locale routing (2026-10-01 to 10-08).** Plan, decisions and the
   evidence for each phase are in the [spec](.scratch/sanity-pagebuilder/spec.md); Phases
-  1–7 and 9a are done, 8 and 9b are open (see Missing).
+  1–7, 9a and the functional copy of 9b are done; 8 and the rest of 9b (native review,
+  switch on functional screens, launch) are open (see Missing).
   - Locale routing: every page lives under `app/(site)/[locale]/`. German has no prefix —
     `proxy.ts` rewrites `/x` to `/de/x` and answers `/de/x` with 308 to `/x`. `/en` and `/es`
     open only once listed in `LAUNCHED_LOCALES` (`lib/i18n.ts`, today `["de"]`); an
@@ -418,9 +427,9 @@ still the friendlier check, but the flow is no longer unverified.
 How to reproduce the reconciliation results:
 
 ```
-pnpm lint                                  # clean
+pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean
-pnpm test                                  # 100/100
+pnpm test                                  # 128/128
 pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 ```
@@ -455,7 +464,7 @@ answers with the last known state when reconciliation throws, and `postbuild`
 
 ## Deployment
 
-Updated 2026-10-16.
+Updated 2026-10-22.
 
 - **Vercel Production is a test environment for now** (Martin, 2026-10-16). It carries test
   settings on purpose: `TRANSACTIONAL_EMAIL_PROVIDER=development-capture`, and the Sanity
@@ -468,19 +477,39 @@ Updated 2026-10-16.
   `OPEN_ALL_LOCALES`, set a real email provider (ADR 0010), switch to the `production`
   dataset after the DPA review, and give production its own database and storage bucket.
   This is the release-gate item under Roadmap M2.
+- **The test environment is open to search engines** (found 2026-10-22): `robots.txt` allows
+  `/`, pages carry no `noindex`, and the canonical points at `rddot-3-dwebsite.vercel.app`.
+  `PHOTO_GENERATION_ENABLED` and `REPLICATE_API_TOKEN` are set on Production; the flag's
+  value was not read. If it is `true`, anyone holding the URL can sign in with the on-screen
+  code and spend up to the provider budget breaker (20 € per rolling 24 h by default).
 - Previews: the same test settings apply to every preview branch (`OPEN_ALL_LOCALES`,
   capture sign-in, Sanity `development` with a Viewer token). Previews are public — no Vercel
   Authentication.
 - The project is linked to `DefinitionGroup/RDDOT-3Dwebsite` (production branch
-  `redesign/devstart`), but **Git preview deployments are switched off**
-  (`previewDeploymentsDisabled`), so pushes to feature branches build nothing. Deploy with
-  `vercel deploy` from a clean checkout of the commit. Settings scoped to a single branch do
-  not reach CLI deployments at runtime, which is why the test settings are set for all
-  previews. Turning Git previews and Deployment Protection on needs a team Owner or Member;
-  the CLI account `sanity-mngt-definition` is a Developer.
-- Latest preview: https://rddot-3-dwebsite-hlzrjxfmv-definitiongroup.vercel.app (`917f5b3`,
-  2026-10-15): sign-in with the on-screen code, `/en` and `/es` from Sanity, the language
-  dropdown and the configurator verified. Production still serves the September deployment.
+  `redesign/devstart`). Git builds both kinds of deployment: a push to `redesign/devstart`
+  builds Production in about a minute, and a push to a feature branch builds a Git preview
+  (seen 2026-10-16; the earlier note that `previewDeploymentsDisabled` stops them is
+  outdated). The CLI account `sanity-mngt-definition` is a Developer: `vercel deploy` makes
+  previews, but it cannot create Production deployments or change project settings.
+  Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
+  the test settings are set for all previews. Turning Deployment Protection on needs a team
+  Owner or Member.
+- Production: `rddot-3-dwebsite-5qmv3dygu`, built from `0c9b45e` on 2026-10-16 (the matching
+  `cc/devstart-sanity` preview is `rddot-3-dwebsite-7fkbv1lkc`). Checked 2026-10-22: the
+  configurator renders in Studio and the Loft and across the cameras at 1440 px and at a
+  500 px phone width (headless Chrome on the GPU), with no overflow, no fallback and only the
+  `THREE.Clock` warning; models arrive at full size; `/impressum` and `/datenschutz` answer
+  404, `/en` and `/es` 200; `/api/webhooks/sanity` answers 404 (no secret); the homepage
+  came from the CDN cache about 4.7 days old.
+- **Functions run in `iad1` (US East)**, Vercel's default — the repository sets no region —
+  while the database is Neon Frankfurt and object storage is in the EU. Every database round
+  trip crosses the Atlantic, and personal data is processed in the US. Choose the function
+  region (`fra1`) before launch; it also belongs in the data-protection review.
+- Variables on Vercel (names only, 2026-10-22): the Sanity four, `OPEN_ALL_LOCALES`, the
+  capture flag and `TRANSACTIONAL_EMAIL_PROVIDER`, `DATABASE_URL*`, `TEST_DATABASE_URL`,
+  `BETTER_AUTH_SECRET`, `REPLICATE_API_TOKEN`, `OBJECT_STORAGE_*`, `PHOTO_GENERATION_ENABLED`.
+  Not set: `SANITY_REVALIDATE_SECRET`, `REPLICATE_WEBHOOK_SIGNING_SECRET`,
+  `PHOTO_WEBHOOK_URL`, `PHOTO_SWEEP_TOKEN`, `BETTER_AUTH_URL`.
 - GLB and HDR files are plain Git files since 2026-10-16 (about 5.8 MB in all). They were in
   Git LFS, and Vercel's Git builds served them as 132-byte pointers (Git LFS is off in the
   project), so production showed the 3D fallback. Older commits keep their LFS pointers.
@@ -491,8 +520,47 @@ Updated 2026-10-16.
 
 ## Open Working Tree
 
-None. `next-env.d.ts` may show as modified; that is the generated-file churn under Known
-Warnings, not work.
+The 2026-10-16 assessment and its screenshots sit untracked in
+`.scratch/website-assessment-2026-10-16/`. `next-env.d.ts` may show as modified; that is the
+generated-file churn under Known Warnings, not work.
+
+## Known Defects
+
+Found by the 2026-10-16 assessment; none is fixed. Items marked *rechecked* were confirmed
+again on 2026-10-22.
+
+- **A signed-out guest's "Als Projekt speichern" loses the configuration** (*rechecked* in
+  source). The configurator sends `/konto?intent=save&import=<key>&c=<code>`
+  (`configurator-shell.tsx`); signed out, `konto/page.tsx` builds the sign-in `returnTo`
+  only from `next` (`safeReturn`) and falls back to `/konto`, and `account-access.tsx`
+  replaces the URL with it after the code, so `pendingImport` never sees the parameters. The
+  "Zum Konfigurator" link on that screen also goes to bare `/configure`. It predates Phase 9b,
+  which carried it over. Not affected: `/anfrage?c=…`, whose sign-in returns to the same
+  URL. No end-to-end sign-in was run; verify a fix with a fresh guest and a non-default
+  configuration.
+- **The Quote Request confirmation promises a response nobody is told about.** "Wir prüfen …
+  und melden uns mit einem Angebot" (`lib/messages/de.ts`), but the
+  `quote-request.submitted` outbox has no consumer (waits on ADR 0010).
+- **Material surcharges are shown before VAT, the total after.** The Nussbaum Memory card
+  says +580 €; choosing it moves the default total from 10.103,10 € to 10.793,30 €
+  (+690,20 €). `blocks/materials/Component.tsx` formats the raw delta from `catalog.ts`.
+- **Dialog focus escapes.** `DetailCard` and `Overlay` focus Close and handle Escape but
+  neither trap focus nor make the background inert (Shift+Tab leaves the material dialog
+  while it stays open). `GlassSegments` declares tabs without arrow keys or a roving
+  tabindex.
+- **The configurator UI covers the product** (*rechecked* on production). On desktop the
+  Datenblatt hides the right part of the kitchen in the Room camera; in the Loft the white
+  wordmark and the "Richtpreis" label wash out against the light wall. On phones the sheet
+  takes about the lower 45 % of the viewport.
+- **The hero film has no pause control**; "Den Film ansehen" requests fullscreen on the same
+  muted loop. Reduced motion is honoured, but that does not replace a control.
+- **The request consent has no privacy-policy link** (waits on the Datenschutz page).
+- **Marketing promises more than the product does** (`content/home/de.ts`): "in Ihrem Raum
+  gesehen" and "ein Foto in Ihrem Raum" suggest the customer's own room (the rooms and photo
+  scenes are supplied); "Ein Planer … persönlich, nicht per Formular" meets an account-gated
+  form; the Agile and Exclusive Line cards open the same configurator; "Vier
+  Entscheidungen", "drei Entscheidungen" and "in vier Klicks" explain the same flow three
+  ways.
 
 ## Deferred Decisions
 
@@ -535,31 +603,36 @@ Revisit when Project Archive/Trash/restore lands.
 - The dev browser logs warnings from the current Three/R3F stack:
   - `THREE.Clock` is deprecated in favor of `THREE.Timer`.
   - `PCFSoftShadowMap` is deprecated and falls back to `PCFShadowMap`.
-- These warnings do not currently block rendering or production build, but they should be revisited before production hardening.
-- `npm install` reported two moderate vulnerabilities. No audit fix was applied yet.
+- These warnings do not currently block rendering or production build, but they should be revisited before production hardening. On production on 2026-10-22 only the `THREE.Clock` warning appeared.
+- `pnpm lint` reports one warning: `components/page-builder/exit-preview.tsx` navigates to an
+  internal page with `window.location.assign`.
+- `pnpm audit --prod` (2026-10-22): 1 critical and 1 high in `dompurify` ≤ 3.4.16, 1 high and
+  4 moderate and 1 low in `vite` 8.3.0–8.3.2, 1 high in `braces`, moderate `uuid` and
+  `sprintf-js`, 1 more low in `dompurify`. Every path runs through `sanity > @sanity/cli`
+  (build and codegen tooling, not served to visitors); on 2026-10-16 it was 0 critical,
+  1 high, 2 moderate. Installed `sanity` is 6.17.0, latest 6.20.0; whether the update clears
+  them is unchecked.
 - `next-env.d.ts` churns between `./.next/types/routes.d.ts` and
   `./.next/dev/types/routes.d.ts` depending on whether `next build` or `next dev` ran
   last. It is a generated file marked "should not be edited"; commit `12215a5` committed
   one side of that coin-flip. Treat a diff on this file as noise, not work.
-- `package.json` pins `next`, `react`, `react-dom` and `motion` to `latest` (and, among the
-  dev dependencies, `typescript`, `@types/node`, `@types/react`, `@types/react-dom` and
-  `eslint-config-next`). Only `pnpm-lock.yaml` holds them (today Next 16.2.10, React 19.2.7,
-  motion 12.42.2), so a lockfile refresh can move a major version without a visible diff.
-  Pin real ranges before production hardening.
-- `@portabletext/editor` (pulled in by `sanity`) asks for React ≥ 19.2.8 while the repo
-  resolves 19.2.7. Harmless so far; revisit if the rich-text input misbehaves.
+- Resolved in `a80ef42` (2026-10-15): `package.json` no longer pins anything to `latest`
+  (Next 16.4.1, React 19.3.1, motion ^12.43.0, TypeScript ^6.0.3), and React 19.3.1
+  satisfies `@portabletext/editor`'s React ≥ 19.2.8.
 
 ## Missing
 
-- Sanity on Vercel: the variables and the publish webhook of spec Phase 7b (the list is in
-  the spec). Until the webhook is configured, a deployed site shows published edits only
-  after a rebuild; redirects take up to a minute per server instance.
+- Sanity on Vercel: the variables are set (2026-10-15); the publish webhook of spec Phase 7b
+  is not (`SANITY_REVALIDATE_SECRET` on Vercel plus the webhook in Sanity; the list is in the
+  spec). Until then a deployed site shows published edits only after a rebuild; redirects
+  take up to a minute per server instance.
 - Sanity, spec Phase 8: ADR 0013 (the queries are the adapter, amending ADR 0007),
   `SANITY.md` and `blocks/CONTRACT.md`.
 - Locales, rest of spec Phase 9b: Martin or a native speaker reviews the English and
   Spanish copy (editorial and functional); the language switch joins the functional screens;
   then English and Spanish join `LAUNCHED_LOCALES`. Until then `/en` and `/es` are 404 in
-  production. Revision snapshots are still written in German; their product and finish
+  a production build without `OPEN_ALL_LOCALES` (Vercel Production sets it while it serves
+  as a test environment). Revision snapshots are still written in German; their product and finish
   names are translated on display only.
 - The Presentation tool itself has not been exercised with a Studio login. Draft mode, live
   preview and the preview data attributes were verified without it.
@@ -575,13 +648,17 @@ Revisit when Project Archive/Trash/restore lands.
   `features/configurator/adapters/sanity.ts` is imported nowhere and still waits to be
   removed (spec §4).
 - No real product catalog, SKU model, pricing engine, cart, order, CRM, or payment integration exists yet. Quote Requests are recorded and listed but nobody is notified: the `quote-request.submitted` outbox has no consumer until the email provider lands (ADR 0010). The "selected photo" named in CONTEXT.md is not yet captured on a Quote Request, and the account list shows the first ten without a load-more.
-- The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders or browser render smoke test in CI, no engine-upgrade guard for historical manifests, and the Appartement scene has no manifest of its own (it is a placeholder awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
+- The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders or browser render smoke test in CI, no engine-upgrade guard for historical manifests, and the Appartement and Loft scenes have no manifest of their own (both are placeholders awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
 - No analytics/event tracking exists for configurator interactions.
 - The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
 - Project Archive/Trash/lifecycle restoration is not implemented yet. The sharing persistence boundary already treats archived links as available and trashed links as unavailable.
 - No accessibility audit has been formalized.
-- No performance budgets exist for 3D, images, or page-builder pages.
+- Performance budgets exist only for the kitchen model (the Asset Manifest's bytes,
+  triangles and draw calls). Nothing measures the whole experience: device profiles, frame
+  time, GPU memory, Core Web Vitals, the hero film (8.3 MB and 2.6 MB files). The
+  configurator prefetches both rooms and both Loft outlooks 1.2 s after it opens
+  (`configurator-shell.tsx`), about 5.4 MB that a Studio-only visit never uses.
 - No automated browser/E2E coverage exists at all: the configurator, the Edit Session, the Project workflows, and the share surface are verified by hand each slice.
 - No CI pipeline runs the gates. Lint, types, unit, DB, and build are run locally and by convention.
 
@@ -601,25 +678,32 @@ Revisit when Project Archive/Trash/restore lands.
 - Do not copy the `defgrp-3d-configurator` implementation directly; use it as interaction and camera inspiration only.
 - Keep the first prototype limited to one straight-line kitchen with cabinet/front color options.
 
-## Roadmap (from 2026-10-15)
+## Roadmap (from 2026-10-15, M0 to M2 revised 2026-10-22)
 
 This section is the plan. Each milestone lists engineering work (a Claude session can
 take it) and what only Martin can supply or decide. Earlier sequences — the 2026-09-02
 "confirmed sequence", the photo storage track, PLAN.md Phases 0–5 — are done or folded
 in below; their history is in git and in the Done section.
 
-### M0 — In flight
+### M0 — Next (from the 2026-10-22 reconciliation)
 
-- Dependency security: Next.js to a patched 16.x, `sharp`, `undici`, `vitest`; real version
-  ranges instead of `latest`. (Session running.)
+The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
+
+- Fix the guest "Als Projekt speichern" handoff through sign-in and test the whole path in
+  the browser: guest configuration → sign-in → saved Project → Quote Request, including
+  back navigation and an expired session (Known Defects).
+- Hygiene on the public test environment: `noindex` and a disallowing `robots.txt` on every
+  deployment that is not the launched site; *Martin:* confirm `PHOTO_GENERATION_ENABLED` on
+  Production is `false` (or accept the budget breaker as the bound).
+- Update `sanity` and recheck `pnpm audit --prod`.
 - Language switch on the functional screens (configure, konto, anfrage). (Proposed.)
 
 ### M1 — A reviewable preview
 
-- Merge M0, run every gate, then deploy a Vercel preview of `cc/devstart-sanity` with the
-  Sanity variables for `development`, `SANITY_REVALIDATE_SECRET` and its webhook (spec 7b),
-  and the on-screen login code for this branch. Changing Vercel settings needs Martin's
-  go-ahead.
+- Production already builds `cc/devstart-sanity`'s commit with the Sanity `development`
+  variables and the on-screen login code (see Deployment). Still missing:
+  `SANITY_REVALIDATE_SECRET` and its webhook (spec 7b). Changing Vercel settings needs
+  Martin's go-ahead.
 - Spec Phase 8: ADR 0013, `SANITY.md`, `blocks/CONTRACT.md`; delete the unused
   `features/configurator/adapters/sanity.ts` stub.
 - Try the Presentation tool with a Studio login.
@@ -637,21 +721,28 @@ Engineering:
   deletion reaches storage; the retention sweep for abandoned and finished captures.
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
   output moderation gate; billed cost against the estimate; then switch generation on.
+- The customer-facing items under Known Defects: request confirmation wording that matches
+  the real follow-up, one VAT basis for surcharges, dialog focus, configurator framing and
+  HUD contrast over the rooms, a pause control for the hero film, the privacy link on the
+  request consent, marketing copy that matches the offer.
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
 - Production Vercel environment: it runs as a test environment until then (see
   Deployment). Remove `TEST_DATABASE_URL`, the capture flag, `OPEN_ALL_LOCALES` and the
-  `development` dataset settings; set the production domain. Give production its own database and its own storage bucket
+  `development` dataset settings; set the production domain and the function region
+  (`iad1` today). Give production its own database and its own storage bucket
   and least-privilege key: today `DATABASE_URL*` and every `OBJECT_STORAGE_*` variable is one
   value shared by Preview and Production, which ADR 0011 rules out.
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS
   deployment, encryption at rest and credential rotation recorded.
 - Accessibility audit and performance budgets for the 3D scene and the homepage film.
 
-*Martin:* Impressum and Datenschutz texts; the email provider choice; an owned or licensed
-Appartement scene; the DPA and transfer reviews (Sanity, Replicate) that open the
-`production` dataset; a decision on the world-readable `public` bucket; residency evidence
-for `ecomstorage.rotpunkt.ai`; whether AI photos are part of the launch.
+*Martin:* Impressum and Datenschutz texts; the email provider choice; owned or licensed
+Appartement and Loft scenes; the DPA and transfer reviews (Sanity, Replicate, and Vercel
+functions outside the EU) that open the `production` dataset; a decision on the
+world-readable `public` bucket; residency evidence for `ecomstorage.rotpunkt.ai`; whether
+AI photos are part of the launch (CONTEXT.md's First Production Release includes them; this
+roadmap leaves it open); who answers Quote Requests and how fast.
 
 ### M3 — English and Spanish launch
 
@@ -679,7 +770,7 @@ for `ecomstorage.rotpunkt.ai`; whether AI photos are part of the launch.
 - `CONTENT_MODEL.md`: page-builder block model, page fields, product definition fields, localization approach, and editor rules.
 - `LOCALIZATION.md`: supported locales, default locale behavior, slug rules, fallback rules, and copy workflow.
 - `CONFIGURATOR_CONTRACT.md`: product definition shape, URL state shape, pricing assumptions, validation rules, and future JSON export contract.
-- `COMMERCE_ROADMAP.md`: fake checkout now, cart/quote/order/payment later, and boundaries between Sanity and commerce systems.
+- `COMMERCE_ROADMAP.md`: Quote Requests now, cart/quote/order/payment later, and boundaries between Sanity and commerce systems.
 - `3D_PIPELINE.md`: model formats, asset optimization, camera presets, material naming, performance budgets, and QA procedure.
 - `QA.md`: manual QA checklist plus automated Playwright coverage plan.
 - `ACCESSIBILITY.md`: keyboard behavior, focus states, reduced motion, contrast, forms, and configurator-specific a11y decisions.
