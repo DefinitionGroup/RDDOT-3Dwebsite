@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/design-system/app-header";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
+import { readSaveIntent, saveIntentPath } from "@/features/customer-accounts/save-intent";
 import { AccountWorkspace } from "@/features/customer-accounts/ui/account-workspace";
+import { CONFIG_QUERY_PARAM } from "@/features/configurator/state-codec";
 import { isDevelopmentEmailCaptureActive } from "@/features/transactional-email/adapters/development-capture";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
@@ -47,6 +49,7 @@ export default async function AccountPage({ params: routeParams, searchParams }:
   if (!locale) notFound();
   const messages = getMessages(locale);
   const params = await searchParams;
+  const saveIntent = readSaveIntent(params);
   const session = await customerSessions.resolve(await headers());
   const [accountProjects, gallery, requests] = session
     ? await Promise.all([
@@ -84,7 +87,16 @@ export default async function AccountPage({ params: routeParams, searchParams }:
 
       <section className="flex min-h-[69svh] flex-col px-5 py-6 sm:px-10 lg:min-h-svh lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
         <AppHeader
-          action={{ href: localizePath(locale, "/configure"), label: messages.appHeader.toConfigurator }}
+          action={{
+            // Backing out of a pending save returns to that configuration, not the default kitchen.
+            href: localizePath(
+              locale,
+              saveIntent
+                ? `/configure?${CONFIG_QUERY_PARAM}=${encodeURIComponent(saveIntent.configurationCode)}`
+                : "/configure"
+            ),
+            label: messages.appHeader.toConfigurator
+          }}
           locale={locale}
           showAccount={false}
         />
@@ -94,16 +106,7 @@ export default async function AccountPage({ params: routeParams, searchParams }:
             <AccountWorkspace
               expiresAt={session.expiresAt.toISOString()}
               gallery={gallery}
-              pendingImport={
-                params.intent === "save" &&
-                typeof params.c === "string" &&
-                typeof params.import === "string"
-                  ? {
-                      configurationCode: params.c,
-                      idempotencyKey: params.import
-                    }
-                  : null
-              }
+              pendingImport={saveIntent}
               projects={accountProjects.map((project) => ({
                 ...project,
                 updatedAt: project.updatedAt.toISOString()
@@ -113,7 +116,9 @@ export default async function AccountPage({ params: routeParams, searchParams }:
           ) : (
             <AccountAccess
               developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
-              returnTo={safeReturn(params.next, locale)}
+              returnTo={
+                saveIntent ? saveIntentPath(locale, saveIntent) : safeReturn(params.next, locale)
+              }
             />
           )}
         </div>

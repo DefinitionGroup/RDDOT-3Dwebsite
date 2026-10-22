@@ -27,7 +27,7 @@ card (it shows the evening photo for now).
 
 Gates at reconciliation (2026-10-22): `pnpm lint` 0 errors and 1 warning
 (`components/page-builder/exit-preview.tsx`, `window.location.assign` to an internal page),
-`tsc --noEmit` clean, `pnpm test` 128/128 in 23 files (covers `features` and `lib`),
+`tsc --noEmit` clean, `pnpm test` 131/131 in 24 files (covers `features` and `lib`),
 production build green with the `postbuild` server-bundle check passing. `pnpm test:db` was
 not rerun (its harness can migrate the remote test database); its last result is 64 passed
 and 1 skipped (2026-10-15). `pnpm audit --prod` reports 1 critical, 3 high, 6 moderate and
@@ -81,7 +81,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Feature | State |
 | --- | --- |
 | Sign-in with a six-digit email code, no password, account created on first use | Gated: production needs a transactional email provider (ADR 0010) |
-| Save a configuration as a Project; autosave with conflict handling; browser recovery drafts | Done when already signed in. **Defect** for a signed-out guest: sign-in lands on bare `/konto` and the configuration is not saved (Known Defects) |
+| Save a configuration as a Project, also by a signed-out guest through sign-in; autosave with conflict handling; browser recovery drafts | Done (the guest handoff fixed 2026-10-22) |
 | Versions: save, history, restore behind a safety version; rename | Done |
 | Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
 | Account area: projects, requests, visualisations | Done |
@@ -110,7 +110,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Feature | State |
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
-| Gates: lint, types, 128 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
+| Gates: lint, types, 131 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
 | Vercel project | Production builds `redesign/devstart` from Git, at `0c9b45e` since 2026-10-16, and serves as a test environment (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories: 1 critical, 3 high (dompurify, vite, braces) under `sanity > @sanity/cli` | Open; build-time tooling, not served to visitors; installed `sanity` 6.17.0, latest 6.20.0 |
@@ -118,6 +118,22 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **A guest's save survives sign-in (2026-10-22).** "Als Projekt speichern" sends a signed-out
+  guest to `/konto?intent=save&import=<key>&c=<code>`; the sign-in there returned to bare
+  `/konto` afterwards, so the import never ran and the configuration was lost, and its
+  "Zum Konfigurator" link opened the default kitchen. The save intent now has one URL
+  contract, `features/customer-accounts/save-intent.ts` (`saveIntentPath`,
+  `readSaveIntent`, unit-tested), which the configurator writes and the account page reads:
+  signed out, the page returns the sign-in to that same URL, and the back link reopens
+  `/configure?c=<code>`. Verified in headless Chrome on the GPU against the dev server with
+  throwaway accounts: at 1440 px a guest with Porzellan carcass and Fenix Castoro Ottawa
+  fronts saved, signed in with the on-screen code, landed on `/konto` with one Project and no
+  import error, and the Project opened with those finishes (11.127 €); the same script
+  against the old code timed out on bare `/konto` with no Project. At 500 px the bottom-sheet
+  save reached the sign-in with the intent intact and the back link restored the guest's
+  kitchen, no overflow (sign-in itself not run there: `BETTER_AUTH_URL` pins the dev origin
+  to port 3000, which another project held). After the import the account page still lists
+  the Project rather than opening it in the configurator; that is unchanged.
 - **Loft view in place of Rendering (2026-10-16).** The Ansicht control reads Studio ·
   Appartement · Loft on desktop and phones; the Rendering segment and the shell's path-tracing
   trigger are gone, the path tracer itself stays in `configurator-canvas.tsx` (an optional
@@ -429,7 +445,7 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean
-pnpm test                                  # 128/128
+pnpm test                                  # 131/131
 pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 ```
@@ -526,18 +542,10 @@ generated-file churn under Known Warnings, not work.
 
 ## Known Defects
 
-Found by the 2026-10-16 assessment; none is fixed. Items marked *rechecked* were confirmed
-again on 2026-10-22.
+Found by the 2026-10-16 assessment. Items marked *rechecked* were confirmed again on
+2026-10-22. The first finding, a signed-out guest's "Als Projekt speichern" losing the
+configuration at sign-in, is fixed (Done, 2026-10-22).
 
-- **A signed-out guest's "Als Projekt speichern" loses the configuration** (*rechecked* in
-  source). The configurator sends `/konto?intent=save&import=<key>&c=<code>`
-  (`configurator-shell.tsx`); signed out, `konto/page.tsx` builds the sign-in `returnTo`
-  only from `next` (`safeReturn`) and falls back to `/konto`, and `account-access.tsx`
-  replaces the URL with it after the code, so `pendingImport` never sees the parameters. The
-  "Zum Konfigurator" link on that screen also goes to bare `/configure`. It predates Phase 9b,
-  which carried it over. Not affected: `/anfrage?c=…`, whose sign-in returns to the same
-  URL. No end-to-end sign-in was run; verify a fix with a fresh guest and a non-default
-  configuration.
 - **The Quote Request confirmation promises a response nobody is told about.** "Wir prüfen …
   und melden uns mit einem Angebot" (`lib/messages/de.ts`), but the
   `quote-request.submitted` outbox has no consumer (waits on ADR 0010).
@@ -606,6 +614,10 @@ Revisit when Project Archive/Trash/restore lands.
 - These warnings do not currently block rendering or production build, but they should be revisited before production hardening. On production on 2026-10-22 only the `THREE.Clock` warning appeared.
 - `pnpm lint` reports one warning: `components/page-builder/exit-preview.tsx` navigates to an
   internal page with `window.location.assign`.
+- The first sign-in code request after the Neon database had idled answered 500
+  (`Connection terminated due to connection timeout`) on 2026-10-22; the retry a minute
+  later worked. A customer sees "Das hat noch nicht funktioniert". Worth a longer connect
+  timeout or one retry before production.
 - `pnpm audit --prod` (2026-10-22): 1 critical and 1 high in `dompurify` ≤ 3.4.16, 1 high and
   4 moderate and 1 low in `vite` 8.3.0–8.3.2, 1 high in `braces`, moderate `uuid` and
   `sprintf-js`, 1 more low in `dompurify`. Every path runs through `sanity > @sanity/cli`
@@ -689,9 +701,9 @@ in below; their history is in git and in the Done section.
 
 The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 
-- Fix the guest "Als Projekt speichern" handoff through sign-in and test the whole path in
-  the browser: guest configuration → sign-in → saved Project → Quote Request, including
-  back navigation and an expired session (Known Defects).
+- The guest "Als Projekt speichern" handoff through sign-in is fixed (2026-10-22). Still to
+  run in the browser: saved Project → Quote Request after it, and an expired session in the
+  middle; then make the path the Playwright smoke test (M2).
 - Hygiene on the public test environment: `noindex` and a disallowing `robots.txt` on every
   deployment that is not the launched site; *Martin:* confirm `PHOTO_GENERATION_ENABLED` on
   Production is `false` (or accept the budget breaker as the bound).

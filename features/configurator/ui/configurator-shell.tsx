@@ -67,6 +67,7 @@ import {
   describeAutosave,
   ProjectAutosave
 } from "@/features/configurator/ui/project-save-controls";
+import { saveIntentPath } from "@/features/customer-accounts/save-intent";
 import { galleryPageKey } from "@/features/photo-gallery/serialize-gallery";
 import type { GalleryResponse } from "@/features/photo-gallery/ui/gallery-types";
 import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
@@ -434,12 +435,9 @@ export function ConfiguratorShell({
   }
 
   function saveConfigurationAsProject(configurationCode: string) {
-    const query = new URLSearchParams({
-      intent: "save",
-      import: crypto.randomUUID(),
-      [CONFIG_QUERY_PARAM]: configurationCode
-    });
-    window.location.assign(localizePath(locale, `/konto?${query.toString()}`));
+    window.location.assign(
+      saveIntentPath(locale, { configurationCode, idempotencyKey: crypto.randomUUID() })
+    );
   }
 
   function restoreProjectDraft(configurationCode: string) {
