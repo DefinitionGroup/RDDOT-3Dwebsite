@@ -1,4 +1,5 @@
 import type { AnyConfiguratorState } from "@/features/configurator/types";
+import type { ProjectLifecycle, ProjectLifecycleAction } from "@/features/projects/project-lifecycle";
 
 export type CustomerAccountId = string;
 export type ProjectId = string;
@@ -28,8 +29,10 @@ export type ProjectWorkspace = {
 export type ProjectSummary = {
   id: ProjectId;
   name: string;
-  lifecycle: "active" | "archived" | "trashed";
+  lifecycle: ProjectLifecycle;
   updatedAt: Date;
+  /** Set while the Project is in Trash: when it is due for permanent deletion. */
+  deletionDueAt: Date | null;
   /** What the account's project card shows: finishes, layout and Richtpreis. */
   workingConfiguration: {
     configuration: AnyConfiguratorState;
@@ -93,10 +96,17 @@ export type RenameProjectResult =
   | { kind: "renamed"; name: string; updatedAt: Date }
   | { kind: "unavailable" };
 
+export type ChangeProjectLifecycleResult =
+  | { kind: "changed"; lifecycle: ProjectLifecycle; deletionDueAt: Date | null }
+  | { kind: "not-allowed"; lifecycle: ProjectLifecycle }
+  | { kind: "unavailable" };
+
 export type ProjectModule = {
+  /** The owner's Projects, newest first: active ones, plus archived and trashed when asked. */
   listProjects(input: {
     ownerId: CustomerAccountId;
     includeArchived?: boolean;
+    includeTrashed?: boolean;
   }): Promise<ProjectSummary[]>;
 
   createProject(input: {
@@ -118,6 +128,17 @@ export type ProjectModule = {
     projectId: ProjectId;
     name: string;
   }): Promise<RenameProjectResult>;
+
+  /**
+   * Archives, trashes or restores a Project (`nextProjectLifecycle`). Entering
+   * Trash revokes the Project's share links for good in the same transaction;
+   * restoring does not bring them back.
+   */
+  changeProjectLifecycle(input: {
+    ownerId: CustomerAccountId;
+    projectId: ProjectId;
+    action: ProjectLifecycleAction;
+  }): Promise<ChangeProjectLifecycleResult>;
 
   listConfigurationRevisions(input: {
     ownerId: CustomerAccountId;

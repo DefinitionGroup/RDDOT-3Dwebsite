@@ -11,6 +11,12 @@ import type { AccountProject } from "@/features/customer-accounts/account-projec
 import { profileInitials, type CustomerProfile } from "@/features/customer-accounts/customer-profile";
 import { ProfileForm } from "@/features/customer-accounts/ui/profile-form";
 import {
+  ProjectMenu,
+  RestingProjectRow,
+  useProjectActions,
+  type ProjectActions
+} from "@/features/customer-accounts/ui/project-actions";
+import {
   galleryPageKey,
   type SerializedGalleryPage
 } from "@/features/photo-gallery/serialize-gallery";
@@ -63,47 +69,54 @@ function MaterialPlate({ summary }: { summary: NonNullable<AccountProject["summa
   );
 }
 
-function ProjectCard({ project }: { project: AccountProject }) {
-  const locale = useLocale();
-  const t = useMessages().account;
-  const updated = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+function formatDay(iso: string, locale: keyof typeof INTL_LOCALE) {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     day: "2-digit",
     month: "2-digit",
     year: "numeric"
-  }).format(new Date(project.updatedAt));
+  }).format(new Date(iso));
+}
+
+function ProjectCard({ actions, project }: { actions: ProjectActions; project: AccountProject }) {
+  const locale = useLocale();
+  const t = useMessages().account;
+  const updated = formatDay(project.updatedAt, locale);
 
   return (
-    <Link
-      className="group flex h-full flex-col overflow-hidden rounded-card bg-charcoal transition-colors duration-state ease-signature hover:bg-[#262626]"
-      href={localizePath(locale, `/configure?project=${project.id}`)}
-    >
-      {project.summary ? <MaterialPlate summary={project.summary} /> : <span className="block aspect-[16/9] bg-mist" />}
-      <span className="flex flex-1 flex-col p-5">
-        <span className="block truncate text-card">{project.name}</span>
-        {project.summary && (
-          <>
-            <span className="mt-1 block text-caption text-graphite">{project.summary.layout}</span>
-            <span className="block text-caption text-graphite">
-              {t.finishes(project.summary.cabinet.label, project.summary.front.label)}
-            </span>
-          </>
-        )}
-        <span className="mt-auto flex items-end justify-between gap-4 pt-5">
-          <span className="min-w-0">
-            {project.summary && (
-              <span className="tnum block font-display text-[1.25rem] leading-none tracking-[-0.02em]">
-                {project.summary.price}
+    <div className="relative h-full">
+      <Link
+        className="group flex h-full flex-col overflow-hidden rounded-card bg-charcoal transition-colors duration-state ease-signature hover:bg-[#262626]"
+        href={localizePath(locale, `/configure?project=${project.id}`)}
+      >
+        {project.summary ? <MaterialPlate summary={project.summary} /> : <span className="block aspect-[16/9] bg-mist" />}
+        <span className="flex flex-1 flex-col p-5">
+          <span className="block truncate text-card">{project.name}</span>
+          {project.summary && (
+            <>
+              <span className="mt-1 block text-caption text-graphite">{project.summary.layout}</span>
+              <span className="block text-caption text-graphite">
+                {t.finishes(project.summary.cabinet.label, project.summary.front.label)}
               </span>
-            )}
-            <span className="mt-1.5 block text-caption text-ash">{t.lastChanged(updated)}</span>
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-2 text-nav text-graphite transition-colors duration-state ease-signature group-hover:text-ink">
-            {t.open}
-            <ArrowIcon />
+            </>
+          )}
+          <span className="mt-auto flex items-end justify-between gap-4 pt-5">
+            <span className="min-w-0">
+              {project.summary && (
+                <span className="tnum block font-display text-[1.25rem] leading-none tracking-[-0.02em]">
+                  {project.summary.price}
+                </span>
+              )}
+              <span className="mt-1.5 block text-caption text-ash">{t.lastChanged(updated)}</span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-2 text-nav text-graphite transition-colors duration-state ease-signature group-hover:text-ink">
+              {t.open}
+              <ArrowIcon />
+            </span>
           </span>
         </span>
-      </span>
-    </Link>
+      </Link>
+      <ProjectMenu actions={actions} project={project} />
+    </div>
   );
 }
 
@@ -136,6 +149,10 @@ export function AccountWorkspace({
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importAttempt, setImportAttempt] = useState(0);
+  const actions = useProjectActions();
+  const active = projects.filter((project) => project.lifecycle === "active");
+  const archived = projects.filter((project) => project.lifecycle === "archived");
+  const trashed = projects.filter((project) => project.lifecycle === "trashed");
 
   useEffect(() => {
     if (!pendingImport) return;
@@ -176,7 +193,7 @@ export function AccountWorkspace({
   }
 
   const sections = [
-    { id: "projects", label: t.projects, count: projects.length },
+    { id: "projects", label: t.projects, count: active.length },
     { id: "requests", label: messages.requestList.heading, count: quoteRequests.totalCount },
     { id: "photos", label: messages.gallery.heading, count: gallery.totalCount },
     { id: "profile", label: t.profile, count: null }
@@ -260,15 +277,16 @@ export function AccountWorkspace({
                 <h2 className="m-0 text-nav" id="projects-heading">
                   {t.projects}
                 </h2>
-                <Label as="span">{t.projectCount(projects.length)}</Label>
+                <Label as="span">{t.projectCount(active.length)}</Label>
               </div>
-              {projects.length > 0 && (
-                <Pill className="h-11 px-5" href={localizePath(locale, "/configure")}>
-                  {t.newProject}
-                </Pill>
+              {active.length > 0 && (
+                <Pill href={localizePath(locale, "/configure")}>{t.newProject}</Pill>
               )}
             </div>
-            {projects.length === 0 ? (
+            <p aria-live="polite" className="m-0 text-caption text-ink empty:hidden">
+              {actions.error}
+            </p>
+            {active.length === 0 ? (
               <div className="py-8">
                 <p className="m-0 max-w-[40ch] text-body text-graphite">{t.noProjects}</p>
                 <Pill className="mt-7" href={localizePath(locale, "/configure")}>
@@ -277,12 +295,52 @@ export function AccountWorkspace({
               </div>
             ) : (
               <ul className="m-0 mt-6 grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
-                {projects.map((project) => (
+                {active.map((project) => (
                   <li key={project.id}>
-                    <ProjectCard project={project} />
+                    <ProjectCard actions={actions} project={project} />
                   </li>
                 ))}
               </ul>
+            )}
+
+            {archived.length > 0 && (
+              <div className="mt-12 scroll-mt-8" id="archive">
+                <div className="flex items-baseline gap-4 border-t border-hairline pt-4">
+                  <h3 className="m-0 text-nav">{t.archived}</h3>
+                  <Label as="span">{archived.length}</Label>
+                </div>
+                <p className="m-0 mt-2 max-w-[60ch] text-caption text-graphite">{t.archivedBody}</p>
+                <ul className="m-0 mt-3 list-none p-0">
+                  {archived.map((project) => (
+                    <RestingProjectRow
+                      actions={actions}
+                      detail={t.lastChanged(formatDay(project.updatedAt, locale))}
+                      key={project.id}
+                      project={project}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {trashed.length > 0 && (
+              <div className="mt-12 scroll-mt-8" id="trash">
+                <div className="flex items-baseline gap-4 border-t border-hairline pt-4">
+                  <h3 className="m-0 text-nav">{t.trash}</h3>
+                  <Label as="span">{trashed.length}</Label>
+                </div>
+                <p className="m-0 mt-2 max-w-[60ch] text-caption text-graphite">{t.trashBody}</p>
+                <ul className="m-0 mt-3 list-none p-0">
+                  {trashed.map((project) => (
+                    <RestingProjectRow
+                      actions={actions}
+                      detail={t.restorableUntil(formatDay(project.deletionDueAt ?? project.updatedAt, locale))}
+                      key={project.id}
+                      project={project}
+                    />
+                  ))}
+                </ul>
+              </div>
             )}
           </section>
 

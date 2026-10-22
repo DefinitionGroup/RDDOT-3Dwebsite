@@ -4,6 +4,7 @@ import {
   getLocalizedLabel
 } from "@/features/configurator/product-definition";
 import type { LocaleCode } from "@/features/configurator/types";
+import type { ProjectLifecycle } from "@/features/projects/project-lifecycle";
 import type { ProjectSummary } from "@/features/projects/project-module";
 import { createRevisionDisplaySnapshot } from "@/features/projects/revision-display";
 import { INTL_LOCALE } from "@/lib/i18n";
@@ -14,7 +15,10 @@ type CardFinish = { label: string; hex: string; textureUrl: string | null };
 export type AccountProject = {
   id: string;
   name: string;
+  lifecycle: ProjectLifecycle;
   updatedAt: string;
+  /** In Trash: the last day it can be restored (ISO). */
+  deletionDueAt: string | null;
   /** Null when the Project's product version can no longer be read: the card shows only its name. */
   summary: {
     layout: string;
@@ -25,7 +29,13 @@ export type AccountProject = {
 };
 
 export function describeAccountProject(project: ProjectSummary, locale: LocaleCode): AccountProject {
-  const base = { id: project.id, name: project.name, updatedAt: project.updatedAt.toISOString() };
+  const base = {
+    id: project.id,
+    name: project.name,
+    lifecycle: project.lifecycle,
+    updatedAt: project.updatedAt.toISOString(),
+    deletionDueAt: project.deletionDueAt?.toISOString() ?? null
+  };
   const { configuration, productDefinitionVersion } = project.workingConfiguration;
   const definition = findConfiguratorProductDefinition(productDefinitionVersion);
   if (!definition) return { ...base, summary: null };

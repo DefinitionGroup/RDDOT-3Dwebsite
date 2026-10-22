@@ -1,6 +1,6 @@
 # Account management
 
-Status: accepted 2026-10-23 — Slice A in M2, Slice B after launch; A1 and A2 done, A3 and A4 open
+Status: accepted 2026-10-23 — Slice A in M2, Slice B after launch; A1, A2 and A3 done, A4 open
 Created: 2026-10-23
 
 Turn `/konto` from a sign-in screen with lists beside a photo into the customer's own
@@ -66,13 +66,17 @@ Shown on the account; offered on the request form, which also takes the sign-in 
 A request still copies its contact at submission, so later profile edits do not rewrite
 history.
 
-**A3 Projects you can tidy.** Archive, move to trash, restore, delete for good from the
+**A3 Projects you can tidy.** Done 2026-10-23 without "delete for good" and without rename
+in the list (rename stays in the configurator): deleting a Project cascades away its Quote
+Requests and queues its photos for storage deletion, so it moves to A4 with the 30-day purge. Archive, move to trash, restore, delete for good from the
 trash; duplicate; rename where the list is. The lifecycle exists; this adds the module
 operations, API and UI. A trashed Project's share links stop working on their own (the
 sharing boundary already treats them as unavailable). Moves the board's "Project archive,
 trash and restore" from Later to here.
 
-**A4 My data.** "Download my data" (Projects, versions, requests, share links and photo
+**A4 My data.** Also takes over from A3: deleting a Project for good from the Trash and
+the purge of Projects past their 30 days, both decided together with what happens to a
+deleted Project's Quote Requests and photos. "Download my data" (Projects, versions, requests, share links and photo
 list as one JSON file; photos as links) and "Delete my account" (confirmation by a fresh
 code, `status = pending-deletion`, sessions revoked, database cascade). Deletion reaching
 object storage needs the deletion sweep scheduled or a signed retention policy — the

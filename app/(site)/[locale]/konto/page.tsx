@@ -84,7 +84,7 @@ export default async function AccountPage({ params: routeParams, searchParams }:
   // Signed in, the account is a workspace: the whole width, no picture beside it.
   if (session) {
     const [accountProjects, gallery, requests, profile] = await Promise.all([
-      projects.listProjects({ ownerId: session.customerAccountId }),
+      projects.listProjects({ ownerId: session.customerAccountId, includeArchived: true, includeTrashed: true }),
       loadInitialGallery({ ownerId: session.customerAccountId }),
       quoteRequests.listForAccount({ ownerId: session.customerAccountId, limit: 10 }),
       customerProfiles.getProfile({ ownerId: session.customerAccountId })

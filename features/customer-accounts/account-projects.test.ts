@@ -10,6 +10,7 @@ const project = {
   name: "Meine Küche",
   lifecycle: "active" as const,
   updatedAt: new Date("2026-10-23T08:00:00Z"),
+  deletionDueAt: null,
   workingConfiguration: {
     configuration: { ...DEFAULT_CONFIGURATOR_STATE, cabinetColorKey: "oak", frontColorKey: "walnut-memory" },
     productDefinitionVersion: RDTD_KITCHEN_PRODUCT_VERSION
@@ -31,7 +32,9 @@ describe("describeAccountProject", () => {
     expect(describeAccountProject(retired, "de")).toEqual({
       id: project.id,
       name: "Meine Küche",
+      lifecycle: "active",
       updatedAt: "2026-10-23T08:00:00.000Z",
+      deletionDueAt: null,
       summary: null
     });
   });

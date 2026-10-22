@@ -28,7 +28,7 @@ card (it shows the evening photo for now).
 
 Gates at reconciliation (2026-10-22): `pnpm lint` 0 errors and 1 warning
 (`components/page-builder/exit-preview.tsx`, `window.location.assign` to an internal page),
-`tsc --noEmit` clean, `pnpm test` 144/144 in 27 files (covers `features` and `lib`),
+`tsc --noEmit` clean, `pnpm test` 149/149 in 28 files (covers `features` and `lib`),
 production build green with the `postbuild` server-bundle check passing. `pnpm test:db` was
 not rerun (its harness can migrate the remote test database); its last result is 64 passed
 and 1 skipped (2026-10-15). `pnpm audit --prod` reports one high advisory with no fixed
@@ -86,7 +86,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Versions: save, history, restore behind a safety version; rename | Done |
 | Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
 | Account area on the whole screen: project cards with finishes and Richtpreis, requests, visualisations, profile (name, phone, postcode) that fills the request form | Done (A1, A2, 2026-10-23) |
-| Archive, trash and restore of Projects | Open |
+| Archive, trash, restore and duplicate Projects from the account | Done (A3, 2026-10-23); deleting for good waits for A4 |
 
 **AI photos**
 
@@ -111,7 +111,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Feature | State |
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
-| Gates: lint, types, 144 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
+| Gates: lint, types, 149 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
 | Vercel project | Production builds `redesign/devstart` from Git, at `e1f5df0` since 2026-10-23, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
@@ -119,6 +119,27 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Projects you can tidy (account management A3, 2026-10-23).** Each project card has a
+  menu over its picture: Duplizieren, Archivieren, In den Papierkorb. Below the cards the
+  account lists the Archive (restore, or move to Trash) and the Trash (restore, "Wiederherstellbar
+  bis …"). The rules follow CONTEXT.md and live in one pure function
+  (`features/projects/project-lifecycle.ts`): archive only from active, Trash from active or
+  archived, restore from both, a repeated request counts as done. Entering Trash sets the
+  30-day `deletion_due_at` the schema already demanded and revokes the Project's open share
+  links for good in the same transaction (`changeProjectLifecycle`); restoring does not bring
+  them back, which is why the Trash step asks once more and says so. Duplicating copies the
+  working configuration into a new active Project ("… (Kopie)", without versions, links,
+  photos or requests). New routes `POST /api/projects/[id]/lifecycle` and `…/duplicate`,
+  error code `project-lifecycle-conflict` in all three languages. The configurator sends an
+  archived or trashed Project back to `/konto#archive` or `#trash` instead of opening it.
+  Not here, on purpose: deleting a Project for good and the purge after 30 days. Deleting a
+  Project cascades away its Quote Requests and queues its photos for storage deletion, so
+  both wait for A4's retention and deletion decisions; until then the Trash keeps Projects
+  past their date. Checked: 5 unit and 3 database tests (archive, trash with date and
+  revoked links, restore without them, refusals, other owners), lint, types, build; in
+  headless Chrome on the dev server as a test account: the menu and Escape, duplicate,
+  archive, trash with its warning, the restore date, restore, the configurator's redirect,
+  nothing past the edge at 390 px, no console errors.
 - **Account page and profile (account management A1 and A2, 2026-10-23).** Signed in,
   `/konto` no longer keeps the sign-in layout: `AppHeader` across the full width, a title
   row with the person's initials (`profileInitials`, no avatar upload) and name or email,
@@ -530,7 +551,7 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean
-pnpm test                                  # 144/144
+pnpm test                                  # 149/149
 pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 ```
@@ -883,9 +904,9 @@ Engineering:
 - Accessibility audit and performance budgets for the 3D scene and the homepage film.
 - Account management, Slice A (accepted 2026-10-23,
   [spec](.scratch/account-management/spec.md)): A1 the account page on the whole screen
-  and A2 profile basics are done (see Done); open are A3 archive/trash/restore/duplicate for
-  Projects and A4 "download my data" and "delete my account", which also settles how
-  deletion reaches stored photos.
+  and A2 profile basics and A3 archive/trash/restore/duplicate for Projects are done (see
+  Done); open is A4 "download my data" and "delete my account", which also brings deleting
+  a Project for good, the 30-day purge of the Trash, and how deletion reaches stored photos.
 
 *Martin:* Impressum and Datenschutz texts; the email provider choice; owned or licensed
 Appartement and Loft scenes; the DPA and transfer reviews (Sanity, Replicate, and Vercel

@@ -67,6 +67,10 @@ export default async function ConfigurePage({ params: routeParams, searchParams 
       loadInitialGallery({ ownerId: session.customerAccountId, projectId })
     ]);
     if (!workspace) notFound();
+    // An archived Project rests and a trashed one is blocked (CONTEXT.md); the account offers to restore it.
+    if (workspace.lifecycle !== "active") {
+      redirect(localizePath(locale, `/konto#${workspace.lifecycle === "trashed" ? "trash" : "archive"}`));
+    }
 
     return (
       <ConfiguratorShell

@@ -479,7 +479,22 @@ export const de = {
     saveProfile: "Profil speichern",
     savingProfile: "Wird gespeichert …",
     profileSaved: "Gespeichert.",
-    profileFailed: "Das Profil konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    profileFailed: "Das Profil konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+    projectActions: (name: string) => `Aktionen für ${name}`,
+    duplicate: "Duplizieren",
+    archive: "Archivieren",
+    moveToTrash: "In den Papierkorb",
+    trashWarning: "Freigabelinks dieses Projekts werden dabei dauerhaft widerrufen.",
+    confirmTrash: "Ja, in den Papierkorb",
+    cancel: "Abbrechen",
+    restore: "Wiederherstellen",
+    archived: "Archiv",
+    archivedBody: "Archivierte Projekte ruhen, bis Sie sie wiederherstellen. Ihre Freigabelinks bleiben gültig.",
+    trash: "Papierkorb",
+    trashBody: "Projekte im Papierkorb lassen sich 30 Tage lang wiederherstellen.",
+    restorableUntil: (date: string) => `Wiederherstellbar bis ${date}`,
+    copyName: (name: string) => `${name} (Kopie)`,
+    actionFailed: "Das hat nicht funktioniert. Bitte versuchen Sie es erneut."
   },
   apiErrors: {
     "session-expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -492,6 +507,7 @@ export const de = {
     "invalid-save-request": "Die Speicheranfrage ist ungültig.",
     "invalid-project-name": "Ein Projektname hat 1 bis 120 Zeichen.",
     "invalid-name": "Der neue Name ist ungültig.",
+    "project-lifecycle-conflict": "Das Projekt hat sich inzwischen geändert. Laden Sie die Seite neu und versuchen Sie es erneut.",
     "invalid-profile":
       "Bitte prüfen Sie Ihre Angaben: Telefon mit 3 bis 40 Zeichen, Postleitzahl mit 3 bis 10 Buchstaben oder Ziffern.",
     "invalid-revision": "Die Version ist ungültig.",

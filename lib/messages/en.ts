@@ -459,7 +459,22 @@ export const en = {
     saveProfile: "Save profile",
     savingProfile: "Saving …",
     profileSaved: "Saved.",
-    profileFailed: "The profile could not be saved. Please try again."
+    profileFailed: "The profile could not be saved. Please try again.",
+    projectActions: (name: string) => `Actions for ${name}`,
+    duplicate: "Duplicate",
+    archive: "Archive",
+    moveToTrash: "Move to trash",
+    trashWarning: "This permanently revokes the project's share links.",
+    confirmTrash: "Yes, move to trash",
+    cancel: "Cancel",
+    restore: "Restore",
+    archived: "Archive",
+    archivedBody: "Archived projects rest until you restore them. Their share links stay valid.",
+    trash: "Trash",
+    trashBody: "Projects in the trash can be restored for 30 days.",
+    restorableUntil: (date: string) => `Restorable until ${date}`,
+    copyName: (name: string) => `${name} (copy)`,
+    actionFailed: "That did not work. Please try again."
   },
   apiErrors: {
     "session-expired": "Your session has expired. Please sign in again.",
@@ -472,6 +487,7 @@ export const en = {
     "invalid-save-request": "The save request is invalid.",
     "invalid-project-name": "A project name has 1 to 120 characters.",
     "invalid-name": "The new name is invalid.",
+    "project-lifecycle-conflict": "The project has changed in the meantime. Reload the page and try again.",
     "invalid-profile":
       "Please check your details: a phone number of 3 to 40 characters, a postcode of 3 to 10 letters or digits.",
     "invalid-revision": "The version is invalid.",

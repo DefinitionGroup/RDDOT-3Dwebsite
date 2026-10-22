@@ -8,7 +8,12 @@ import {
   hashJson,
   parseConfiguration
 } from "@/features/projects/configuration-contract";
+import {
+  nextProjectLifecycle,
+  trashDeletionDueAt
+} from "@/features/projects/project-lifecycle";
 import type {
+  ChangeProjectLifecycleResult,
   CheckpointRevisionResult,
   ConfigurationRevisionSummary,
   ProjectModule,
@@ -127,7 +132,7 @@ export function createPostgresProjectModule(
   return {
     async listProjects(input) {
       const ownerId = uuidSchema.parse(input.ownerId);
-      let query = database
+      const rows = await database
         .withSchema("app")
         .selectFrom("project")
         .innerJoin(
@@ -140,22 +145,24 @@ export function createPostgresProjectModule(
           "project.name",
           "project.lifecycle",
           "project.updatedAt",
+          "project.deletionDueAt",
           "workingConfiguration.normalizedConfiguration",
           "workingConfiguration.productDefinitionVersion"
         ])
         .where("project.ownerId", "=", ownerId)
-        .where("project.lifecycle", "!=", "trashed");
-
-      if (!input.includeArchived) {
-        query = query.where("project.lifecycle", "=", "active");
-      }
-
-      const rows = await query.orderBy("project.updatedAt", "desc").execute();
+        .where("project.lifecycle", "in", [
+          "active",
+          ...(input.includeArchived ? (["archived"] as const) : []),
+          ...(input.includeTrashed ? (["trashed"] as const) : [])
+        ])
+        .orderBy("project.updatedAt", "desc")
+        .execute();
       return rows.map((row) => ({
         id: row.id,
         name: row.name,
         lifecycle: row.lifecycle,
         updatedAt: new Date(row.updatedAt),
+        deletionDueAt: row.deletionDueAt ? new Date(row.deletionDueAt) : null,
         workingConfiguration: {
           configuration: parseConfiguration(row.normalizedConfiguration),
           productDefinitionVersion: row.productDefinitionVersion
@@ -258,6 +265,60 @@ export function createPostgresProjectModule(
 
       if (!renamed) return { kind: "unavailable" };
       return { kind: "renamed", name: renamed.name, updatedAt };
+    },
+
+    async changeProjectLifecycle(input): Promise<ChangeProjectLifecycleResult> {
+      const ownerId = uuidSchema.parse(input.ownerId);
+      const projectId = uuidSchema.parse(input.projectId);
+
+      return database.transaction().execute(async (transaction) => {
+        const current = await transaction
+          .withSchema("app")
+          .selectFrom("project")
+          .select(["lifecycle", "deletionDueAt"])
+          .where("id", "=", projectId)
+          .where("ownerId", "=", ownerId)
+          .forUpdate()
+          .executeTakeFirst();
+        if (!current) return { kind: "unavailable" };
+
+        const next = nextProjectLifecycle(current.lifecycle, input.action);
+        if (next === null) return { kind: "not-allowed", lifecycle: current.lifecycle };
+        if (next === current.lifecycle) {
+          return {
+            kind: "changed",
+            lifecycle: next,
+            deletionDueAt: current.deletionDueAt ? new Date(current.deletionDueAt) : null
+          };
+        }
+
+        const now = new Date();
+        const deletionDueAt = next === "trashed" ? trashDeletionDueAt(now) : null;
+        await transaction
+          .withSchema("app")
+          .updateTable("project")
+          .set({
+            lifecycle: next,
+            trashedAt: next === "trashed" ? now : null,
+            deletionDueAt,
+            updatedAt: now
+          })
+          .where("id", "=", projectId)
+          .execute();
+
+        // Entering Trash revokes every open share link for good (CONTEXT.md, Trashed Project).
+        if (next === "trashed") {
+          await transaction
+            .withSchema("app")
+            .updateTable("sharedRevisionLink")
+            .set({ revokedAt: now })
+            .where("projectId", "=", projectId)
+            .where("revokedAt", "is", null)
+            .execute();
+        }
+
+        return { kind: "changed", lifecycle: next, deletionDueAt };
+      });
     },
 
     async listConfigurationRevisions(input) {

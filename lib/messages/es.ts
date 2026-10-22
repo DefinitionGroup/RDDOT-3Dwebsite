@@ -460,7 +460,22 @@ export const es = {
     saveProfile: "Guardar perfil",
     savingProfile: "Guardando …",
     profileSaved: "Guardado.",
-    profileFailed: "No se ha podido guardar el perfil. Inténtelo de nuevo."
+    profileFailed: "No se ha podido guardar el perfil. Inténtelo de nuevo.",
+    projectActions: (name: string) => `Acciones para ${name}`,
+    duplicate: "Duplicar",
+    archive: "Archivar",
+    moveToTrash: "Mover a la papelera",
+    trashWarning: "Los enlaces compartidos de este proyecto se revocarán de forma permanente.",
+    confirmTrash: "Sí, mover a la papelera",
+    cancel: "Cancelar",
+    restore: "Restaurar",
+    archived: "Archivo",
+    archivedBody: "Los proyectos archivados descansan hasta que los restaure. Sus enlaces compartidos siguen siendo válidos.",
+    trash: "Papelera",
+    trashBody: "Los proyectos de la papelera se pueden restaurar durante 30 días.",
+    restorableUntil: (date: string) => `Se puede restaurar hasta el ${date}`,
+    copyName: (name: string) => `${name} (copia)`,
+    actionFailed: "No ha funcionado. Inténtelo de nuevo."
   },
   apiErrors: {
     "session-expired": "Su sesión ha caducado. Vuelva a iniciar sesión.",
@@ -473,6 +488,7 @@ export const es = {
     "invalid-save-request": "La solicitud de guardado no es válida.",
     "invalid-project-name": "El nombre de un proyecto tiene entre 1 y 120 caracteres.",
     "invalid-name": "El nombre nuevo no es válido.",
+    "project-lifecycle-conflict": "El proyecto ha cambiado mientras tanto. Recargue la página e inténtelo de nuevo.",
     "invalid-profile":
       "Revise sus datos: un teléfono de 3 a 40 caracteres y un código postal de 3 a 10 letras o cifras.",
     "invalid-revision": "La versión no es válida.",
