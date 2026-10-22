@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-23 to `dd3560f`. `cc/devstart-003` and the earlier
+2026-10-23 to `e1f5df0`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -112,7 +112,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
 | Gates: lint, types, 144 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
-| Vercel project | Production builds `redesign/devstart` from Git, at `dd3560f` since 2026-10-23, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
+| Vercel project | Production builds `redesign/devstart` from Git, at `e1f5df0` since 2026-10-23, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
@@ -597,7 +597,17 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-lef747166`, built from `dd3560f` on 2026-10-23, live about
+- Production: `rddot-3-dwebsite-pip4b4yvp`, built from `e1f5df0` on 2026-10-23, live about
+  a minute after `redesign/devstart` was fast-forwarded from `dd3560f` and pushed; it
+  brings the account page on the whole screen and the profile (A1, A2; the profile table
+  was already in the database). Checked right after, signed out: `PUT /api/account/profile`
+  answers 401 `session-expired`, noindex holds, the sign-in on `/konto` keeps its photo and
+  language switch at 1440 and 390 px and in English with nothing past the right edge (the
+  edge measured per element), no console errors; the configurator renders in Studio, the
+  Loft and Detail at 1440 px and in Front at 500 px on `/en/configure`, only the
+  `THREE.Clock` warning. The signed-in account page was not checked live: signing in there
+  would create an account on the test environment; it was checked on the dev server.
+- The deployment before, `rddot-3-dwebsite-lef747166`, was built from `dd3560f` on 2026-10-23, live about
   90 s after `redesign/devstart` was fast-forwarded from `1aee72f` and pushed; it brings the
   journey-test record, Sanity 6.20 and the language switch. Checked right after, signed
   out, in headless Chrome on the GPU: noindex on pages, the Studio and a model; the language
