@@ -847,6 +847,11 @@ Engineering:
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS
   deployment, encryption at rest and credential rotation recorded.
 - Accessibility audit and performance budgets for the 3D scene and the homepage film.
+- Account management, Slice A (accepted 2026-10-23,
+  [spec](.scratch/account-management/spec.md)): A1 the account page on the whole screen,
+  A2 profile basics (name, phone, postcode; initials, no avatar upload) prefilled into
+  requests, A3 archive/trash/restore/duplicate for Projects, A4 "download my data" and
+  "delete my account", which also settles how deletion reaches stored photos.
 
 *Martin:* Impressum and Datenschutz texts; the email provider choice; owned or licensed
 Appartement and Loft scenes; the DPA and transfer reviews (Sanity, Replicate, and Vercel
@@ -865,7 +870,8 @@ roadmap leaves it open); who answers Quote Requests and how fast.
 ### Later
 
 - Inline live-3D `configuratorBlock` variant; `faq` and `media` blocks.
-- Project archive, trash and restore (then revisit automatic object deletion).
+- Account management, Slice B: all share links in the account, a page per request, change
+  of sign-in email, devices and sign out everywhere, preferred email language.
 - The selected photo on a Quote Request; load-more for older requests in the account.
 - Analytics for configurator interactions.
 - Product Definition Drafts and Release Bundles; a real catalog, pricing service, cart,
