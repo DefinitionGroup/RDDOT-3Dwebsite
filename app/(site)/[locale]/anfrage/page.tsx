@@ -25,7 +25,8 @@ import { QuoteRequestForm } from "@/features/quote-requests/ui/quote-request-for
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
 import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n";
-import { visibleLocale } from "@/lib/locale-gate";
+import { screenLanguageLinks } from "@/lib/language-links";
+import { visibleLocale, visibleLocales } from "@/lib/locale-gate";
 import { getMessages } from "@/lib/messages";
 
 export const dynamic = "force-dynamic";
@@ -63,21 +64,23 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
   const session = await customerSessions.resolve(await headers());
 
   const backHref = localizePath(locale, projectId ? `/configure?project=${projectId}` : "/configure");
-
-  let content: React.ReactNode;
-  if (!session) {
-    const returnTo = localizePath(
-      locale,
+  // This request in any language: where a sign-in returns, and where the language switch leads.
+  const requestPath = (target: Locale) =>
+    localizePath(
+      target,
       projectId
         ? `/anfrage?project=${projectId}`
         : guestCode
           ? `/anfrage?c=${encodeURIComponent(guestCode)}`
           : "/anfrage"
     );
+
+  let content: React.ReactNode;
+  if (!session) {
     content = (
       <AccountAccess
         developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
-        returnTo={returnTo}
+        returnTo={requestPath(locale)}
       />
     );
   } else if (!projectId) {
@@ -113,6 +116,7 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
       <AppHeader
         action={{ href: backHref, label: messages.appHeader.toConfiguration }}
         className="mx-auto max-w-6xl"
+        languages={screenLanguageLinks(locale, await visibleLocales(), requestPath)}
         locale={locale}
       />
       <div className="mx-auto mt-14 max-w-6xl pb-16 lg:mt-20">{content}</div>

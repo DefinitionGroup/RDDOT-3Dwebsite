@@ -100,3 +100,11 @@ export function localizePath(locale: Locale, path: string) {
   if (locale === DEFAULT_LOCALE) return normalized;
   return normalized === "/" ? `/${locale}` : `/${locale}${normalized}`;
 }
+
+/** `localizePath` undone: `/en/anfrage?project=…` → `/anfrage?project=…`, `/en` → `/`. */
+export function unlocalizePath(path: string) {
+  const match = /^\/([a-z]{2})(?=[/?#]|$)/.exec(path);
+  if (!match || !isLocale(match[1]) || match[1] === DEFAULT_LOCALE) return path;
+  const rest = path.slice(match[0].length);
+  return rest.startsWith("/") ? rest : `/${rest}`;
+}

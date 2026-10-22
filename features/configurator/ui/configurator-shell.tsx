@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState, useTransition } from "react";
 import { Emphasized } from "@/components/design-system/emphasized";
 import { Label } from "@/components/design-system/label";
+import { LanguageSwitch } from "@/components/design-system/language-switch";
 import { Pill } from "@/components/design-system/pill";
 import { preloadApartmentRoom } from "@/features/configurator/engine/apartment-room";
 import { preloadLoftRoom } from "@/features/configurator/engine/loft-room";
@@ -81,6 +82,7 @@ import { ProjectVersions } from "@/features/projects/ui/project-versions";
 import type { ProjectAutosaveStatus } from "@/features/projects/ui/use-project-autosave";
 import { ProjectShareLinks } from "@/features/sharing/ui/project-share-links";
 import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { screenLanguageLinks } from "@/lib/language-links";
 import { apiErrorMessage, getMessages, type Messages } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
@@ -89,6 +91,8 @@ import { useIsDesktop } from "@/lib/use-media";
 type ConfiguratorShellProps = {
   initialState: ConfiguratorState;
   locale?: LocaleCode;
+  /** Languages the visitor can open; the switch shows from two. */
+  locales?: readonly LocaleCode[];
   project?: EditableProject;
   /** A signed-in person without a Project: the photo can create one. */
   signedIn?: boolean;
@@ -158,6 +162,7 @@ function stageForSection(section: DatasheetSection | null): PlanningStage {
 export function ConfiguratorShell({
   initialState,
   locale: localeProp,
+  locales = [],
   project: projectProp,
   sharedView,
   signedIn = false
@@ -236,13 +241,18 @@ export function ConfiguratorShell({
   );
   const savedVersion = autosaveStatus?.phase === "saved" ? autosaveStatus.savedVersion : null;
 
+  // The address of this configurator: the Project, or the guest configuration itself.
+  const configurePath = project
+    ? `/configure?project=${project.id}`
+    : `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
+  const languages = sharedView
+    ? []
+    : screenLanguageLinks(locale, locales, (target) => localizePath(target, configurePath));
+
   useEffect(() => {
     if (sharedView) return;
-    const path = project
-      ? `/configure?project=${project.id}`
-      : `/configure?${CONFIG_QUERY_PARAM}=${encodedConfig}`;
-    window.history.replaceState(null, "", localizePath(locale, path));
-  }, [encodedConfig, locale, project, sharedView]);
+    window.history.replaceState(null, "", localizePath(locale, configurePath));
+  }, [configurePath, locale, sharedView]);
 
   useEffect(() => {
     const roomsTimer = window.setTimeout(() => {
@@ -835,6 +845,12 @@ export function ConfiguratorShell({
       cabinetColor={cabinetColor}
       description={sharedView ? t.sharedDescription : undefined}
       extraRows={sharedRows}
+      footer={
+        // Phones: the sheet's foot holds the language switch, the top bar has no room.
+        variant === "sheet" && languages.length > 1 ? (
+          <LanguageSwitch links={languages} variant="sheet" />
+        ) : undefined
+      }
       frontColor={frontColor}
       locale={locale}
       onCollapse={variant === "card" ? () => setPanelOpen(false) : undefined}
@@ -869,8 +885,8 @@ export function ConfiguratorShell({
 
       <VisualizationPreloader active={visualization !== "studio"} />
 
-      {/* HUD · top */}
-      <div className="pointer-events-none absolute inset-x-5 top-5 z-20 flex items-center justify-between gap-4 lg:inset-x-10 lg:top-7">
+      {/* HUD · top; above the Datenblatt card so the language list can open over it */}
+      <div className="pointer-events-none absolute inset-x-5 top-5 z-30 flex items-center justify-between gap-4 lg:inset-x-10 lg:top-7">
         <HudBrand context={hudContext} />
         {!sharedView && isDesktop && (
           <div className="pointer-events-auto">
@@ -883,6 +899,11 @@ export function ConfiguratorShell({
           ) : (
             <div className="pointer-events-auto">
               <ViewSegments active={visualization} onSelect={setVisualization} size="compact" />
+            </div>
+          )}
+          {isDesktop && languages.length > 1 && (
+            <div className="chip-solid pointer-events-auto rounded-pill px-2">
+              <LanguageSwitch links={languages} />
             </div>
           )}
           {!sharedView && isDesktop && <HudAccountLink />}

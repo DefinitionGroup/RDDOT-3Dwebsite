@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AccountIndicator } from "@/components/design-system/account-indicator";
 import { BrandLogo } from "@/components/design-system/brand-logo";
+import { LanguageSwitch } from "@/components/design-system/language-switch";
 import { localizePath, type Locale } from "@/lib/i18n";
+import type { LanguageLink } from "@/lib/language-links";
 import { getMessages } from "@/lib/messages";
 
 type AppHeaderProps = {
@@ -12,6 +14,8 @@ type AppHeaderProps = {
   action?: { href: string; label: string };
   /** Hidden on the account surface itself, where it would point at the page. */
   showAccount?: boolean;
+  /** This screen in each language the visitor can open; no switch below two. */
+  languages?: LanguageLink[];
   className?: string;
   locale: Locale;
 };
@@ -20,17 +24,19 @@ type AppHeaderProps = {
  * The header for the application surfaces — configurator, account, request.
  * `SiteHeader` stays the marketing header for the homepage.
  *
- * Three fixed slots, same order everywhere: the wordmark always goes home,
- * the action link is labelled with its destination, and the account entry is
- * present wherever it is not the current page.
+ * Fixed slots, same order everywhere: the wordmark always goes home, the
+ * action link is labelled with its destination, the language switch follows
+ * once more than one language is open, and the account entry is present
+ * wherever it is not the current page.
  *
  * Deliberately not used on the public shared-revision view, which exposes no
  * account or project navigation by design (CONTEXT.md, Shared Revision View).
  */
-export function AppHeader({ action, className = "", locale, showAccount = true }: AppHeaderProps) {
+export function AppHeader({ action, className = "", languages = [], locale, showAccount = true }: AppHeaderProps) {
+  const t = getMessages(locale).header;
   return (
     <div className={`flex items-center justify-between gap-4 ${className}`}>
-      <BrandLogo compact href={localizePath(locale, "/")} label={getMessages(locale).header.home} />
+      <BrandLogo compact href={localizePath(locale, "/")} label={t.home} />
 
       <div className="flex items-center gap-1">
         {action && (
@@ -54,6 +60,7 @@ export function AppHeader({ action, className = "", locale, showAccount = true }
             {action.label}
           </Link>
         )}
+        <LanguageSwitch links={languages} />
         {showAccount && <AccountIndicator locale={locale} />}
       </div>
     </div>

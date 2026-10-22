@@ -4,12 +4,13 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { LOCALE_TITLES } from "@/lib/i18n";
 import type { LanguageLink } from "@/lib/language-links";
+import { useMessages } from "@/lib/messages/locale-context";
 import { DURATION, SIGNATURE_EASE } from "@/lib/motion";
 
 type LanguageSwitchProps = {
   links: LanguageLink[];
-  /** Interface words in the page's language. */
-  labels: { nav: string; current: (name: string) => string };
+  /** Interface words in the page's language; by default the header's own. */
+  labels?: { nav: string; current: (name: string) => string };
   /**
    * `bar`: the current language as a small button in the header bar, the
    * list opening below it. `sheet`: larger, in the phone menu, the list
@@ -46,7 +47,9 @@ function Chevron({ open }: { open: boolean }) {
  * client navigation: switching reloads the page in the other locale's
  * layout. Escape, a click outside or a choice closes it.
  */
-export function LanguageSwitch({ className = "", labels, links, onNavigate, variant = "bar" }: LanguageSwitchProps) {
+export function LanguageSwitch({ className = "", labels: labelsProp, links, onNavigate, variant = "bar" }: LanguageSwitchProps) {
+  const header = useMessages().header;
+  const labels = labelsProp ?? { nav: header.language, current: header.currentLanguage };
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);

@@ -11,7 +11,7 @@ import { normalizeConfiguratorState } from "@/features/configurator/product-defi
 import { parseRevisionDisplaySnapshot } from "@/features/projects/revision-display";
 import { sharing } from "@/lib/server/sharing/sharing";
 import { DEFAULT_LOCALE, localizePath } from "@/lib/i18n";
-import { visibleLocale } from "@/lib/locale-gate";
+import { visibleLocale, visibleLocales } from "@/lib/locale-gate";
 import { getMessages } from "@/lib/messages";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +73,7 @@ export default async function ConfigurePage({ params: routeParams, searchParams 
         initialState={normalizeConfiguratorState(workspace.workingConfiguration.configuration)}
         key={`${workspace.id}:${workspace.workingConfiguration.version}`}
         locale={locale}
+        locales={await visibleLocales()}
         project={{
           id: workspace.id,
           name: workspace.name,
@@ -111,6 +112,11 @@ export default async function ConfigurePage({ params: routeParams, searchParams 
   const session = await customerSessions.resolve(await headers());
 
   return (
-    <ConfiguratorShell initialState={initialState} locale={locale} signedIn={Boolean(session)} />
+    <ConfiguratorShell
+      initialState={initialState}
+      locale={locale}
+      locales={await visibleLocales()}
+      signedIn={Boolean(session)}
+    />
   );
 }

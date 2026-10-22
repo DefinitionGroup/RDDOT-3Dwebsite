@@ -28,7 +28,7 @@ card (it shows the evening photo for now).
 
 Gates at reconciliation (2026-10-22): `pnpm lint` 0 errors and 1 warning
 (`components/page-builder/exit-preview.tsx`, `window.location.assign` to an internal page),
-`tsc --noEmit` clean, `pnpm test` 134/134 in 25 files (covers `features` and `lib`),
+`tsc --noEmit` clean, `pnpm test` 138/138 in 25 files (covers `features` and `lib`),
 production build green with the `postbuild` server-bundle check passing. `pnpm test:db` was
 not rerun (its harness can migrate the remote test database); its last result is 64 passed
 and 1 skipped (2026-10-15). `pnpm audit --prod` reports one high advisory with no fixed
@@ -75,7 +75,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Shareable guest URL (`?c=`), older URLs upgrade | Done |
 | Asset Manifest with release-gate test; poster fallback when 3D fails | Done |
 | Phone layout: bottom sheet, compact HUD | Done |
-| Interface in German, English, Spanish (Phase 9b) | Done; language switch on functional screens open |
+| Interface in German, English, Spanish (Phase 9b) | Done; with the language switch on configurator, account and request since 2026-10-23 |
 
 **Customer account and projects**
 
@@ -111,7 +111,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Feature | State |
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
-| Gates: lint, types, 134 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
+| Gates: lint, types, 138 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
 | Vercel project | Production builds `redesign/devstart` from Git, at `1aee72f` since 2026-10-22, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
@@ -119,6 +119,25 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Language switch on the configurator, account and request screens (2026-10-23).** The
+  editorial pages' dropdown (`LanguageSwitch`) now sits in `AppHeader` (account, request)
+  and in the configurator: in the desktop top bar between price and account, on a solid
+  chip, and on phones at the foot of the Datenblatt sheet, because the top row has no room
+  at 375 px. Each link is the same screen in the other language and carries what the
+  screen holds in its URL (`screenLanguageLinks` in `lib/language-links.ts`): the guest
+  configuration or the Project in the configurator and the request, a pending save on
+  `/konto`, and a `next` return address moved into the target language
+  (`unlocalizePath` in `lib/i18n.ts`). The switch reads its words from the page's
+  messages, so a server component can place it. It shows only where two languages are
+  open, so it stays hidden in production until English and Spanish launch; the shared
+  view keeps none, because a plain link would drop the secret in its URL fragment. The
+  configurator's top bar moved to `z-30` so the list opens over the Datenblatt card.
+  Checked in headless Chrome: on a German-only `next start` no switch on configure, konto
+  and anfrage; on the dev server the links on the guest configurator, a pending save, a
+  return address, a guest request and, signed in, a Project's configurator and request;
+  English reopened the same configuration in English, Spanish the same Project's request;
+  no overflow at 1440, 500 and 375 px, no console errors. At 375 px the request header's
+  "Zur Konfiguration" wraps onto two lines.
 - **Sanity updated, the dependency audit down to one unfixable advisory (2026-10-23).**
   `sanity` and `@sanity/vision` 6.17.0 → 6.20.0 brought `@sanity/cli` 8.13.0 → 8.22.1, which
   cleared the vite advisories and `sprintf-js`. Two overrides in `package.json` lift what the
@@ -486,7 +505,7 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean
-pnpm test                                  # 134/134
+pnpm test                                  # 138/138
 pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 ```
@@ -702,8 +721,8 @@ Revisit when Project Archive/Trash/restore lands.
 - Sanity, spec Phase 8: ADR 0013 (the queries are the adapter, amending ADR 0007),
   `SANITY.md` and `blocks/CONTRACT.md`.
 - Locales, rest of spec Phase 9b: Martin or a native speaker reviews the English and
-  Spanish copy (editorial and functional); the language switch joins the functional screens;
-  then English and Spanish join `LAUNCHED_LOCALES`. Until then `/en` and `/es` are 404 in
+  Spanish copy (editorial and functional); then English and Spanish join
+  `LAUNCHED_LOCALES` (the switch on the functional screens is done, 2026-10-23). Until then `/en` and `/es` are 404 in
   a production build without `OPEN_ALL_LOCALES` (Vercel Production sets it while it serves
   as a test environment). Revision snapshots are still written in German; their product and finish
   names are translated on display only.
@@ -769,7 +788,8 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
   test environment runs it. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
   `false` (or accept the budget breaker as the bound).
 - `sanity` is updated and the audit cleared down to one advisory without a fix (2026-10-23).
-- Language switch on the functional screens (configure, konto, anfrage). (Proposed.)
+- The language switch on the functional screens is done (2026-10-23). M0 is empty but for
+  Martin's check of `PHOTO_GENERATION_ENABLED`.
 
 ### M1 — A reviewable preview
 

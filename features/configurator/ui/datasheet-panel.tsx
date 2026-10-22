@@ -46,6 +46,8 @@ type DatasheetPanelProps = {
   primary: { href: string; label: string; shortLabel: string; tone: "primary" | "secondary" };
   /** Rows appended to the summary: the shared view's expiry. */
   extraRows?: SummaryRow[];
+  /** Below the sections, at the end of the scrolling part: the phone's language switch. */
+  footer?: ReactNode;
   /** Without sections the panel is read-only: the shared view. */
   sections?: {
     open: DatasheetSection | null;
@@ -192,6 +194,7 @@ export function DatasheetPanel({
   cabinetColor,
   description,
   extraRows = [],
+  footer,
   frontColor,
   locale,
   onCollapse,
@@ -387,6 +390,7 @@ export function DatasheetPanel({
             </AccordionItem>
           </Accordion>
         )}
+        {footer && <div className="shrink-0 pt-6">{footer}</div>}
         <div className="h-5 shrink-0" />
       </div>
 

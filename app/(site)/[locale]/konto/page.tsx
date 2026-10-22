@@ -14,8 +14,9 @@ import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-q
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
 import { projects } from "@/lib/server/projects/projects";
 import { quoteRequests } from "@/lib/server/quote-requests/quote-requests";
-import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n";
-import { visibleLocale } from "@/lib/locale-gate";
+import { DEFAULT_LOCALE, localizePath, unlocalizePath, type Locale } from "@/lib/i18n";
+import { screenLanguageLinks } from "@/lib/language-links";
+import { visibleLocale, visibleLocales } from "@/lib/locale-gate";
 import { getMessages } from "@/lib/messages";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,14 @@ export default async function AccountPage({ params: routeParams, searchParams }:
   const messages = getMessages(locale);
   const params = await searchParams;
   const saveIntent = readSaveIntent(params);
+  const returnTo = safeReturn(params.next, locale);
+  const accountPath = localizePath(locale, "/konto");
+  // Another language keeps the pending save, or the return address in that language.
+  const languages = screenLanguageLinks(locale, await visibleLocales(), (target) => {
+    if (saveIntent) return saveIntentPath(target, saveIntent);
+    if (returnTo === accountPath) return localizePath(target, "/konto");
+    return localizePath(target, `/konto?next=${encodeURIComponent(localizePath(target, unlocalizePath(returnTo)))}`);
+  });
   const session = await customerSessions.resolve(await headers());
   const [accountProjects, gallery, requests] = session
     ? await Promise.all([
@@ -97,6 +106,7 @@ export default async function AccountPage({ params: routeParams, searchParams }:
             ),
             label: messages.appHeader.toConfigurator
           }}
+          languages={languages}
           locale={locale}
           showAccount={false}
         />
@@ -116,9 +126,7 @@ export default async function AccountPage({ params: routeParams, searchParams }:
           ) : (
             <AccountAccess
               developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
-              returnTo={
-                saveIntent ? saveIntentPath(locale, saveIntent) : safeReturn(params.next, locale)
-              }
+              returnTo={saveIntent ? saveIntentPath(locale, saveIntent) : returnTo}
             />
           )}
         </div>

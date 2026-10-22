@@ -1,6 +1,6 @@
 # Sanity pagebuilder
 
-Status: in progress — Phases 1–7, 9a and the functional copy of 9b done; 8 (ADR 0013, SANITY.md, CONTRACT.md) and the rest of 9b (review, switch on functional routes, launch) open; Sanity project `06g3ozu4` created by Martin
+Status: in progress — Phases 1–7, 9a and the functional copy of 9b done; 8 (ADR 0013, SANITY.md, CONTRACT.md) and the rest of 9b (review, launch) open; the switch on the functional routes done 2026-10-23; Sanity project `06g3ozu4` created by Martin
 Branch: `cc/devstart-sanity` (from `cc/devstart-003` at `e4fd3e9`)
 Governing decisions: [ADR 0007](../../docs/adr/0007-use-sanity-only-for-scoped-editorial-content.md),
 [issue 11](../production-architecture/issues/11-define-sanity-editorial-contract.md),
@@ -463,9 +463,9 @@ screens read as before with unprefixed URLs. One bug found and fixed on the way:
 summary called a formatter exported from a client module. 106 unit tests, lint, types,
 production build green.
 
-*9b remaining before launch:* native review of the English and Spanish copy (editorial and
-functional); the language switch on the functional routes (configure, konto, anfrage);
-then `LAUNCHED_LOCALES` (`hreflang`, sitemap and robots follow it on their own, 7b).
+*9b remaining before launch* (the language switch on the functional routes is done since
+2026-10-23, see STATUS): native review of the English and Spanish copy (editorial and
+functional); then `LAUNCHED_LOCALES` (`hreflang`, sitemap and robots follow it on their own, 7b).
 
 ## 6. Later, separately
 

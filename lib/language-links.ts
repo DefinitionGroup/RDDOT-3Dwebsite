@@ -17,6 +17,23 @@ export const pagePath = (locale: Locale, page: { isHomepage: boolean | null; slu
   localizePath(locale, page.isHomepage || !page.slug ? "/" : `/${page.slug}`);
 
 /**
+ * The language switcher's links for an application screen (configurator,
+ * account, request): the same screen in each visible locale. `hrefFor` gives
+ * the screen's address in a locale, carrying whatever the screen holds in its
+ * URL (a configuration, a Project, a pending save, a return address), so the
+ * switch loses none of it. Fewer than two visible locales: no switcher.
+ */
+export function screenLanguageLinks(
+  current: Locale,
+  visible: readonly Locale[],
+  hrefFor: (locale: Locale) => string
+): LanguageLink[] {
+  const locales = LOCALES.filter((locale) => visible.includes(locale));
+  if (locales.length < 2) return [];
+  return locales.map((locale) => ({ locale, href: hrefFor(locale), current: locale === current }));
+}
+
+/**
  * The language switcher's links for one page: each visible locale points at
  * this page's translation, or at that locale's homepage when there is none.
  * Translations are never mixed in (ADR 0007), so a missing one leads home

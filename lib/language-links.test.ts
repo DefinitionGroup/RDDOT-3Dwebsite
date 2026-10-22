@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { languageLinks } from "./language-links";
+import { localizePath } from "./i18n";
+import { languageLinks, screenLanguageLinks } from "./language-links";
 
 const ALL = ["de", "en", "es"] as const;
 
@@ -39,5 +40,21 @@ describe("languageLinks", () => {
   it("keeps the site's locale order and leaves out locales that are not visible", () => {
     const links = languageLinks({ locale: "de", isHomepage: true, slug: null, translations: null }, ["es", "de"]);
     expect(links.map((link) => link.locale)).toEqual(["de", "es"]);
+  });
+});
+
+describe("screenLanguageLinks", () => {
+  const hrefFor = (locale: "de" | "en" | "es") => localizePath(locale, "/configure?project=p1");
+
+  it("is empty while only one locale is visible", () => {
+    expect(screenLanguageLinks("de", ["de"], hrefFor)).toEqual([]);
+  });
+
+  it("keeps the screen and its query in every visible locale", () => {
+    expect(screenLanguageLinks("en", ALL, hrefFor)).toEqual([
+      { locale: "de", href: "/configure?project=p1", current: false },
+      { locale: "en", href: "/en/configure?project=p1", current: true },
+      { locale: "es", href: "/es/configure?project=p1", current: false }
+    ]);
   });
 });
