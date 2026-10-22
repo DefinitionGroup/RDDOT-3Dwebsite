@@ -1,12 +1,13 @@
 # rotpunkt Signature Status
 
-Last reconciled: 2026-10-22 (at `0c9b45e`, no commits since 2026-10-16), against the
-website assessment of 2026-10-16 (`.scratch/website-assessment-2026-10-16/assessment.md`,
-untracked) and a recheck of the gates and the live deployment.
+Last reconciled: 2026-10-22 (at `0c9b45e`), against the website assessment of 2026-10-16
+(`.scratch/website-assessment-2026-10-16/assessment.md`, untracked) and a recheck of the
+gates and the live deployment; the guest-save fix, noindex and the `1aee72f` deploy were
+added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
-`cc/devstart-003` at `e4fd3e9`. `origin/redesign/devstart`, the Vercel production branch,
-was pushed to the same commit `0c9b45e` on 2026-10-16, so production builds this branch.
-The local `redesign/devstart` ref is stale at `12215a5`. `cc/devstart-003` and the earlier
+`cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
+fast-forwarded to this branch and pushed when the test environment should update; last on
+2026-10-22 to `1aee72f`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -111,7 +112,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
 | Gates: lint, types, 134 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
-| Vercel project | Production builds `redesign/devstart` from Git, at `0c9b45e` since 2026-10-16, and serves as a test environment (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
+| Vercel project | Production builds `redesign/devstart` from Git, at `1aee72f` since 2026-10-22, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories: 1 critical, 3 high (dompurify, vite, braces) under `sanity > @sanity/cli` | Open; build-time tooling, not served to visitors; installed `sanity` 6.17.0, latest 6.20.0 |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
@@ -130,8 +131,8 @@ built. Details for each line are under Done, Known Defects and Missing.
   can stay listed. Checked on `next start` of the normal build: the header on pages,
   `robots.txt`, the sitemap, the Studio, a GLB, the film, an image, an API route and a 404;
   the meta tag on `/`, `/configure`, `/konto`, `/anfrage`. A second build with the variable
-  set had no header rule, the sitemap line back and no robots meta on the homepage. Takes
-  effect on Vercel with the next push of `redesign/devstart`.
+  set had no header rule, the sitemap line back and no robots meta on the homepage. Live on
+  Vercel since `1aee72f` was deployed the same evening (see Deployment).
 - **A guest's save survives sign-in (2026-10-22).** "Als Projekt speichern" sends a signed-out
   guest to `/konto?intent=save&import=<key>&c=<code>`; the sign-in there returned to bare
   `/konto` afterwards, so the import never ran and the configuration was lost, and its
@@ -507,11 +508,11 @@ Updated 2026-10-22.
   `OPEN_ALL_LOCALES`, set a real email provider (ADR 0010), switch to the `production`
   dataset after the DPA review, and give production its own database and storage bucket.
   This is the release-gate item under Roadmap M2.
-- **The test environment is open to search engines until the next deploy** (found
-  2026-10-22): the deployed `0c9b45e` sends no `noindex`. Fixed in code the same day: every
-  deployment says noindex unless it sets `SEARCH_INDEXING_ENABLED=true` (see Done); it
-  reaches Vercel with the next push of `redesign/devstart`.
-  `PHOTO_GENERATION_ENABLED` and `REPLICATE_API_TOKEN` are set on Production; the flag's
+- **The test environment stays out of search engines** since `1aee72f` went live on
+  2026-10-22: every response says noindex, because Production sets no
+  `SEARCH_INDEXING_ENABLED` and still carries test flags (see Done). Before that, `0c9b45e`
+  sent no `noindex`.
+- `PHOTO_GENERATION_ENABLED` and `REPLICATE_API_TOKEN` are set on Production; the flag's
   value was not read. If it is `true`, anyone holding the URL can sign in with the on-screen
   code and spend up to the provider budget breaker (20 € per rolling 24 h by default).
 - Previews: the same test settings apply to every preview branch (`OPEN_ALL_LOCALES`,
@@ -526,13 +527,17 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-5qmv3dygu`, built from `0c9b45e` on 2026-10-16 (the matching
-  `cc/devstart-sanity` preview is `rddot-3-dwebsite-7fkbv1lkc`). Checked 2026-10-22: the
-  configurator renders in Studio and the Loft and across the cameras at 1440 px and at a
-  500 px phone width (headless Chrome on the GPU), with no overflow, no fallback and only the
-  `THREE.Clock` warning; models arrive at full size; `/impressum` and `/datenschutz` answer
-  404, `/en` and `/es` 200; `/api/webhooks/sanity` answers 404 (no secret); the homepage
-  came from the CDN cache about 4.7 days old.
+- Production: `rddot-3-dwebsite-53camsk2r`, built from `1aee72f` on 2026-10-22, live about
+  70 s after `redesign/devstart` was fast-forwarded from `0c9b45e` and pushed (the previous
+  deployment was `rddot-3-dwebsite-5qmv3dygu`). Checked right after: `X-Robots-Tag: noindex,
+  nofollow` on pages, `robots.txt`, the sitemap, the Studio, both room models, the film and a
+  404; the robots meta tag on `/`, `/configure`, `/konto` and `/en`; `robots.txt` without a
+  sitemap line; models at full size; the configurator renders in Studio, the Loft and the
+  Detail camera at 1440 px and in the Front camera at a 500 px phone width (headless Chrome on
+  the GPU), with no overflow, no fallback and only the `THREE.Clock` warning; on `/konto`
+  with a pending save, "Zum Konfigurator" keeps `?c=` (the `7c99752` fix). Earlier that day,
+  on `0c9b45e`: `/impressum` and `/datenschutz` answered 404, `/en` and `/es` 200, and
+  `/api/webhooks/sanity` 404 (no secret).
 - **Functions run in `iad1` (US East)**, Vercel's default — the repository sets no region —
   while the database is Neon Frankfurt and object storage is in the EU. Every database round
   trip crosses the Atlantic, and personal data is processed in the US. Choose the function
@@ -720,8 +725,8 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 - The guest "Als Projekt speichern" handoff through sign-in is fixed (2026-10-22). Still to
   run in the browser: saved Project → Quote Request after it, and an expired session in the
   middle; then make the path the Playwright smoke test (M2).
-- Noindex on every deployment but the launched site is done in code (2026-10-22) and goes
-  live with the next deploy. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
+- Noindex on every deployment but the launched site is live (2026-10-22, `1aee72f`), and the
+  test environment runs it. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
   `false` (or accept the budget breaker as the bound).
 - Update `sanity` and recheck `pnpm audit --prod`.
 - Language switch on the functional screens (configure, konto, anfrage). (Proposed.)
