@@ -31,8 +31,8 @@ Gates at reconciliation (2026-10-22): `pnpm lint` 0 errors and 1 warning
 `tsc --noEmit` clean, `pnpm test` 134/134 in 25 files (covers `features` and `lib`),
 production build green with the `postbuild` server-bundle check passing. `pnpm test:db` was
 not rerun (its harness can migrate the remote test database); its last result is 64 passed
-and 1 skipped (2026-10-15). `pnpm audit --prod` reports 1 critical, 3 high, 6 moderate and
-2 low advisories, all through `sanity > @sanity/cli` (see Known Warnings). The build only
+and 1 skipped (2026-10-15). `pnpm audit --prod` reports one high advisory with no fixed
+release, in Sanity's build tooling (since 2026-10-23; see Known Warnings). The build only
 passes with `TRANSACTIONAL_EMAIL_PROVIDER` **unset** — with the local `development-capture`
 value it fails closed by design (ADR 0010). See Build & Verification Gates below.
 
@@ -114,11 +114,22 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Gates: lint, types, 134 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
 | Vercel project | Production builds `redesign/devstart` from Git, at `1aee72f` since 2026-10-22, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
-| Sanity CLI advisories: 1 critical, 3 high (dompurify, vite, braces) under `sanity > @sanity/cli` | Open; build-time tooling, not served to visitors; installed `sanity` 6.17.0, latest 6.20.0 |
+| Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
 
 ## Done
 
+- **Sanity updated, the dependency audit down to one unfixable advisory (2026-10-23).**
+  `sanity` and `@sanity/vision` 6.17.0 → 6.20.0 brought `@sanity/cli` 8.13.0 → 8.22.1, which
+  cleared the vite advisories and `sprintf-js`. Two overrides in `package.json` lift what the
+  CLI still pinned: `dompurify` to 3.4.17 (the critical, a high and a low, in
+  `@sanity/cli-build`) and `uuid` 10 to 11.1.1 (moderate, in `typeid-js`, which calls only
+  `stringify` and `v7`, both unchanged in 11). From 12 advisories (1 critical, 3 high) to one
+  high in `braces` with no fixed release (Known Warnings). Lint, types, 134 tests and the
+  build pass; type generation through the new CLI produced identical `schema.json` and
+  `sanity.types.ts`; on `next start` the Studio shows its sign-in screen and the homepage and
+  configurator render, with no console errors. pnpm now warns that `@sanity/blueprints`
+  (Sanity Functions tooling, unused here) wants `jiti` 2 and finds 1.21.7.
 - **The journey to a Quote Request, browser-tested (2026-10-22).** Scripted in headless
   Chrome on the GPU against the dev server with throwaway accounts (`qa-journey-…@example.com`;
   four Quote Requests now sit in the shared development database, which nobody is notified
@@ -668,12 +679,12 @@ Revisit when Project Archive/Trash/restore lands.
 - One React hydration-mismatch error ("attributes of the server rendered HTML didn't match")
   appeared once during the 500 px journey on the dev server; loading each page of that
   journey directly, signed in and out, showed none.
-- `pnpm audit --prod` (2026-10-22): 1 critical and 1 high in `dompurify` ≤ 3.4.16, 1 high and
-  4 moderate and 1 low in `vite` 8.3.0–8.3.2, 1 high in `braces`, moderate `uuid` and
-  `sprintf-js`, 1 more low in `dompurify`. Every path runs through `sanity > @sanity/cli`
-  (build and codegen tooling, not served to visitors); on 2026-10-16 it was 0 critical,
-  1 high, 2 moderate. Installed `sanity` is 6.17.0, latest 6.20.0; whether the update clears
-  them is unchecked.
+- `pnpm audit --prod` (2026-10-23) reports one high advisory: `braces` ≤ 3.0.3, stack
+  exhaustion through deeply nested patterns (GHSA-vfj7-8cjw-p6xm), with no fixed release
+  published. Its only path is `sanity > @sanity/cli > @sanity/codegen > chokidar`, the file
+  watcher of type generation, which sees only this repository's own patterns at build time;
+  nothing a visitor sends reaches it. Recheck when `braces` or `chokidar` publishes a fix.
+  The other eleven of 2026-10-22 are gone (see Done).
 - `next-env.d.ts` churns between `./.next/types/routes.d.ts` and
   `./.next/dev/types/routes.d.ts` depending on whether `next build` or `next dev` ran
   last. It is a generated file marked "should not be edited"; commit `12215a5` committed
@@ -757,7 +768,7 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 - Noindex on every deployment but the launched site is live (2026-10-22, `1aee72f`), and the
   test environment runs it. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
   `false` (or accept the budget breaker as the bound).
-- Update `sanity` and recheck `pnpm audit --prod`.
+- `sanity` is updated and the audit cleared down to one advisory without a fix (2026-10-23).
 - Language switch on the functional screens (configure, konto, anfrage). (Proposed.)
 
 ### M1 — A reviewable preview
