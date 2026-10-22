@@ -27,7 +27,7 @@ card (it shows the evening photo for now).
 
 Gates at reconciliation (2026-10-22): `pnpm lint` 0 errors and 1 warning
 (`components/page-builder/exit-preview.tsx`, `window.location.assign` to an internal page),
-`tsc --noEmit` clean, `pnpm test` 131/131 in 24 files (covers `features` and `lib`),
+`tsc --noEmit` clean, `pnpm test` 134/134 in 25 files (covers `features` and `lib`),
 production build green with the `postbuild` server-bundle check passing. `pnpm test:db` was
 not rerun (its harness can migrate the remote test database); its last result is 64 passed
 and 1 skipped (2026-10-15). `pnpm audit --prod` reports 1 critical, 3 high, 6 moderate and
@@ -110,7 +110,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Feature | State |
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
-| Gates: lint, types, 131 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
+| Gates: lint, types, 134 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
 | Vercel project | Production builds `redesign/devstart` from Git, at `0c9b45e` since 2026-10-16, and serves as a test environment (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories: 1 critical, 3 high (dompurify, vite, braces) under `sanity > @sanity/cli` | Open; build-time tooling, not served to visitors; installed `sanity` 6.17.0, latest 6.20.0 |
@@ -118,6 +118,20 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Only the launched site may be indexed (2026-10-22).** The Vercel test environment
+  answered every crawler with an open `robots.txt`, a sitemap and no `noindex`. Now
+  `lib/search-indexing.ts` decides once per deployment: indexing needs a production build
+  with `SEARCH_INDEXING_ENABLED=true`, and is refused on every Vercel preview and on any
+  deployment that still sets `OPEN_ALL_LOCALES` or the email-capture flag. Otherwise every
+  response carries `X-Robots-Tag: noindex, nofollow` (`next.config.ts`, so models, film and
+  images too), every page `<meta name="robots" content="noindex, nofollow">` (the
+  `[locale]` layout), and `robots.txt` names no sitemap. `robots.txt` keeps letting crawlers
+  in on purpose: a crawler blocked there never reads the noindex, and URLs it already knows
+  can stay listed. Checked on `next start` of the normal build: the header on pages,
+  `robots.txt`, the sitemap, the Studio, a GLB, the film, an image, an API route and a 404;
+  the meta tag on `/`, `/configure`, `/konto`, `/anfrage`. A second build with the variable
+  set had no header rule, the sitemap line back and no robots meta on the homepage. Takes
+  effect on Vercel with the next push of `redesign/devstart`.
 - **A guest's save survives sign-in (2026-10-22).** "Als Projekt speichern" sends a signed-out
   guest to `/konto?intent=save&import=<key>&c=<code>`; the sign-in there returned to bare
   `/konto` afterwards, so the import never ran and the configuration was lost, and its
@@ -445,7 +459,7 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean
-pnpm test                                  # 131/131
+pnpm test                                  # 134/134
 pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 ```
@@ -493,8 +507,10 @@ Updated 2026-10-22.
   `OPEN_ALL_LOCALES`, set a real email provider (ADR 0010), switch to the `production`
   dataset after the DPA review, and give production its own database and storage bucket.
   This is the release-gate item under Roadmap M2.
-- **The test environment is open to search engines** (found 2026-10-22): `robots.txt` allows
-  `/`, pages carry no `noindex`, and the canonical points at `rddot-3-dwebsite.vercel.app`.
+- **The test environment is open to search engines until the next deploy** (found
+  2026-10-22): the deployed `0c9b45e` sends no `noindex`. Fixed in code the same day: every
+  deployment says noindex unless it sets `SEARCH_INDEXING_ENABLED=true` (see Done); it
+  reaches Vercel with the next push of `redesign/devstart`.
   `PHOTO_GENERATION_ENABLED` and `REPLICATE_API_TOKEN` are set on Production; the flag's
   value was not read. If it is `true`, anyone holding the URL can sign in with the on-screen
   code and spend up to the provider budget breaker (20 € per rolling 24 h by default).
@@ -704,9 +720,9 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 - The guest "Als Projekt speichern" handoff through sign-in is fixed (2026-10-22). Still to
   run in the browser: saved Project → Quote Request after it, and an expired session in the
   middle; then make the path the Playwright smoke test (M2).
-- Hygiene on the public test environment: `noindex` and a disallowing `robots.txt` on every
-  deployment that is not the launched site; *Martin:* confirm `PHOTO_GENERATION_ENABLED` on
-  Production is `false` (or accept the budget breaker as the bound).
+- Noindex on every deployment but the launched site is done in code (2026-10-22) and goes
+  live with the next deploy. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
+  `false` (or accept the budget breaker as the bound).
 - Update `sanity` and recheck `pnpm audit --prod`.
 - Language switch on the functional screens (configure, konto, anfrage). (Proposed.)
 
@@ -742,7 +758,8 @@ Engineering:
 - Production Vercel environment: it runs as a test environment until then (see
   Deployment). Remove `TEST_DATABASE_URL`, the capture flag, `OPEN_ALL_LOCALES` and the
   `development` dataset settings; set the production domain and the function region
-  (`iad1` today). Give production its own database and its own storage bucket
+  (`iad1` today), then `SEARCH_INDEXING_ENABLED=true` so search engines may index it (it
+  stays noindex while any test flag remains). Give production its own database and its own storage bucket
   and least-privilege key: today `DATABASE_URL*` and every `OBJECT_STORAGE_*` variable is one
   value shared by Preview and Production, which ADR 0011 rules out.
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS

@@ -9,6 +9,7 @@ import { DEFAULT_LOCALE, isLocale, LAUNCHED_LOCALES } from "@/lib/i18n";
 import { visibleLocale } from "@/lib/locale-gate";
 import { getMessages } from "@/lib/messages";
 import { siteMetadata } from "@/lib/page-metadata";
+import { SEARCH_INDEXING } from "@/lib/search-indexing";
 import { LocaleProvider } from "@/lib/messages/locale-context";
 import { isSanityConfigured } from "@/sanity/env";
 import { SanityLive } from "@/sanity/lib/live";
@@ -32,14 +33,15 @@ const serif = Instrument_Serif({
 
 /**
  * The locale's defaults from the site settings; pages override them.
- * Editorial Preview is never indexed (ADR 0007).
+ * Editorial Preview is never indexed (ADR 0007), nor is any deployment but
+ * the launched site (`lib/search-indexing.ts`).
  */
 export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Promise<Metadata> {
   const { locale: requested } = await params;
   const locale = isLocale(requested) ? requested : DEFAULT_LOCALE;
   const metadata = siteMetadata(locale, await loadSiteSettings(locale, { stega: false }));
   const { isEnabled } = await draftMode();
-  return isEnabled ? { ...metadata, robots: { index: false, follow: false } } : metadata;
+  return isEnabled || !SEARCH_INDEXING ? { ...metadata, robots: { index: false, follow: false } } : metadata;
 }
 
 export const viewport: Viewport = {

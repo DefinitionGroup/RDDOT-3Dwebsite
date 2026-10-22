@@ -96,7 +96,7 @@ The current direction is:
 - The product definition should remain portable to JSON or another storage backend later.
 - Prices and product rules never live in Sanity; blocks read them through `features/configurator/catalog.ts`.
 - Public visitors never connect to Sanity: reads are server-side and cached under the `sanity` tag, which the signed publish webhook (`app/api/webhooks/sanity`, `SANITY_REVALIDATE_SECRET`) expires.
-- Code owns SEO output (`lib/page-metadata.ts`, `lib/seo.ts`, `app/sitemap.ts`, `app/robots.ts`); `siteSettings` and each page's `seo` only supply words and images. `redirect` documents are enforced in `proxy.ts` from an in-memory table (`sanity/lib/redirect-table.ts`).
+- Code owns SEO output (`lib/page-metadata.ts`, `lib/seo.ts`, `app/sitemap.ts`, `app/robots.ts`); `siteSettings` and each page's `seo` only supply words and images. Only a deployment with `SEARCH_INDEXING_ENABLED=true` and no test flags may be indexed (`lib/search-indexing.ts`); every other one answers noindex. `redirect` documents are enforced in `proxy.ts` from an in-memory table (`sanity/lib/redirect-table.ts`).
 - The configurator is the smart `configuratorBlock`: editorial presentation plus a `productKey`.
 
 ## Commerce Direction
