@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-23 to `be80de2`. `cc/devstart-003` and the earlier
+2026-10-23 to `8811e17`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -732,7 +732,18 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-mhl73bc78`, built from `be80de2` on 2026-10-23, live about
+- Production: `rddot-3-dwebsite-l7tae03wl`, built from `8811e17` on 2026-10-23, live about
+  90 s after `redesign/devstart` was fast-forwarded from `be80de2` and pushed; it brings
+  profile P1 and request P2 (the migration was applied to the shared development database
+  before the push, so the previous deployment ran against the new columns unharmed).
+  Checked right after, signed out: `PUT /api/account/profile`, the export, submitting and
+  listing requests, lifecycle, duplicate and delete answer 401 `session-expired`;
+  `/anfrage` in German, English and Spanish and `/konto` ask for sign-in with the language
+  switch at 1440 and 390 px, nothing past the edge, noindex holds; the configurator renders,
+  frames the kitchen left of the Datenblatt, changes with walnut and selects a module on a
+  click in the Edit Session; no console errors. The new forms need a signed-in account, so
+  they were checked on the dev server only.
+- The deployment before, `rddot-3-dwebsite-mhl73bc78`, was built from `be80de2` on 2026-10-23, live about
   90 s after `redesign/devstart` was fast-forwarded from `fdc353d` and pushed; it brings
   dialog focus containment, the segment controls as radio groups, and the desktop framing
   left of the Datenblatt with the HUD on soot chips. Checked right after, signed out, in
