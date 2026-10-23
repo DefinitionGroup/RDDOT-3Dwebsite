@@ -148,6 +148,8 @@ export type ConfiguratorQuote = {
   cabinetDeltaCents: number;
   frontDeltaCents: number;
   subtotalCents: number;
+  /** VAT rate of the price book the quote was made from, e.g. 0.19. */
+  taxRate: number;
   taxCents: number;
   totalCents: number;
 };

@@ -38,10 +38,13 @@ describe("presetState", () => {
 });
 
 describe("presetPricing", () => {
-  it("prices the preset and reports the front surcharge", () => {
-    const walnut = RDTD_KITCHEN_PRODUCT_V2.frontColors.find((option) => option.key === "walnut-memory");
-    const pricing = presetPricing(KEY, { frontColorKey: "walnut-memory" });
-    expect(pricing?.frontDeltaCents).toBe(walnut?.priceDeltaCents);
-    expect(presetPricing(KEY)?.totalCents).toBe(getConfiguratorQuote(DEFAULT_CONFIGURATOR_STATE).totalCents);
+  it("prices the preset and reports the front surcharge as the total moves, VAT included", () => {
+    const standard = presetPricing(KEY);
+    const walnut = presetPricing(KEY, { frontColorKey: "walnut-memory" });
+    expect(standard?.totalCents).toBe(getConfiguratorQuote(DEFAULT_CONFIGURATOR_STATE).totalCents);
+    expect(standard?.frontSurchargeCents).toBe(0);
+    // The homepage card said +580 € while choosing walnut moved the total by 690,20 €.
+    expect(walnut?.frontSurchargeCents).toBe(69020);
+    expect(walnut!.totalCents - standard!.totalCents).toBe(walnut?.frontSurchargeCents);
   });
 });

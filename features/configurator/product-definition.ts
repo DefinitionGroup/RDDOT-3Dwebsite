@@ -505,6 +505,7 @@ export function getConfiguratorQuote(
     cabinetDeltaCents,
     frontDeltaCents,
     subtotalCents,
+    taxRate: definition.priceBook.taxRate,
     taxCents,
     totalCents: subtotalCents + taxCents
   };
@@ -538,15 +539,37 @@ function getLegacyQuote(
     cabinetDeltaCents: cabinetColor.priceDeltaCents,
     frontDeltaCents: frontColor.priceDeltaCents,
     subtotalCents,
+    taxRate: definition.priceBook.taxRate,
     taxCents,
     totalCents: subtotalCents + taxCents
   };
 }
 
+const NUMBER_LOCALE: Record<LocaleCode, string> = { de: "de-DE", en: "en-US", es: "es-ES" };
+
 export function formatCurrency(cents: number, locale: LocaleCode = "de") {
-  return new Intl.NumberFormat(locale === "de" ? "de-DE" : locale === "es" ? "es-ES" : "en-US", {
+  return new Intl.NumberFormat(NUMBER_LOCALE[locale], {
     currency: "EUR",
     maximumFractionDigits: 0,
     style: "currency"
   }).format(cents / 100);
+}
+
+/**
+ * A unit price: whole euros when it is one, otherwise to the cent, so that
+ * quantity × unit price can be checked against the position.
+ */
+export function formatUnitPrice(cents: number, locale: LocaleCode = "de") {
+  const digits = cents % 100 === 0 ? 0 : 2;
+  return new Intl.NumberFormat(NUMBER_LOCALE[locale], {
+    currency: "EUR",
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+    style: "currency"
+  }).format(cents / 100);
+}
+
+/** A rate such as 0.19 as the locale writes it: "19 %", "19%". */
+export function formatPercent(rate: number, locale: LocaleCode = "de") {
+  return new Intl.NumberFormat(NUMBER_LOCALE[locale], { maximumFractionDigits: 1, style: "percent" }).format(rate);
 }

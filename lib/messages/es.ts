@@ -14,10 +14,10 @@ export const es = {
   blocks: {
     moreAbout: (name: string) => `Más sobre ${name}`,
     includedAsStandard: "Incluido de serie",
-    surcharge: (price: string) => `Suplemento ${price}`,
+    surcharge: (price: string) => `Suplemento ${price} IVA incluido`,
     indicativePrice: "Precio orientativo",
-    indicativePriceStandard: "Precio orientativo del equipamiento básico",
-    indicativePricePreset: "Precio orientativo de este equipamiento",
+    indicativePriceStandard: "Precio orientativo del equipamiento básico, IVA incluido",
+    indicativePricePreset: "Precio orientativo de este equipamiento, IVA incluido",
     decisions: (count: number) => `Las ${["", "una", "dos", "tres", "cuatro", "cinco"][count] ?? count} decisiones`,
     configureNow: "Configurar ahora"
   },
@@ -135,7 +135,7 @@ export const es = {
     layoutHint:
       "Mueva, añada o cambie armarios en la escena. El precio orientativo sigue cada cambio; nada se aplica hasta que pulse «Listo».",
     priceLines: (count: number) => `${count} partidas`,
-    indicativePriceNonBinding: "Precio orientativo, sin compromiso"
+    indicativePriceNonBinding: "Precio orientativo con IVA, sin compromiso"
   },
   islandSizes: {
     0: "Sin isla",
@@ -152,9 +152,7 @@ export const es = {
   priceLines: {
     cabinetFinish: "Acabado del cuerpo",
     frontFinish: "Acabado del frente",
-    subtotal: "Subtotal",
-    taxIndicator: "IVA orientativo",
-    taxIncluded: "IVA incluido"
+    taxIncluded: (rate: string) => `IVA incluido (${rate})`
   },
   editor: {
     addLeft: "Añadir un módulo a la izquierda",

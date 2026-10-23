@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/design-system/app-header";
 import { Emphasized } from "@/components/design-system/emphasized";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
+import { grossQuote } from "@/features/configurator/gross-prices";
 import {
   getConfiguratorQuote,
   getLocalizedLabel
@@ -137,21 +138,23 @@ function describe(
       locale
     );
     const quote = getConfiguratorQuote(working.configuration);
+    const gross = grossQuote(quote);
     return {
       productTitle: snapshot.productTitle,
       layoutLabel: snapshot.layoutLabel,
       cabinetFinish: snapshot.cabinetFinish,
       frontFinish: snapshot.frontFinish,
-      lineItems: quote.lineItems.map((item) => ({
+      lineItems: gross.lineItems.map((item) => ({
         key: item.key,
         label: getLocalizedLabel(item.label, locale),
         quantity: item.quantity,
-        totalCents: item.totalCents
+        grossCents: item.grossCents
       })),
-      cabinetDeltaCents: quote.cabinetDeltaCents,
-      frontDeltaCents: quote.frontDeltaCents,
-      taxCents: quote.taxCents,
-      totalCents: quote.totalCents,
+      cabinetFinishCents: gross.cabinetFinishCents,
+      frontFinishCents: gross.frontFinishCents,
+      taxCents: gross.taxCents,
+      taxRate: gross.taxRate,
+      totalCents: gross.totalCents,
       currency: quote.currency
     };
   } catch (error) {

@@ -14,10 +14,10 @@ export const en = {
   blocks: {
     moreAbout: (name: string) => `More about ${name}`,
     includedAsStandard: "Included as standard",
-    surcharge: (price: string) => `Surcharge ${price}`,
+    surcharge: (price: string) => `Surcharge ${price} incl. VAT`,
     indicativePrice: "Indicative price",
-    indicativePriceStandard: "Indicative price, standard specification",
-    indicativePricePreset: "Indicative price of this specification",
+    indicativePriceStandard: "Indicative price, standard specification, incl. VAT",
+    indicativePricePreset: "Indicative price of this specification, incl. VAT",
     decisions: (count: number) => `The ${["", "one", "two", "three", "four", "five"][count] ?? count} decisions`,
     configureNow: "Configure now"
   },
@@ -135,7 +135,7 @@ export const en = {
     layoutHint:
       "Move, add or swap cabinets in the scene. The indicative price follows every change; nothing is applied until you tap “Done”.",
     priceLines: (count: number) => `${count} price items`,
-    indicativePriceNonBinding: "Indicative price, non-binding"
+    indicativePriceNonBinding: "Indicative price incl. VAT, non-binding"
   },
   islandSizes: {
     0: "None",
@@ -152,9 +152,7 @@ export const en = {
   priceLines: {
     cabinetFinish: "Carcass finish",
     frontFinish: "Front finish",
-    subtotal: "Subtotal",
-    taxIndicator: "VAT indicator",
-    taxIncluded: "VAT included"
+    taxIncluded: (rate: string) => `Of which VAT (${rate})`
   },
   editor: {
     addLeft: "Add a module on the left",

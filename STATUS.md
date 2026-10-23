@@ -70,7 +70,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Straight kitchen line from wall modules (tall cabinet, appliance cabinet, cabinet 30): Edit Session with add, remove, move, swap, drag reorder, drag from the Datenblatt palette; width and per-type limits | Done |
 | Islands: none, standard, large | Done |
 | Finishes: three carcass colours, four fronts; full-size material overlay | Done |
-| Itemised indicative price (sum of parts), live with every change | Done (prototype prices in code, ADR 0006); the homepage material cards show the surcharge before VAT while the configurator total includes it (Known Defects) |
+| Itemised indicative price (sum of parts), live with every change | Done (prototype prices in code, ADR 0006); every price shown includes VAT since 2026-10-23 |
 | Views: Studio, Appartement, Loft; cameras Room, Front, Detail; supersampled studio light | Done; both rooms are placeholders with no recorded licence (Release Blocker). The path-traced Rendering has no button since the Loft took its place |
 | Shareable guest URL (`?c=`), older URLs upgrade | Done |
 | Asset Manifest with release-gate test; poster fallback when 3D fails | Done |
@@ -120,6 +120,23 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Every price includes VAT (2026-10-23).** The price book stays net; what customers see
+  is gross, as German price law (PAngV) asks of prices for consumers and as the totals
+  already were. The homepage material card said "Aufpreis 580 €" while choosing the finish
+  moved the total by 690,20 €; it now says "Aufpreis 690 € inkl. MwSt." (`presetPricing`
+  returns `frontSurchargeCents`, the quote's front delta with VAT). The configurator's
+  "Aufstellung" and the request's configuration panel list every position with VAT, in
+  whole euros that add up to the Richtpreis shown (`features/configurator/gross-prices.ts`:
+  leftover euros go to the positions closest to rounding up), unit prices to the cent when
+  they have cents, and end with "darin enthaltene MwSt. (19 %)" instead of a net subtotal
+  and a "MwSt. Indikator". The datasheet's total reads "Richtpreis inkl. MwSt.,
+  unverbindlich", the homepage teaser's note says "inkl. MwSt."; English and Spanish
+  alike. The stored Price Indication on requests is unchanged (net lines, tax, total).
+  Checked: lint, types, 153/153 tests (new: every configuration's positions add up to its
+  total); headless Chrome on the dev server: the walnut card says 690 € and the total goes
+  10.103 → 10.793 €, the walnut list's nine positions sum to 10.793 €, the English and
+  Spanish lists add up, the request panel sums to 11.127 € at 1440 and 390 px with nothing
+  clipped, no console errors.
 - **The request confirmation says what really happens (2026-10-23).** Nothing tells rotpunkt
   about a new Quote Request yet, so `/anfrage` no longer promises an offer: the form says
   the customer sends this state to rotpunkt and that the request is not yet a quote; the
@@ -737,9 +754,6 @@ Found by the 2026-10-16 assessment. Items marked *rechecked* were confirmed agai
 2026-10-22. The first finding, a signed-out guest's "Als Projekt speichern" losing the
 configuration at sign-in, is fixed (Done, 2026-10-22).
 
-- **Material surcharges are shown before VAT, the total after.** The Nussbaum Memory card
-  says +580 €; choosing it moves the default total from 10.103,10 € to 10.793,30 €
-  (+690,20 €). `blocks/materials/Component.tsx` formats the raw delta from `catalog.ts`.
 - **Dialog focus escapes.** `DetailCard` and `Overlay` focus Close and handle Escape but
   neither trap focus nor make the background inert (Shift+Tab leaves the material dialog
   while it stays open). `GlassSegments` declares tabs without arrow keys or a roving
@@ -905,8 +919,8 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 - `sanity` is updated and the audit cleared down to one advisory without a fix (2026-10-23).
 - The language switch on the functional screens is done (2026-10-23).
 - Moved up from M2 on 2026-10-23, in this order: the request confirmation that matches
-  the real follow-up (done the same day, see Done), one VAT basis for material
-  surcharges, dialog focus containment and the configurator's tab semantics, then the
+  the real follow-up and one VAT basis for prices (both done the same day, see Done), dialog
+  focus containment and the configurator's tab semantics, then the
   configurator's framing and HUD contrast over the rooms.
 - Then the profile, Slice P of the [account spec](.scratch/account-management/spec.md)
   (decided 2026-10-23): salutation, how to reach me and private or professional, copied

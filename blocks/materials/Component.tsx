@@ -39,9 +39,9 @@ export default function MaterialsBlock({ block, locale }: BlockProps<"materialsB
       href: resolved ? `${configurePath}?${CONFIG_QUERY_PARAM}=${encodeConfiguration(resolved.state)}` : null,
       detailLabel: t.moreAbout(item.name),
       price: pricing
-        ? pricing.frontDeltaCents === 0
+        ? pricing.frontSurchargeCents === 0
           ? t.includedAsStandard
-          : t.surcharge(formatCurrency(pricing.frontDeltaCents, locale))
+          : t.surcharge(formatCurrency(pricing.frontSurchargeCents, locale))
         : null
     };
   });

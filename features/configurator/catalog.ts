@@ -1,3 +1,4 @@
+import { withTax } from "./gross-prices";
 import {
   DEFAULT_CONFIGURATOR_STATE,
   getConfiguratorQuote,
@@ -66,14 +67,17 @@ export function presetState(productKey: string | null | undefined, preset: Produ
   return { product, state };
 }
 
-/** Price facts of a preset: its indicative total and the front finish's surcharge. */
+/**
+ * Price facts of a preset, both with VAT like every price a customer sees: its
+ * indicative total and what its front finish adds to that total.
+ */
 export function presetPricing(productKey: string | null | undefined, preset: ProductPreset = {}) {
   const resolved = presetState(productKey, preset);
   if (!resolved) return null;
   const { product, state } = resolved;
-  const front = product.frontColors.find((option) => option.key === state.frontColorKey);
+  const quote = getConfiguratorQuote(state, product);
   return {
-    totalCents: getConfiguratorQuote(state, product).totalCents,
-    frontDeltaCents: front?.priceDeltaCents ?? 0
+    totalCents: quote.totalCents,
+    frontSurchargeCents: withTax(quote.frontDeltaCents, quote.taxRate)
   };
 }

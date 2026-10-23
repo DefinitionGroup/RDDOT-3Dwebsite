@@ -1,19 +1,24 @@
 import { Label } from "@/components/design-system/label";
-import { formatCurrency } from "@/features/configurator/product-definition";
+import { formatCurrency, formatPercent } from "@/features/configurator/product-definition";
 import { formatQuantity } from "@/features/configurator/format-quantity";
 import type { Locale } from "@/lib/i18n";
 import { getMessages } from "@/lib/messages";
 
-/** Serializable description of the configuration a Quote Request is about. */
+/**
+ * Serializable description of the configuration a Quote Request is about.
+ * Every amount includes VAT (`grossQuote`), like the total.
+ */
 export type ConfigurationSummaryData = {
   productTitle: string;
   layoutLabel: string;
   cabinetFinish: string;
   frontFinish: string;
-  lineItems: { key: string; label: string; quantity: number; totalCents: number }[];
-  cabinetDeltaCents: number;
-  frontDeltaCents: number;
+  lineItems: { key: string; label: string; quantity: number; grossCents: number }[];
+  cabinetFinishCents: number;
+  frontFinishCents: number;
+  /** The VAT the total contains, and its rate. */
   taxCents: number;
+  taxRate: number;
   totalCents: number;
   currency: string;
 };
@@ -56,19 +61,19 @@ export function ConfigurationSummary({
             <span>
               {item.label} ({formatQuantity(item.key, item.quantity, locale)})
             </span>
-            <span>{money(item.totalCents)}</span>
+            <span>{money(item.grossCents)}</span>
           </div>
         ))}
         <div className="flex justify-between gap-6">
           <span>{messages.priceLines.cabinetFinish}</span>
-          <span>{money(summary.cabinetDeltaCents)}</span>
+          <span>{money(summary.cabinetFinishCents)}</span>
         </div>
         <div className="flex justify-between gap-6">
           <span>{messages.priceLines.frontFinish}</span>
-          <span>{money(summary.frontDeltaCents)}</span>
+          <span>{money(summary.frontFinishCents)}</span>
         </div>
-        <div className="flex justify-between gap-6">
-          <span>{messages.priceLines.taxIncluded}</span>
+        <div className="flex justify-between gap-6 border-t border-hairline pt-2 text-ash">
+          <span>{messages.priceLines.taxIncluded(formatPercent(summary.taxRate, locale))}</span>
           <span>{money(summary.taxCents)}</span>
         </div>
       </div>

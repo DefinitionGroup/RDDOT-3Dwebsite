@@ -23,10 +23,10 @@ export const de = {
   blocks: {
     moreAbout: (name: string) => `Mehr zu ${name}`,
     includedAsStandard: "In der Grundausstattung enthalten",
-    surcharge: (price: string) => `Aufpreis ${price}`,
+    surcharge: (price: string) => `Aufpreis ${price} inkl. MwSt.`,
     indicativePrice: "Richtpreis",
-    indicativePriceStandard: "Richtpreis der Grundausstattung",
-    indicativePricePreset: "Richtpreis dieser Ausstattung",
+    indicativePriceStandard: "Richtpreis der Grundausstattung, inkl. MwSt.",
+    indicativePricePreset: "Richtpreis dieser Ausstattung, inkl. MwSt.",
     decisions: (count: number) => `Die ${["", "eine", "zwei", "drei", "vier", "fünf"][count] ?? count} Entscheidungen`,
     configureNow: "Jetzt konfigurieren"
   },
@@ -147,7 +147,7 @@ export const de = {
     layoutHint:
       "Schränke in der Szene verschieben, ergänzen oder tauschen. Der Richtpreis folgt jeder Änderung; übernommen wird erst mit „Fertig“.",
     priceLines: (count: number) => `${count} Preispositionen`,
-    indicativePriceNonBinding: "Richtpreis, unverbindlich"
+    indicativePriceNonBinding: "Richtpreis inkl. MwSt., unverbindlich"
   },
   /** Island sizes by module count; 2 and 6 stay for stored configurations. */
   islandSizes: {
@@ -165,9 +165,7 @@ export const de = {
   priceLines: {
     cabinetFinish: "Korpus-Finish",
     frontFinish: "Front-Finish",
-    subtotal: "Zwischensumme",
-    taxIndicator: "MwSt. Indikator",
-    taxIncluded: "enthaltene MwSt."
+    taxIncluded: (rate: string) => `darin enthaltene MwSt. (${rate})`
   },
   editor: {
     addLeft: "Modul links hinzufügen",
