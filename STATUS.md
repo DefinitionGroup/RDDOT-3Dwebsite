@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-23 to `edf646b`. `cc/devstart-003` and the earlier
+2026-10-23 to `d4682f4`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -656,7 +656,15 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-emayyjt50`, built from `edf646b` on 2026-10-23, live about
+- Production: `rddot-3-dwebsite-cuyb1zo5z`, built from `d4682f4` on 2026-10-23, live about
+  a minute after `redesign/devstart` was fast-forwarded from `edf646b` and pushed; it brings
+  the request confirmation that no longer promises an offer. Checked right after, signed
+  out: `/anfrage`, `/en/anfrage` and `/es/anfrage` answer 200 with noindex and ask for
+  sign-in with the language switch at 1440 px (German also at 390 px), nothing past the
+  edge, no console errors; the 22 scripts those pages load carry the new wording in all
+  three languages and none of the old offer promises. The wording itself shows only to a
+  signed-in owner of a saved Project, so it was seen on the dev server, not live.
+- The deployment before, `rddot-3-dwebsite-emayyjt50`, was built from `edf646b` on 2026-10-23, live about
   90 s after `redesign/devstart` was fast-forwarded from `e1f5df0` and pushed; it brings
   account management A3 and A4 (no database change). Checked right after, signed out: the
   export, profile, lifecycle, duplicate and delete routes answer 401 `session-expired`,
