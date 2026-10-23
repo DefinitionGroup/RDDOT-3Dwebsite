@@ -15,14 +15,14 @@ import {
   SMAA,
   ToneMapping
 } from "@react-three/postprocessing";
-import { useThree } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import {
   BlendFunction,
   SMAAPreset,
   ToneMappingMode
 } from "postprocessing";
 import { Suspense, useEffect, useRef, type ComponentType, type ElementRef } from "react";
-import { Box3, RectAreaLight, Vector3 } from "three";
+import { Box3, PerspectiveCamera as ThreePerspectiveCamera, RectAreaLight, Vector3 } from "three";
 import type {
   CameraView,
   ConfiguratorState,
@@ -31,6 +31,7 @@ import type {
   VisualizationMode
 } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
+import { lensShift, visibleShare } from "@/features/configurator/engine/visible-frame";
 import {
   APARTMENT_CAMERA_BOUNDS,
   ApartmentRoom
@@ -53,6 +54,8 @@ const STUDIO_FLOOR_SIZE = 40;
 
 type KitchenSceneProps = {
   cameraView: CameraView;
+  /** CSS pixels of the canvas the Datenblatt covers on the right (see visible-frame.ts). */
+  coveredRight?: number;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   outlook: LoftOutlook;
@@ -160,6 +163,7 @@ function cameraFov(room: boolean, compact: boolean) {
 
 export function KitchenScene({
   cameraView,
+  coveredRight = 0,
   edit,
   onCameraInteraction,
   outlook,
@@ -214,6 +218,22 @@ export function KitchenScene({
     const retries = [300, 900, 1800].map((delay) => window.setTimeout(frame, delay));
     return () => retries.forEach((timer) => window.clearTimeout(timer));
   }, [cameraView, defaultControls, isCompactViewport, pathTracing, room]);
+
+  // The framing is drawn into the part of the canvas the Datenblatt leaves
+  // free: zoomed out to its share of the width here, centred by the lens
+  // shift below. Opening or closing the panel eases between the two.
+  const share = visibleShare(width, coveredRight);
+  useEffect(() => {
+    void controlsRef.current?.zoomTo(share, !pathTracing);
+  }, [defaultControls, pathTracing, share]);
+
+  useFrame(({ camera }) => {
+    if (!(camera instanceof ThreePerspectiveCamera)) return;
+    const offset = lensShift(camera, share);
+    if (Math.abs(camera.filmOffset - offset) < 1e-6) return;
+    camera.filmOffset = offset;
+    camera.updateProjectionMatrix();
+  });
 
   return (
     <>

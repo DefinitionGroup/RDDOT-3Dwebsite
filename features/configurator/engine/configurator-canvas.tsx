@@ -19,6 +19,8 @@ import { KitchenScene } from "@/features/configurator/engine/kitchen-scene";
 type ConfiguratorCanvasProps = {
   cameraView: CameraView;
   captureRef?: SceneCaptureRef;
+  /** CSS pixels of the canvas the Datenblatt covers on the right; the framing moves left of it. */
+  coveredRight?: number;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   /** What the Loft's glass looks out on. */
@@ -104,6 +106,7 @@ export function ConfiguratorCanvas(props: ConfiguratorCanvasProps) {
 function SceneCanvas({
   cameraView,
   captureRef,
+  coveredRight = 0,
   edit,
   onCameraInteraction,
   outlook = "street",
@@ -129,6 +132,7 @@ function SceneCanvas({
       <Suspense fallback={null}>
         <RenderPipeline
           cameraView={cameraView}
+          coveredRight={coveredRight}
           edit={edit}
           onCameraInteraction={onCameraInteraction}
           outlook={outlook}
@@ -144,6 +148,7 @@ function SceneCanvas({
 
 type RenderPipelineProps = {
   cameraView: CameraView;
+  coveredRight: number;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   outlook: LoftOutlook;
@@ -154,6 +159,7 @@ type RenderPipelineProps = {
 
 function RenderPipeline({
   cameraView,
+  coveredRight,
   edit,
   onCameraInteraction,
   outlook,
@@ -168,6 +174,7 @@ function RenderPipeline({
     return (
       <KitchenScene
         cameraView={cameraView}
+        coveredRight={coveredRight}
         edit={edit}
         outlook={outlook}
         pathTracing={false}
@@ -181,6 +188,7 @@ function RenderPipeline({
     <PathTracingPipeline
       cameraView={cameraView}
       compact={isCompactViewport}
+      coveredRight={coveredRight}
       onCameraInteraction={onCameraInteraction}
       outlook={outlook}
       state={state}
@@ -192,6 +200,7 @@ function RenderPipeline({
 function PathTracingPipeline({
   cameraView,
   compact,
+  coveredRight,
   onCameraInteraction,
   outlook,
   state,
@@ -212,6 +221,7 @@ function PathTracingPipeline({
     >
       <KitchenScene
         cameraView={cameraView}
+        coveredRight={coveredRight}
         onCameraInteraction={onCameraInteraction}
         outlook={outlook}
         pathTracing

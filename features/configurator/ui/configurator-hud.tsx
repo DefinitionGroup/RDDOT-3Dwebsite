@@ -31,10 +31,14 @@ function AccountIcon() {
 }
 
 /** Brand, context and the account entry: the top-left and top-right of the HUD. */
+/**
+ * The top HUD sits on soot chips like every control over the scene: bare
+ * white type and graphite labels wash out against the rooms' light walls.
+ */
 export function HudBrand({ context }: { context: string }) {
   const locale = useLocale();
   return (
-    <div className="pointer-events-auto flex items-center gap-4">
+    <div className="chip-solid pointer-events-auto flex h-11 min-w-0 items-center gap-4 rounded-pill px-4">
       <BrandLogo compact href={localizePath(locale, "/")} label={useMessages().header.home} />
       <span aria-hidden="true" className="hidden h-[18px] w-px bg-hairline sm:block" />
       <span className="hidden truncate text-[0.875rem] text-graphite sm:block">{context}</span>
@@ -47,7 +51,7 @@ export function HudAccountLink() {
   return (
     <Link
       aria-label={useMessages().common.account}
-      className="pointer-events-auto inline-flex size-11 shrink-0 items-center justify-center rounded-pill border border-hairline text-ink transition-colors duration-state ease-signature hover:border-ink"
+      className="chip-solid pointer-events-auto inline-flex size-11 shrink-0 items-center justify-center rounded-pill text-ink transition-colors duration-state ease-signature hover:bg-ink/[.14]"
       href={localizePath(locale, "/konto")}
     >
       <AccountIcon />
@@ -57,7 +61,13 @@ export function HudAccountLink() {
 
 export function HudPrice({ children, size = "hud" }: { children: ReactNode; size?: "hud" | "sheet" }) {
   return (
-    <div className={`flex items-baseline gap-2.5 ${size === "sheet" ? "flex-col gap-0.5" : ""}`}>
+    <div
+      className={
+        size === "sheet"
+          ? "flex flex-col gap-0.5"
+          : "chip-solid flex h-11 items-center gap-2.5 rounded-pill px-4"
+      }
+    >
       <Label as="span">{useMessages().common.indicativePrice}</Label>
       <span
         className={`tnum font-display leading-none tracking-[-0.02em] text-ink ${

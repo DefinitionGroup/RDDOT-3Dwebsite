@@ -24,8 +24,8 @@ const EPSILON = 1e-7;
  * Jitters the camera by a sub-pixel offset while nothing moves and feeds
  * the frames to an AccumulationPass. Place it among the composer's
  * children after the ambient-occlusion pass and before the effects that
- * encode the output. Any change to `resetKey`, the camera or the viewport
- * starts the accumulation over.
+ * encode the output. Any change to `resetKey`, the camera, its lens or the
+ * viewport starts the accumulation over.
  */
 export function TemporalAccumulation({
   resetKey,
@@ -38,6 +38,7 @@ export function TemporalAccumulation({
   const camera = useThree((rootState) => rootState.camera);
   const gl = useThree((rootState) => rootState.gl);
   const previousMatrix = useRef<number[]>([]);
+  const previousLens = useRef("");
   const previousKey = useRef(resetKey);
   const size = useMemo(() => new Vector2(), []);
 
@@ -47,10 +48,16 @@ export function TemporalAccumulation({
     if (!(camera instanceof PerspectiveCamera)) return;
 
     const matrix = camera.matrixWorld.elements;
+    // A zoom or lens shift changes the picture without moving the camera.
+    const lens = `${camera.fov}|${camera.zoom}|${camera.aspect}|${camera.filmOffset}`;
     const moved =
       previousMatrix.current.length !== 16 ||
+      lens !== previousLens.current ||
       matrix.some((value, index) => Math.abs(value - previousMatrix.current[index]) > EPSILON);
-    if (moved) previousMatrix.current = Array.from(matrix);
+    if (moved) {
+      previousMatrix.current = Array.from(matrix);
+      previousLens.current = lens;
+    }
 
     if (moved || previousKey.current !== resetKey) {
       previousKey.current = resetKey;

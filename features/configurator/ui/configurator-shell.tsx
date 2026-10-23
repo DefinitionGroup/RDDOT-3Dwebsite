@@ -146,6 +146,10 @@ function describePhotoFailure(reason: string | null, t: Messages["photo"]) {
   }
 }
 
+/** The desktop Datenblatt card: its width and its gap to the right edge. */
+const DATASHEET_WIDTH_PX = 400;
+const DATASHEET_GAP_PX = 40;
+
 /** The stage chips name the decision; the panel section is where it is made. */
 const SECTION_FOR_STAGE: Record<PlanningStage, DatasheetSection> = {
   material: "material",
@@ -199,6 +203,8 @@ export function ConfiguratorShell({
   const [autosaveStatus, setAutosaveStatus] = useState<ProjectAutosaveStatus | null>(null);
   const { captureRef, capturePhoto } = useSceneCapture();
   const isDesktop = useIsDesktop();
+  // What the open Datenblatt covers of the scene; the framing moves left of it.
+  const coveredRight = isDesktop && isPanelOpen ? DATASHEET_WIDTH_PX + DATASHEET_GAP_PX : 0;
   // An element dragged from the Datenblatt into the scene.
   const [drag, setDrag] = useState<{ key: WallModuleKey } | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -491,7 +497,7 @@ export function ConfiguratorShell({
     }
     const savedVersionNow = currentPayload.version;
 
-    const captured = await capturePhoto();
+    const captured = await capturePhoto({ coveredRight });
     if (!captured) {
       setPhotoStatus({ phase: "error", message: messages.photo.captureFailed });
       return;
@@ -876,6 +882,7 @@ export function ConfiguratorShell({
         <ConfiguratorCanvas
           cameraView={cameraView}
           captureRef={captureRef}
+          coveredRight={coveredRight}
           edit={canvasEdit}
           outlook={outlook}
           state={effectiveConfig}
@@ -1055,9 +1062,10 @@ export function ConfiguratorShell({
         {isPanelOpen && (
           <motion.div
             animate={{ opacity: 1, x: 0 }}
-            className="pointer-events-auto absolute bottom-9 right-10 top-24 z-20 w-[400px]"
+            className="pointer-events-auto absolute bottom-9 top-24 z-20"
             exit={{ opacity: 0, x: OVERLAY_SLIDE }}
             initial={{ opacity: 0, x: OVERLAY_SLIDE }}
+            style={{ right: DATASHEET_GAP_PX, width: DATASHEET_WIDTH_PX }}
             transition={{ duration: DURATION.overlay, ease: SIGNATURE_EASE }}
           >
             {panel("card")}

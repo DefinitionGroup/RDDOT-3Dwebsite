@@ -120,6 +120,44 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The desktop Datenblatt no longer covers the kitchen; the HUD reads on light walls
+  (2026-10-23).** Every camera framing is composed for the whole canvas; with the panel
+  open the scene now draws it into the 1000 px left of it (at 1440 px): the camera zooms
+  out to the visible share of the width and a horizontal lens shift (three's `filmOffset`)
+  centres the frame there (`features/configurator/engine/visible-frame.ts`). The camera
+  stays where the preset put it, so orbiting, the rooms' walls and raycasting are
+  unchanged; hiding the panel eases back to the full width. Temporal accumulation now
+  restarts on a zoom or lens change too, and the photo capture crops the same frame, so a
+  photo is composed as before. The wordmark with "Signature Küche", the Richtpreis and the
+  account button sit on soot chips like the other controls over the scene; bare white type
+  and graphite labels washed out on the Appartement's and the Loft's walls. Checked: lint,
+  types, 163/163 tests (new: the lens shift puts the optical axis and the frame's edges
+  where they belong), build; headless Chrome on the dev server's real GPU: Studio,
+  Appartement and Loft in Raum, Front and Detail at 1440 px show the whole kitchen left of
+  the panel and a readable HUD; hiding and reopening the panel moves the lit area from
+  x ≤ 980 to 1330 and back; choosing walnut changes the picture; a click on a wall module
+  in the Edit Session selects it; the capture crop is centred; at 390 px the wordmark sits
+  on its chip and nothing else changed; no console errors.
+- **Dialogs keep focus, segment controls take arrow keys (2026-10-23).** One hook,
+  `components/design-system/use-modal-dialog.ts`, now runs every modal dialog — the
+  material and promise cards (`DetailCard`), the teaser's "So funktioniert es" and the
+  configurator's material sheet (`Overlay`), and the photo lightbox: focus moves to Close,
+  Tab and Shift+Tab wrap inside, the rest of the page is `inert`, Escape closes and focus
+  returns to what opened it. The backdrops are no longer buttons in the Tab order (a click
+  outside still closes). The old effects also re-ran on every render of their parent and
+  pulled focus back to Close; the teaser re-renders every 3,2 s on its stage timer, so the
+  open explainer kept taking focus. `GlassSegments` (stages, view, camera, the Loft's
+  outlook, the teaser's decisions) is a radio group: only the chosen segment is in the Tab
+  order, arrow keys, Home and End choose another, one Tab leaves. It never controlled tab
+  panels — a stage opens a Datenblatt section — so "tab" was the wrong role. Checked: lint,
+  types, 158/158 tests (new: `lib/keyboard.ts`), build; headless Chrome with real key
+  presses on the dev server: in the material card and the explainer, focus starts on
+  Close, six Tabs and six Shift+Tabs never leave, `main` is inert, Escape closes and focus
+  returns to the trigger with nothing left inert; in the configurator at 1440 and 390 px
+  the view group has one Tab stop, ArrowRight, End, Home and wrap-around choose and focus,
+  one Tab leaves, and ArrowRight on the stages opens Aufbau; no console errors. The photo
+  lightbox was not opened in the browser (the QA account has no photos); it uses the same
+  hook.
 - **Every price includes VAT (2026-10-23).** The price book stays net; what customers see
   is gross, as German price law (PAngV) asks of prices for consumers and as the totals
   already were. The homepage material card said "Aufpreis 580 €" while choosing the finish
@@ -763,14 +801,10 @@ Found by the 2026-10-16 assessment. Items marked *rechecked* were confirmed agai
 2026-10-22. The first finding, a signed-out guest's "Als Projekt speichern" losing the
 configuration at sign-in, is fixed (Done, 2026-10-22).
 
-- **Dialog focus escapes.** `DetailCard` and `Overlay` focus Close and handle Escape but
-  neither trap focus nor make the background inert (Shift+Tab leaves the material dialog
-  while it stays open). `GlassSegments` declares tabs without arrow keys or a roving
-  tabindex.
-- **The configurator UI covers the product** (*rechecked* on production). On desktop the
-  Datenblatt hides the right part of the kitchen in the Room camera; in the Loft the white
-  wordmark and the "Richtpreis" label wash out against the light wall. On phones the sheet
-  takes about the lower 45 % of the viewport.
+- **On phones the configurator UI still covers much of the product.** The sheet takes the
+  lower 45 % of the viewport and the camera row sits above it; in the Appartement and the
+  Loft the Room camera then shows the kitchen cropped large in the band between the top
+  controls and the sheet. Desktop is fixed (Done, 2026-10-23).
 - **The hero film has no pause control**; "Den Film ansehen" requests fullscreen on the same
   muted loop. Reduced motion is honoured, but that does not replace a control.
 - **The request consent has no privacy-policy link** (waits on the Datenschutz page).
@@ -928,9 +962,10 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 - `sanity` is updated and the audit cleared down to one advisory without a fix (2026-10-23).
 - The language switch on the functional screens is done (2026-10-23).
 - Moved up from M2 on 2026-10-23, in this order: the request confirmation that matches
-  the real follow-up and one VAT basis for prices (both done the same day, see Done), dialog
-  focus containment and the configurator's tab semantics, then the
-  configurator's framing and HUD contrast over the rooms.
+  the real follow-up, one VAT basis for prices, dialog focus containment and the
+  configurator's tab semantics, and the configurator's framing and HUD contrast over the
+  rooms on desktop (all four done the same day, see Done). The phone framing stays a
+  Known Defect.
 - Then the profile, Slice P of the [account spec](.scratch/account-management/spec.md)
   (decided 2026-10-23): salutation, how to reach me and private or professional, copied
   into each request with the postcode (P1); planning facts on the request (P2); a profile
@@ -967,7 +1002,7 @@ Engineering:
   output moderation gate; billed cost against the estimate; then switch generation on.
 - The customer-facing items under Known Defects not taken into M0: a pause control for
   the hero film, the privacy link on the request consent, marketing copy that matches the
-  offer.
+  offer, the configurator's framing on phones.
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
 - The sign-in code limit counts per client address: 3 code requests per 10 minutes
