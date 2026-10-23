@@ -1,8 +1,15 @@
 import "server-only";
 
+import { APIError } from "better-auth/api";
 import { Pool } from "pg";
+import {
+  ACCOUNT_DELETION_FRESH_SECONDS,
+  ACCOUNT_HAS_REQUESTS
+} from "@/features/customer-accounts/account-deletion";
 import { createAuthenticationOtpSender } from "@/features/transactional-email/authentication-otp";
 import { createAuth } from "@/lib/server/auth/create-auth";
+import { createPostgresAccountDeletion } from "@/lib/server/db/account-deletion-postgres";
+import { getDatabase } from "@/lib/server/db/database";
 import { createTransactionalEmailDeliveryFromEnvironment } from "@/lib/server/transactional-email/delivery";
 
 declare global {
@@ -88,5 +95,17 @@ export const auth = createAuth({
   ],
   sendAuthenticationOtp: createAuthenticationOtpSender(
     createTransactionalEmailDeliveryFromEnvironment()
-  )
+  ),
+  freshAgeSeconds: ACCOUNT_DELETION_FRESH_SECONDS,
+  // The application's account goes first: if that fails, the login survives and
+  // the person can try again. An account with Quote Requests stays (A4).
+  async beforeDeleteUser(userId) {
+    const result = await createPostgresAccountDeletion(getDatabase()).deleteAccount({
+      provider: "better-auth",
+      providerSubject: userId
+    });
+    if (result.kind === "has-requests") {
+      throw new APIError("FORBIDDEN", { code: ACCOUNT_HAS_REQUESTS, message: "The account has Quote Requests." });
+    }
+  }
 });

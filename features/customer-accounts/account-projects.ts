@@ -17,8 +17,8 @@ export type AccountProject = {
   name: string;
   lifecycle: ProjectLifecycle;
   updatedAt: string;
-  /** In Trash: the last day it can be restored (ISO). */
-  deletionDueAt: string | null;
+  /** In Trash: since when (ISO). It stays there until restored or deleted by hand. */
+  trashedAt: string | null;
   /** Null when the Project's product version can no longer be read: the card shows only its name. */
   summary: {
     layout: string;
@@ -34,7 +34,7 @@ export function describeAccountProject(project: ProjectSummary, locale: LocaleCo
     name: project.name,
     lifecycle: project.lifecycle,
     updatedAt: project.updatedAt.toISOString(),
-    deletionDueAt: project.deletionDueAt?.toISOString() ?? null
+    trashedAt: project.trashedAt?.toISOString() ?? null
   };
   const { configuration, productDefinitionVersion } = project.workingConfiguration;
   const definition = findConfiguratorProductDefinition(productDefinitionVersion);

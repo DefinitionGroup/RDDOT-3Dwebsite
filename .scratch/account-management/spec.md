@@ -1,6 +1,6 @@
 # Account management
 
-Status: accepted 2026-10-23 — Slice A in M2, Slice B after launch; A1, A2 and A3 done, A4 open
+Status: accepted 2026-10-23 — Slice A in M2, Slice B after launch; Slice A done (A1–A4); Slice B after launch
 Created: 2026-10-23
 
 Turn `/konto` from a sign-in screen with lists beside a photo into the customer's own
@@ -74,7 +74,10 @@ operations, API and UI. A trashed Project's share links stop working on their ow
 sharing boundary already treats them as unavailable). Moves the board's "Project archive,
 trash and restore" from Later to here.
 
-**A4 My data.** Also takes over from A3: deleting a Project for good from the Trash and
+**A4 My data.** Done 2026-10-23 (see STATUS) with Martin's decisions: Projects and accounts
+with Quote Requests are not deleted by their owner, the Trash has no automatic purge, and
+stored files leave storage 30 days after their row through a daily sweep that waits for
+`CRON_SECRET` on Vercel. Also takes over from A3: deleting a Project for good from the Trash and
 the purge of Projects past their 30 days, both decided together with what happens to a
 deleted Project's Quote Requests and photos. "Download my data" (Projects, versions, requests, share links and photo
 list as one JSON file; photos as links) and "Delete my account" (confirmation by a fresh

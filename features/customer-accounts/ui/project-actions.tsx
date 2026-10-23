@@ -51,6 +51,9 @@ export function useProjectActions() {
         })
       );
     },
+    deleteForGood(projectId: string) {
+      return run(projectId, () => fetch(`/api/projects/${projectId}`, { method: "DELETE" }));
+    },
     duplicate(project: AccountProject) {
       return run(project.id, () =>
         fetch(`/api/projects/${project.id}/duplicate`, {
@@ -205,30 +208,33 @@ export function RestingProjectRow({
   project: AccountProject;
 }) {
   const t = useMessages().account;
-  const [confirmTrash, setConfirmTrash] = useState(false);
+  const [confirming, setConfirming] = useState<"trash" | "delete" | null>(null);
   const busy = actions.busyId === project.id;
+  const warning = confirming === "trash" ? t.trashWarning : confirming === "delete" ? t.deleteForGoodWarning : null;
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-hairline py-3">
       <span className="min-w-0">
         <span className="block truncate text-nav text-ink">{project.name}</span>
-        <span className="block text-caption text-ash">{confirmTrash ? t.trashWarning : detail}</span>
+        <span className="block text-caption text-ash">{warning ?? detail}</span>
       </span>
       <span className="-mr-3 flex flex-wrap items-center gap-1">
-        {confirmTrash ? (
+        {confirming ? (
           <>
             <button
               className={`${rowActionClass} text-ink`}
               disabled={busy}
               onClick={() => {
-                setConfirmTrash(false);
-                void actions.change(project.id, "trash");
+                setConfirming(null);
+                void (confirming === "trash"
+                  ? actions.change(project.id, "trash")
+                  : actions.deleteForGood(project.id));
               }}
               type="button"
             >
-              {t.confirmTrash}
+              {confirming === "trash" ? t.confirmTrash : t.confirmDelete}
             </button>
-            <button className={rowActionClass} onClick={() => setConfirmTrash(false)} type="button">
+            <button className={rowActionClass} onClick={() => setConfirming(null)} type="button">
               {t.cancel}
             </button>
           </>
@@ -243,8 +249,13 @@ export function RestingProjectRow({
               {t.restore}
             </button>
             {project.lifecycle === "archived" && (
-              <button className={rowActionClass} disabled={busy} onClick={() => setConfirmTrash(true)} type="button">
+              <button className={rowActionClass} disabled={busy} onClick={() => setConfirming("trash")} type="button">
                 {t.moveToTrash}
+              </button>
+            )}
+            {project.lifecycle === "trashed" && (
+              <button className={rowActionClass} disabled={busy} onClick={() => setConfirming("delete")} type="button">
+                {t.deleteForGood}
               </button>
             )}
           </>

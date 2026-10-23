@@ -472,8 +472,27 @@ export const es = {
     archived: "Archivo",
     archivedBody: "Los proyectos archivados descansan hasta que los restaure. Sus enlaces compartidos siguen siendo válidos.",
     trash: "Papelera",
-    trashBody: "Los proyectos de la papelera se pueden restaurar durante 30 días.",
-    restorableUntil: (date: string) => `Se puede restaurar hasta el ${date}`,
+    trashBody: "Los proyectos permanecen en la papelera hasta que los restaure o los elimine definitivamente. Sus enlaces compartidos ya están revocados.",
+    inTrashSince: (date: string) => `En la papelera desde el ${date}`,
+    deleteForGood: "Eliminar definitivamente",
+    deleteForGoodWarning: "Se eliminan el proyecto, sus versiones e imágenes. No se puede deshacer.",
+    confirmDelete: "Sí, eliminar definitivamente",
+    dataSection: "Datos y cuenta",
+    dataBody: "Sus datos son suyos: descárguelos o elimine su cuenta.",
+    exportData: "Descargar mis datos",
+    exportHint: "Un archivo JSON con su perfil, proyectos, versiones, enlaces, solicitudes y la lista de sus imágenes.",
+    deleteAccount: "Eliminar cuenta",
+    deleteAccountBody:
+      "Elimina su cuenta con su perfil, proyectos, versiones, enlaces compartidos e imágenes. Las imágenes guardadas desaparecen del almacenamiento 30 días después.",
+    deleteAccountWarning: "No se puede deshacer.",
+    confirmDeleteAccount: "Sí, eliminar mi cuenta definitivamente",
+    deletingAccount: "Eliminando la cuenta …",
+    accountHasRequests:
+      "Su cuenta contiene solicitudes. Para que rotpunkt pueda atenderlas, no se elimina aquí: escríbanos y la eliminaremos a mano.",
+    reauthRequired:
+      "Por seguridad, eliminar requiere un inicio de sesión reciente. Cierre la sesión, vuelva a entrar y elimine la cuenta en los 15 minutos siguientes.",
+    signOutToConfirm: "Cerrar sesión y volver a entrar",
+    accountDeleteFailed: "No se ha podido eliminar la cuenta. Inténtelo de nuevo.",
     copyName: (name: string) => `${name} (copia)`,
     actionFailed: "No ha funcionado. Inténtelo de nuevo."
   },
@@ -488,6 +507,8 @@ export const es = {
     "invalid-save-request": "La solicitud de guardado no es válida.",
     "invalid-project-name": "El nombre de un proyecto tiene entre 1 y 120 caracteres.",
     "invalid-name": "El nombre nuevo no es válido.",
+    "project-not-trashed": "Solo los proyectos de la papelera se pueden eliminar definitivamente.",
+    "project-has-requests": "Los proyectos con solicitudes se conservan. Contacte con rotpunkt si debe eliminarse alguno.",
     "project-lifecycle-conflict": "El proyecto ha cambiado mientras tanto. Recargue la página e inténtelo de nuevo.",
     "invalid-profile":
       "Revise sus datos: un teléfono de 3 a 40 caracteres y un código postal de 3 a 10 letras o cifras.",

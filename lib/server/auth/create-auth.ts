@@ -23,6 +23,13 @@ export function createAuth(input: {
   sendAuthenticationOtp: SendAuthenticationOtp;
   rateLimitEnabled?: boolean;
   trustedOrigins?: (request?: Request) => string[] | Promise<string[]>;
+  /**
+   * Runs before Better Auth deletes a user: deletes the application's account,
+   * or throws an APIError to refuse. Without it, users cannot delete themselves.
+   */
+  beforeDeleteUser?: (userId: string) => Promise<void>;
+  /** How recent a sign-in must be for sensitive actions such as deleting the account. */
+  freshAgeSeconds?: number;
 }) {
   return betterAuth({
     appName: "rotpunkt Signature",
@@ -33,6 +40,15 @@ export function createAuth(input: {
     session: {
       cookieCache: {
         enabled: false
+      },
+      ...(input.freshAgeSeconds ? { freshAge: input.freshAgeSeconds } : {})
+    },
+    user: {
+      deleteUser: {
+        enabled: Boolean(input.beforeDeleteUser),
+        beforeDelete: async (user) => {
+          await input.beforeDeleteUser?.(user.id);
+        }
       }
     },
     rateLimit: {

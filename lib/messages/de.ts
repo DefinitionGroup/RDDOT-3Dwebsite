@@ -491,8 +491,27 @@ export const de = {
     archived: "Archiv",
     archivedBody: "Archivierte Projekte ruhen, bis Sie sie wiederherstellen. Ihre Freigabelinks bleiben gültig.",
     trash: "Papierkorb",
-    trashBody: "Projekte im Papierkorb lassen sich 30 Tage lang wiederherstellen.",
-    restorableUntil: (date: string) => `Wiederherstellbar bis ${date}`,
+    trashBody: "Projekte im Papierkorb bleiben, bis Sie sie wiederherstellen oder endgültig löschen. Ihre Freigabelinks sind bereits widerrufen.",
+    inTrashSince: (date: string) => `Im Papierkorb seit ${date}`,
+    deleteForGood: "Endgültig löschen",
+    deleteForGoodWarning: "Projekt, Versionen und Bilder werden gelöscht. Das lässt sich nicht rückgängig machen.",
+    confirmDelete: "Ja, endgültig löschen",
+    dataSection: "Daten & Konto",
+    dataBody: "Ihre Daten gehören Ihnen: Laden Sie sie herunter oder löschen Sie Ihr Konto.",
+    exportData: "Meine Daten herunterladen",
+    exportHint: "Eine JSON-Datei mit Profil, Projekten, Versionen, Freigaben, Anfragen und der Liste Ihrer Bilder.",
+    deleteAccount: "Konto löschen",
+    deleteAccountBody:
+      "Löscht Ihr Konto mit Profil, Projekten, Versionen, Freigabelinks und Bildern. Gespeicherte Bilder verschwinden 30 Tage später auch aus dem Speicher.",
+    deleteAccountWarning: "Das lässt sich nicht rückgängig machen.",
+    confirmDeleteAccount: "Ja, Konto endgültig löschen",
+    deletingAccount: "Konto wird gelöscht …",
+    accountHasRequests:
+      "Ihr Konto enthält Anfragen. Damit rotpunkt sie bearbeiten kann, löschen wir es nicht hier: Schreiben Sie uns, dann löschen wir es von Hand.",
+    reauthRequired:
+      "Zur Sicherheit braucht das Löschen eine frische Anmeldung. Melden Sie sich ab und wieder an und löschen Sie das Konto dann innerhalb von 15 Minuten.",
+    signOutToConfirm: "Abmelden und neu anmelden",
+    accountDeleteFailed: "Das Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     copyName: (name: string) => `${name} (Kopie)`,
     actionFailed: "Das hat nicht funktioniert. Bitte versuchen Sie es erneut."
   },
@@ -507,6 +526,8 @@ export const de = {
     "invalid-save-request": "Die Speicheranfrage ist ungültig.",
     "invalid-project-name": "Ein Projektname hat 1 bis 120 Zeichen.",
     "invalid-name": "Der neue Name ist ungültig.",
+    "project-not-trashed": "Nur Projekte im Papierkorb lassen sich endgültig löschen.",
+    "project-has-requests": "Projekte mit Anfragen bleiben erhalten. Wenden Sie sich an rotpunkt, wenn eines gelöscht werden soll.",
     "project-lifecycle-conflict": "Das Projekt hat sich inzwischen geändert. Laden Sie die Seite neu und versuchen Sie es erneut.",
     "invalid-profile":
       "Bitte prüfen Sie Ihre Angaben: Telefon mit 3 bis 40 Zeichen, Postleitzahl mit 3 bis 10 Buchstaben oder Ziffern.",

@@ -471,8 +471,27 @@ export const en = {
     archived: "Archive",
     archivedBody: "Archived projects rest until you restore them. Their share links stay valid.",
     trash: "Trash",
-    trashBody: "Projects in the trash can be restored for 30 days.",
-    restorableUntil: (date: string) => `Restorable until ${date}`,
+    trashBody: "Projects stay in the trash until you restore them or delete them for good. Their share links are already revoked.",
+    inTrashSince: (date: string) => `In the trash since ${date}`,
+    deleteForGood: "Delete for good",
+    deleteForGoodWarning: "The project, its versions and images are deleted. This cannot be undone.",
+    confirmDelete: "Yes, delete for good",
+    dataSection: "Data & account",
+    dataBody: "Your data is yours: download it or delete your account.",
+    exportData: "Download my data",
+    exportHint: "A JSON file with your profile, projects, versions, share links, requests and the list of your images.",
+    deleteAccount: "Delete account",
+    deleteAccountBody:
+      "Deletes your account with its profile, projects, versions, share links and images. Stored images also leave storage 30 days later.",
+    deleteAccountWarning: "This cannot be undone.",
+    confirmDeleteAccount: "Yes, delete my account for good",
+    deletingAccount: "Deleting the account …",
+    accountHasRequests:
+      "Your account contains requests. So that rotpunkt can handle them, it is not deleted here: write to us and we delete it by hand.",
+    reauthRequired:
+      "For your safety, deleting needs a fresh sign-in. Sign out and in again, then delete the account within 15 minutes.",
+    signOutToConfirm: "Sign out and sign in again",
+    accountDeleteFailed: "The account could not be deleted. Please try again.",
     copyName: (name: string) => `${name} (copy)`,
     actionFailed: "That did not work. Please try again."
   },
@@ -487,6 +506,8 @@ export const en = {
     "invalid-save-request": "The save request is invalid.",
     "invalid-project-name": "A project name has 1 to 120 characters.",
     "invalid-name": "The new name is invalid.",
+    "project-not-trashed": "Only projects in the trash can be deleted for good.",
+    "project-has-requests": "Projects with requests are kept. Contact rotpunkt if one should be deleted.",
     "project-lifecycle-conflict": "The project has changed in the meantime. Reload the page and try again.",
     "invalid-profile":
       "Please check your details: a phone number of 3 to 40 characters, a postcode of 3 to 10 letters or digits.",

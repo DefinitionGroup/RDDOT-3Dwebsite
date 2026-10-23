@@ -31,7 +31,9 @@ export type ProjectSummary = {
   name: string;
   lifecycle: ProjectLifecycle;
   updatedAt: Date;
-  /** Set while the Project is in Trash: when it is due for permanent deletion. */
+  /** Set while the Project is in Trash: when it went there. */
+  trashedAt: Date | null;
+  /** Set while the Project is in Trash; no purge acts on it (Martin, 2026-10-23). */
   deletionDueAt: Date | null;
   /** What the account's project card shows: finishes, layout and Richtpreis. */
   workingConfiguration: {
@@ -101,6 +103,13 @@ export type ChangeProjectLifecycleResult =
   | { kind: "not-allowed"; lifecycle: ProjectLifecycle }
   | { kind: "unavailable" };
 
+export type DeleteProjectResult =
+  | { kind: "deleted" }
+  | { kind: "not-trashed" }
+  /** A Project with Quote Requests stays; rotpunkt deletes it by hand (Martin, 2026-10-23). */
+  | { kind: "has-requests" }
+  | { kind: "unavailable" };
+
 export type ProjectModule = {
   /** The owner's Projects, newest first: active ones, plus archived and trashed when asked. */
   listProjects(input: {
@@ -139,6 +148,16 @@ export type ProjectModule = {
     projectId: ProjectId;
     action: ProjectLifecycleAction;
   }): Promise<ChangeProjectLifecycleResult>;
+
+  /**
+   * Deletes a Project in Trash for good, with its versions, links, photos and
+   * captures (their stored files follow through the deletion outbox). Refused
+   * outside Trash and while the Project has Quote Requests.
+   */
+  deleteProject(input: {
+    ownerId: CustomerAccountId;
+    projectId: ProjectId;
+  }): Promise<DeleteProjectResult>;
 
   listConfigurationRevisions(input: {
     ownerId: CustomerAccountId;

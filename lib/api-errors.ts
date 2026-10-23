@@ -31,6 +31,8 @@ export const API_ERROR_CODES = [
   "project-not-requestable",
   "project-conflict",
   "project-lifecycle-conflict",
+  "project-not-trashed",
+  "project-has-requests",
   "unreadable-configuration",
   "product-version-retired",
   "working-version-retired",

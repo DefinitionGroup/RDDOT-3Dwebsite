@@ -125,7 +125,7 @@ A shareable Kitchen Configuration that is not owned by a Customer Account and ma
 _Avoid_: Anonymous account, guest order, claimed configuration
 
 **Customer Account**:
-The application-owned identity and private workspace of a person planning their own kitchen. Authentication Identities grant access, while Sanity editors and future internal sales or planning staff remain separate identities.
+The application-owned identity and private workspace of a person planning their own kitchen. Authentication Identities grant access, while Sanity editors and future internal sales or planning staff remain separate identities. Its owner can download everything it holds and, after a recent sign-in, delete it with all it owns; an account with Quote Requests is deleted by rotpunkt by hand. Stored files of deleted rows leave object storage 30 days later.
 _Avoid_: User account, editor account, Shopify customer
 
 **Authentication Identity**:
@@ -177,7 +177,7 @@ A Project removed from the active workspace and made read-only until restored. I
 _Avoid_: Deleted Project, Trash
 
 **Trashed Project**:
-A Project blocked from further activity and scheduled for permanent deletion after a 30-day recovery period unless its owner restores or permanently deletes it sooner. Entering Trash permanently revokes its Shared Revision Links.
+A Project blocked from further activity until its owner restores it or deletes it permanently; nothing deletes it automatically (decided 2026-10-23). Entering Trash permanently revokes its Shared Revision Links. A Project with Quote Requests cannot be deleted permanently by its owner; rotpunkt deletes it by hand.
 _Avoid_: Archived Project, soft-deleted Project
 
 **Shared Revision Link**:

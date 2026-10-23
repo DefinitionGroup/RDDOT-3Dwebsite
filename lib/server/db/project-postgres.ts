@@ -15,6 +15,7 @@ import {
 import type {
   ChangeProjectLifecycleResult,
   CheckpointRevisionResult,
+  DeleteProjectResult,
   ConfigurationRevisionSummary,
   ProjectModule,
   ProjectWorkspace,
@@ -145,6 +146,7 @@ export function createPostgresProjectModule(
           "project.name",
           "project.lifecycle",
           "project.updatedAt",
+          "project.trashedAt",
           "project.deletionDueAt",
           "workingConfiguration.normalizedConfiguration",
           "workingConfiguration.productDefinitionVersion"
@@ -162,6 +164,7 @@ export function createPostgresProjectModule(
         name: row.name,
         lifecycle: row.lifecycle,
         updatedAt: new Date(row.updatedAt),
+        trashedAt: row.trashedAt ? new Date(row.trashedAt) : null,
         deletionDueAt: row.deletionDueAt ? new Date(row.deletionDueAt) : null,
         workingConfiguration: {
           configuration: parseConfiguration(row.normalizedConfiguration),
@@ -318,6 +321,40 @@ export function createPostgresProjectModule(
         }
 
         return { kind: "changed", lifecycle: next, deletionDueAt };
+      });
+    },
+
+    async deleteProject(input): Promise<DeleteProjectResult> {
+      const ownerId = uuidSchema.parse(input.ownerId);
+      const projectId = uuidSchema.parse(input.projectId);
+
+      return database.transaction().execute(async (transaction) => {
+        const project = await transaction
+          .withSchema("app")
+          .selectFrom("project")
+          .select("lifecycle")
+          .where("id", "=", projectId)
+          .where("ownerId", "=", ownerId)
+          .forUpdate()
+          .executeTakeFirst();
+        if (!project) return { kind: "unavailable" };
+        if (project.lifecycle !== "trashed") return { kind: "not-trashed" };
+
+        const request = await transaction
+          .withSchema("app")
+          .selectFrom("quoteRequest")
+          .select("id")
+          .where("projectId", "=", projectId)
+          .limit(1)
+          .executeTakeFirst();
+        if (request) return { kind: "has-requests" };
+
+        await transaction
+          .withSchema("app")
+          .deleteFrom("project")
+          .where("id", "=", projectId)
+          .execute();
+        return { kind: "deleted" };
       });
     },
 

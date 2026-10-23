@@ -31,10 +31,19 @@ export type StorageDeletionSweepResult = {
 export async function sweepStorageDeletions(
   database: Kysely<Database>,
   storage: ObjectStorageModule,
-  options: { batchSize?: number; clock?: () => Date } = {}
+  options: {
+    batchSize?: number;
+    clock?: () => Date;
+    /**
+     * Leave an object alone until its row has been gone this long: a second
+     * safety net after the row's own deletion (Martin, 2026-10-23: 30 days).
+     */
+    minimumAgeMs?: number;
+  } = {}
 ): Promise<StorageDeletionSweepResult> {
   const batchSize = options.batchSize ?? 50;
   const clock = options.clock ?? (() => new Date());
+  const deletedBefore = new Date(clock().getTime() - (options.minimumAgeMs ?? 0));
   const result: StorageDeletionSweepResult = {
     claimed: 0,
     deleted: 0,
@@ -50,6 +59,7 @@ export async function sweepStorageDeletions(
       .where("topic", "=", STORAGE_DELETION_TOPIC)
       .where("processedAt", "is", null)
       .where("availableAt", "<=", clock())
+      .where("occurredAt", "<=", deletedBefore)
       .orderBy("availableAt")
       .limit(batchSize)
       .forUpdate()
@@ -135,6 +145,9 @@ async function markProcessed(
  * an operational signal, not a normal state — the Production Release Gate for
  * ADR 0011 expects this to be empty.
  */
+/** How long a stored photo or capture outlives its row (Martin, 2026-10-23). */
+export const STORAGE_DELETION_HOLD_MS = 30 * 24 * 60 * 60 * 1000;
+
 export async function findUnreconciledDeletions(
   database: Kysely<Database>,
   limit = 100

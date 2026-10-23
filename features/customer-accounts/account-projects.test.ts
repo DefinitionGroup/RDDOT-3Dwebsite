@@ -10,6 +10,7 @@ const project = {
   name: "Meine Küche",
   lifecycle: "active" as const,
   updatedAt: new Date("2026-10-23T08:00:00Z"),
+  trashedAt: null,
   deletionDueAt: null,
   workingConfiguration: {
     configuration: { ...DEFAULT_CONFIGURATOR_STATE, cabinetColorKey: "oak", frontColorKey: "walnut-memory" },
@@ -34,7 +35,7 @@ describe("describeAccountProject", () => {
       name: "Meine Küche",
       lifecycle: "active",
       updatedAt: "2026-10-23T08:00:00.000Z",
-      deletionDueAt: null,
+      trashedAt: null,
       summary: null
     });
   });

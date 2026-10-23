@@ -9,6 +9,7 @@ import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import type { AccountProject } from "@/features/customer-accounts/account-projects";
 import { profileInitials, type CustomerProfile } from "@/features/customer-accounts/customer-profile";
+import { AccountData } from "@/features/customer-accounts/ui/account-data";
 import { ProfileForm } from "@/features/customer-accounts/ui/profile-form";
 import {
   ProjectMenu,
@@ -196,7 +197,8 @@ export function AccountWorkspace({
     { id: "projects", label: t.projects, count: active.length },
     { id: "requests", label: messages.requestList.heading, count: quoteRequests.totalCount },
     { id: "photos", label: messages.gallery.heading, count: gallery.totalCount },
-    { id: "profile", label: t.profile, count: null }
+    { id: "profile", label: t.profile, count: null },
+    { id: "data", label: t.dataSection, count: null }
   ];
 
   return (
@@ -334,7 +336,7 @@ export function AccountWorkspace({
                   {trashed.map((project) => (
                     <RestingProjectRow
                       actions={actions}
-                      detail={t.restorableUntil(formatDay(project.deletionDueAt ?? project.updatedAt, locale))}
+                      detail={t.inTrashSince(formatDay(project.trashedAt ?? project.updatedAt, locale))}
                       key={project.id}
                       project={project}
                     />
@@ -367,6 +369,17 @@ export function AccountWorkspace({
             </div>
             <div className="mt-6">
               <ProfileForm email={email} initial={profile} onSaved={setProfile} />
+            </div>
+          </section>
+
+          <section aria-labelledby="data-heading" className="scroll-mt-8" id="data">
+            <div className="border-t border-ink pt-5">
+              <h2 className="m-0 text-nav" id="data-heading">
+                {t.dataSection}
+              </h2>
+            </div>
+            <div className="mt-6">
+              <AccountData hasRequests={quoteRequests.totalCount > 0} />
             </div>
           </section>
 

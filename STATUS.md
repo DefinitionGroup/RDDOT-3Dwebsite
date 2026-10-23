@@ -86,7 +86,8 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Versions: save, history, restore behind a safety version; rename | Done |
 | Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
 | Account area on the whole screen: project cards with finishes and Richtpreis, requests, visualisations, profile (name, phone, postcode) that fills the request form | Done (A1, A2, 2026-10-23) |
-| Archive, trash, restore and duplicate Projects from the account | Done (A3, 2026-10-23); deleting for good waits for A4 |
+| Archive, trash, restore and duplicate Projects from the account; delete for good from the Trash unless the Project has requests | Done (A3, A4, 2026-10-23); no automatic purge by decision |
+| Download my data (JSON); delete my account after a fresh sign-in unless it has requests | Done (A4, 2026-10-23) |
 
 **AI photos**
 
@@ -110,7 +111,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 | Feature | State |
 | --- | --- |
-| PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; object deletion sweep unscheduled by decision |
+| PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; the daily storage sweep (30-day hold) waits for `CRON_SECRET` on Vercel |
 | Gates: lint, types, 149 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
 | Vercel project | Production builds `redesign/devstart` from Git, at `e1f5df0` since 2026-10-23, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
@@ -119,6 +120,28 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **My data: export and deletion (account management A4, 2026-10-23).** "Daten & Konto" in
+  the account offers "Meine Daten herunterladen" (`GET /api/account/export`, one JSON file
+  with the account, profile, Projects with their configurations and versions, share links
+  without secrets, requests, photo jobs and the photo list; no storage paths, token hashes
+  or idempotency keys) and "Konto löschen". Deleting uses Better Auth's own `deleteUser`,
+  which demands a sign-in from the last 15 minutes (`freshAge`, otherwise
+  `SESSION_EXPIRED` and the page explains how to sign in again); its `beforeDelete` hook
+  deletes the application's account first (`createPostgresAccountDeletion`), so a failure
+  leaves the login in place to try again. A Project in the Trash can be deleted for good
+  (`DELETE /api/projects/[id]`). Martin decided (see Deferred Decisions): a Project or an
+  account with Quote Requests is refused (`project-has-requests`; an account with requests
+  is told rotpunkt deletes it by hand and gets no button), the Trash has no automatic purge
+  (CONTEXT.md updated, the Trash now says "Im Papierkorb seit …"), and stored files leave
+  storage 30 days after their row through the daily sweep, which waits for `CRON_SECRET`.
+  Checked: 4 database tests (delete for good refused outside the Trash and with requests,
+  account deletion with and without requests, the export without internal keys, the 30-day
+  hold) next to the lifecycle tests; lint, types, 149 unit tests, build; in headless Chrome
+  on the dev server: the export as an attachment with the test account's data, the
+  account-with-requests message, deleting the archived copy for good with its warning,
+  the refusal for the Project with requests and its restore, and a fresh throwaway account
+  deleted end to end (home page, export then answers 401), no console errors. The
+  `SESSION_EXPIRED` path was not exercised: it needs a sign-in older than 15 minutes.
 - **Projects you can tidy (account management A3, 2026-10-23).** Each project card has a
   menu over its picture: Duplizieren, Archivieren, In den Papierkorb. Below the cards the
   account lists the Archive (restore, or move to Trash) and the Trash (restore, "Wiederherstellbar
@@ -717,26 +740,20 @@ Found by the journey test of 2026-10-22:
 
 ## Deferred Decisions
 
-**Automatic object deletion is deliberately not scheduled** (decided 2026-09-01).
-`sweepStorageDeletions` is implemented and tested, but nothing calls it periodically,
-so deletion intents accumulate in the outbox until a sweep is run by hand.
+**Automatic object deletion — decided 2026-10-23 (Martin), waiting on one setting.** The
+2026-09-01 deferral held the storage sweep back until Project Archive/Trash/restore existed,
+because the sweep removes the undo. With A3 and A4 in place it runs once a day
+(`/api/cron/storage-sweep`, `vercel.json` crons at 03:30 UTC) and deletes a stored photo
+or capture only 30 days after its row is gone (`STORAGE_DELETION_HOLD_MS`), a second safety
+net after the row's own deletion. The route exists only when `CRON_SECRET` is set; until
+Martin sets it on Vercel, deletion intents keep accumulating and account deletion still
+does not reach object storage. Abandoned and finished captures that never lose their row
+are a separate retention sweep, still open (Roadmap M2).
 
-The reason is recovery, not caution about the sweep's behaviour: the sweep only ever
-deletes objects whose database row is already gone, so it cannot remove a photo a
-customer still has. What it does remove is the undo. While a row is deleted but its
-object is not, a wrongly deleted photo is recoverable by restoring the row. Project
-Archive/Trash/restore is still unimplemented, so making byte-level deletion automatic
-before that lifecycle is settled would turn a recoverable mistake into a permanent one.
-
-**The consequence being accepted:** Customer Account deletion does not currently reach
-object storage. The cascade clears the database and stops at the queue, so Generated
-Photos and Source Captures outlive the account that owned them. ADR 0011 requires that
-cascade, and the EU-residency posture makes it a data-protection obligation rather than
-housekeeping. This is a Production Release Gate item and must be closed before any
-production release — by scheduling the sweep, or by an explicit retention policy that
-the Release Owner signs.
-
-Revisit when Project Archive/Trash/restore lands.
+**Deleting Projects and accounts — decided 2026-10-23 (Martin).** A Project or a Customer
+Account with Quote Requests is not deleted by its owner; rotpunkt deletes it by hand. The
+Trash keeps Projects until restored or deleted by hand: no automatic purge after 30 days
+(CONTEXT.md, Trashed Project). Before launch, have the request retention checked legally.
 
 ## Release Blockers
 
@@ -878,8 +895,9 @@ Engineering:
 - `richText` block, Impressum and Datenschutz pages, legal column in the footer.
 - Licence or replace the Appartement and Loft rooms (see Release Blockers) and give them
   manifests; until then they cannot ship.
-- Data protection: schedule the object deletion sweep or sign a retention policy so account
-  deletion reaches storage; the retention sweep for abandoned and finished captures.
+- Data protection: the storage sweep is built and scheduled in `vercel.json` (A4); it runs
+  once `CRON_SECRET` is set on Vercel. Still open: the retention sweep for abandoned and
+  finished captures.
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
   output moderation gate; billed cost against the estimate; then switch generation on.
 - The customer-facing items under Known Defects: request confirmation wording that matches
@@ -902,13 +920,12 @@ Engineering:
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS
   deployment, encryption at rest and credential rotation recorded.
 - Accessibility audit and performance budgets for the 3D scene and the homepage film.
-- Account management, Slice A (accepted 2026-10-23,
-  [spec](.scratch/account-management/spec.md)): A1 the account page on the whole screen
-  and A2 profile basics and A3 archive/trash/restore/duplicate for Projects are done (see
-  Done); open is A4 "download my data" and "delete my account", which also brings deleting
-  a Project for good, the 30-day purge of the Trash, and how deletion reaches stored photos.
+- Account management, Slice A ([spec](.scratch/account-management/spec.md)) is done:
+  A1 to A4 on 2026-10-23 (see Done). Slice B follows after launch (Later).
 
-*Martin:* Impressum and Datenschutz texts; the email provider choice; owned or licensed
+*Martin:* `CRON_SECRET` on Vercel, so the daily storage sweep runs; a legal check of keeping
+Quote Requests when the customer wants an account deleted; Impressum and Datenschutz texts
+(they need to describe the profile, the export and the deletion rules); the email provider choice; owned or licensed
 Appartement and Loft scenes; the DPA and transfer reviews (Sanity, Replicate, and Vercel
 functions outside the EU) that open the `production` dataset; a decision on the
 world-readable `public` bucket; residency evidence for `ecomstorage.rotpunkt.ai`; whether
