@@ -908,6 +908,12 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
   the real follow-up (done the same day, see Done), one VAT basis for material
   surcharges, dialog focus containment and the configurator's tab semantics, then the
   configurator's framing and HUD contrast over the rooms.
+- Then the profile, Slice P of the [account spec](.scratch/account-management/spec.md)
+  (decided 2026-10-23): salutation, how to reach me and private or professional, copied
+  into each request with the postcode (P1); planning facts on the request (P2); a profile
+  photo in the account (P3); photo and first name on share links, opt-in, once Martin
+  decides how a photo is checked before strangers see it (P4). Newsletter consent (P5)
+  waits for the email provider in M2.
 
 ### M1 — A reviewable preview
 
@@ -926,7 +932,8 @@ Engineering:
 - Transactional email provider adapter once chosen (ADR 0010), then the outbox consumer
   that tells rotpunkt about each Quote Request. The same change sets
   `QUOTE_REQUESTS_REACH_ROTPUNKT` to true, which brings back the confirmation that
-  promises a reply.
+  promises a reply. With it, newsletter consent with double opt-in (profile P5) once a
+  newsletter tool is chosen.
 - `richText` block, Impressum and Datenschutz pages, legal column in the footer.
 - Licence or replace the Appartement and Loft rooms (see Release Blockers) and give them
   manifests; until then they cannot ship.
@@ -964,7 +971,9 @@ Appartement and Loft scenes; the DPA and transfer reviews (Sanity, Replicate, an
 functions outside the EU) that open the `production` dataset; a decision on the
 world-readable `public` bucket; residency evidence for `ecomstorage.rotpunkt.ai`; whether
 AI photos are part of the launch (CONTEXT.md's First Production Release includes them; this
-roadmap leaves it open); who answers Quote Requests and how fast.
+roadmap leaves it open); who answers Quote Requests and how fast; how a profile photo is
+checked before it shows on share links (profile P4); the budget bands on the request
+form (P2); what sends newsletters (P5).
 
 ### M3 — English and Spanish launch
 
