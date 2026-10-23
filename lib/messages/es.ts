@@ -342,7 +342,7 @@ export const es = {
     label: "Solicitud",
     title: "Solicitar su *planificación*.",
     intro: (project: string) =>
-      `Revisamos «${project}» exactamente en este estado y nos pondremos en contacto con usted con una oferta y los próximos pasos. La solicitud es sin compromiso.`,
+      `Envía «${project}» a rotpunkt exactamente en este estado. La solicitud es sin compromiso y todavía no es una oferta.`,
     name: "Nombre",
     email: "Correo electrónico",
     phone: "Teléfono",
@@ -359,9 +359,13 @@ export const es = {
     conflict: "Este proyecto se ha modificado entretanto en otro lugar.",
     loadLatest: "Cargar el estado actual",
     receivedLabel: "Solicitud recibida",
+    savedLabel: "Solicitud guardada",
     thanks: "Muchas *gracias*,",
     receivedBody: (project: string) =>
-      `Hemos recibido su solicitud para «${project}». Nuestros planificadores revisarán la configuración y se pondrán en contacto con usted en`,
+      `Su solicitud para «${project}» ha llegado a rotpunkt. Nos pondremos en contacto con usted en`,
+    savedBody: (project: string) => `Su solicitud para «${project}» queda guardada con exactamente este estado de planificación.`,
+    notDeliveredNote:
+      "Aviso: las nuevas solicitudes todavía no llegan a rotpunkt automáticamente. Hasta que esté configurado, nadie se pondrá en contacto por iniciativa propia.",
     reference: "Referencia",
     received: "Recibida",
     keptNote:
@@ -384,7 +388,7 @@ export const es = {
     cabinet: "Cuerpo",
     front: "Frente",
     disclaimer:
-      "Indicación de precio sin compromiso en el momento de la solicitud. Recibirá una oferta tras la revisión de nuestros planificadores."
+      "Indicación de precio sin compromiso en el momento de la solicitud. Todavía no es una oferta."
   },
   requestList: {
     heading: "Solicitudes",

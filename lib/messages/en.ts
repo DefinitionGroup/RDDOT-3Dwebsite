@@ -342,7 +342,7 @@ export const en = {
     label: "Request",
     title: "Request your *plan*.",
     intro: (project: string) =>
-      `We review “${project}” in exactly this state and get back to you with a quote and the next steps. The request is non-binding.`,
+      `You send “${project}” to rotpunkt in exactly this state. The request is non-binding and not yet a quote.`,
     name: "Name",
     email: "Email address",
     phone: "Phone",
@@ -359,9 +359,13 @@ export const en = {
     conflict: "This project has been changed elsewhere in the meantime.",
     loadLatest: "Load the current state",
     receivedLabel: "Request received",
+    savedLabel: "Request saved",
     thanks: "*Thank* you,",
     receivedBody: (project: string) =>
-      `Your request for “${project}” has reached us. Our planners will review the configuration and get back to you at`,
+      `Your request for “${project}” has reached rotpunkt. We will get back to you at`,
+    savedBody: (project: string) => `Your request for “${project}” is saved with exactly this planning state.`,
+    notDeliveredNote:
+      "Note: new requests do not reach rotpunkt automatically yet. Until that is set up, nobody gets back to you on their own.",
     reference: "Reference",
     received: "Received",
     keptNote:
@@ -384,7 +388,7 @@ export const en = {
     cabinet: "Carcass",
     front: "Front",
     disclaimer:
-      "Non-binding price indication at the time of the request. You will receive a quote once our planners have reviewed it."
+      "Non-binding price indication at the time of the request. It is not yet a quote."
   },
   requestList: {
     heading: "Requests",

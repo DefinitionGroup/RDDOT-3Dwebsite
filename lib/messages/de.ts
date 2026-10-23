@@ -357,7 +357,7 @@ export const de = {
     label: "Anfrage",
     title: "Planung *anfragen*.",
     intro: (project: string) =>
-      `Wir prüfen „${project}“ in genau diesem Stand und melden uns mit einem Angebot und den nächsten Schritten. Die Anfrage ist unverbindlich.`,
+      `Sie senden „${project}“ in genau diesem Stand an rotpunkt. Die Anfrage ist unverbindlich und noch kein Angebot.`,
     name: "Name",
     email: "E-Mail-Adresse",
     phone: "Telefon",
@@ -374,10 +374,14 @@ export const de = {
     conflict: "Dieses Projekt wurde inzwischen an anderer Stelle geändert.",
     loadLatest: "Aktuellen Stand laden",
     receivedLabel: "Anfrage eingegangen",
+    savedLabel: "Anfrage gespeichert",
     /** Followed by the person's name and a full stop. */
     thanks: "Vielen *Dank*,",
     receivedBody: (project: string) =>
-      `Ihre Anfrage für „${project}“ ist bei uns eingegangen. Unsere Planung prüft die Konfiguration und meldet sich bei Ihnen unter`,
+      `Ihre Anfrage für „${project}“ ist bei rotpunkt eingegangen. Wir melden uns bei Ihnen unter`,
+    savedBody: (project: string) => `Ihre Anfrage für „${project}“ ist mit genau diesem Planungsstand gespeichert.`,
+    notDeliveredNote:
+      "Hinweis: Neue Anfragen erreichen rotpunkt noch nicht automatisch. Bis das eingerichtet ist, meldet sich niemand von selbst.",
     reference: "Referenz",
     received: "Eingegangen",
     keptNote:
@@ -400,7 +404,7 @@ export const de = {
     cabinet: "Korpus",
     front: "Front",
     disclaimer:
-      "Unverbindliche Preisindikation zum Zeitpunkt der Anfrage. Ein Angebot erhalten Sie nach der Prüfung durch unsere Planung."
+      "Unverbindliche Preisindikation zum Zeitpunkt der Anfrage. Sie ist noch kein Angebot."
   },
   requestList: {
     heading: "Anfragen",

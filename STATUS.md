@@ -120,6 +120,21 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The request confirmation says what really happens (2026-10-23).** Nothing tells rotpunkt
+  about a new Quote Request yet, so `/anfrage` no longer promises an offer: the form says
+  the customer sends this state to rotpunkt and that the request is not yet a quote; the
+  confirmation is labelled "Anfrage gespeichert", says the request is saved with exactly
+  this planning state and adds "Neue Anfragen erreichen rotpunkt noch nicht automatisch.
+  Bis das eingerichtet ist, meldet sich niemand von selbst."; the price panel says the
+  indication is not yet an offer. One switch, `QUOTE_REQUESTS_REACH_ROTPUNKT` in
+  `features/quote-requests/quote-request-contract.ts` (false), keeps the "eingegangen …
+  wir melden uns bei Ihnen unter <E-Mail>" version ready for when the
+  `quote-request.submitted` consumer exists. German, English and Spanish. Checked: lint,
+  types, 149/149 tests; headless Chrome on the dev server, signed in as the QA account,
+  read the promise on `/anfrage`, `/en/anfrage` and `/es/anfrage`, sent two requests
+  (`A-47KT THSB`, `A-G8U5 6V78`, now in the shared development database) and found the
+  saved label, both sentences and the price panel's wording, nothing clipped at 390 px and
+  no console errors.
 - **My data: export and deletion (account management A4, 2026-10-23).** "Daten & Konto" in
   the account offers "Meine Daten herunterladen" (`GET /api/account/export`, one JSON file
   with the account, profile, Projects with their configurations and versions, share links
@@ -714,9 +729,6 @@ Found by the 2026-10-16 assessment. Items marked *rechecked* were confirmed agai
 2026-10-22. The first finding, a signed-out guest's "Als Projekt speichern" losing the
 configuration at sign-in, is fixed (Done, 2026-10-22).
 
-- **The Quote Request confirmation promises a response nobody is told about.** "Wir prüfen …
-  und melden uns mit einem Angebot" (`lib/messages/de.ts`), but the
-  `quote-request.submitted` outbox has no consumer (waits on ADR 0010).
 - **Material surcharges are shown before VAT, the total after.** The Nussbaum Memory card
   says +580 €; choosing it moves the default total from 10.103,10 € to 10.793,30 €
   (+690,20 €). `blocks/materials/Component.tsx` formats the raw delta from `catalog.ts`.
@@ -883,8 +895,11 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
   test environment runs it. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
   `false` (or accept the budget breaker as the bound).
 - `sanity` is updated and the audit cleared down to one advisory without a fix (2026-10-23).
-- The language switch on the functional screens is done (2026-10-23). M0 is empty but for
-  Martin's check of `PHOTO_GENERATION_ENABLED`.
+- The language switch on the functional screens is done (2026-10-23).
+- Moved up from M2 on 2026-10-23, in this order: the request confirmation that matches
+  the real follow-up (done the same day, see Done), one VAT basis for material
+  surcharges, dialog focus containment and the configurator's tab semantics, then the
+  configurator's framing and HUD contrast over the rooms.
 
 ### M1 — A reviewable preview
 
@@ -901,7 +916,9 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 
 Engineering:
 - Transactional email provider adapter once chosen (ADR 0010), then the outbox consumer
-  that tells rotpunkt about each Quote Request.
+  that tells rotpunkt about each Quote Request. The same change sets
+  `QUOTE_REQUESTS_REACH_ROTPUNKT` to true, which brings back the confirmation that
+  promises a reply.
 - `richText` block, Impressum and Datenschutz pages, legal column in the footer.
 - Licence or replace the Appartement and Loft rooms (see Release Blockers) and give them
   manifests; until then they cannot ship.
@@ -910,10 +927,9 @@ Engineering:
   finished captures.
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
   output moderation gate; billed cost against the estimate; then switch generation on.
-- The customer-facing items under Known Defects: request confirmation wording that matches
-  the real follow-up, one VAT basis for surcharges, dialog focus, configurator framing and
-  HUD contrast over the rooms, a pause control for the hero film, the privacy link on the
-  request consent, marketing copy that matches the offer.
+- The customer-facing items under Known Defects not taken into M0: a pause control for
+  the hero film, the privacy link on the request consent, marketing copy that matches the
+  offer.
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
 - The sign-in code limit counts per client address: 3 code requests per 10 minutes

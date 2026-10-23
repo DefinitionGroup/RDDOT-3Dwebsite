@@ -18,6 +18,15 @@ export const QUOTE_REQUEST_LIMITS = {
  */
 export const QUOTE_REQUEST_CONSENT_VERSION = "anfrage-datenschutz-2026-09";
 
+/**
+ * Whether a submitted Quote Request reaches rotpunkt. False until the
+ * `quote-request.submitted` outbox has a consumer (ADR 0010; the board's "Real
+ * sign-in emails and request notifications"): the confirmation then says the
+ * request is saved instead of promising a reply nobody is told about. The work
+ * that delivers requests switches it on.
+ */
+export const QUOTE_REQUESTS_REACH_ROTPUNKT = false;
+
 export const quoteRequestContactSchema = z.object({
   name: z.string().trim().min(1).max(QUOTE_REQUEST_LIMITS.nameMax),
   email: z

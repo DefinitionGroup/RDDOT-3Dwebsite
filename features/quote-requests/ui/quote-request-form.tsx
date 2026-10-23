@@ -11,7 +11,10 @@ import { INTL_LOCALE, localizePath } from "@/lib/i18n";
 import { apiErrorMessage } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
-import { QUOTE_REQUEST_LIMITS } from "@/features/quote-requests/quote-request-contract";
+import {
+  QUOTE_REQUEST_LIMITS,
+  QUOTE_REQUESTS_REACH_ROTPUNKT
+} from "@/features/quote-requests/quote-request-contract";
 import { formatQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
 import type { SerializedQuoteRequest } from "@/features/quote-requests/serialize-quote-request";
 
@@ -114,14 +117,21 @@ export function QuoteRequestForm({
         initial={prefersReducedMotion ? false : { opacity: 0, y: REVEAL_RISE }}
         transition={{ duration: DURATION.reveal, ease: SIGNATURE_EASE }}
       >
-        <Label>{t.receivedLabel}</Label>
+        <Label>{QUOTE_REQUESTS_REACH_ROTPUNKT ? t.receivedLabel : t.savedLabel}</Label>
         <h1 className="m-0 mt-5 max-w-3xl text-heading">
           <Emphasized text={t.thanks} /> {submitted.contact.name}.
         </h1>
-        <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
-          {t.receivedBody(submitted.projectName)}{" "}
-          <span className="text-ink">{submitted.contact.email}</span>.
-        </p>
+        {QUOTE_REQUESTS_REACH_ROTPUNKT ? (
+          <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
+            {t.receivedBody(submitted.projectName)}{" "}
+            <span className="text-ink">{submitted.contact.email}</span>.
+          </p>
+        ) : (
+          <>
+            <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{t.savedBody(submitted.projectName)}</p>
+            <p className="m-0 mt-4 max-w-[52ch] text-caption text-ink">{t.notDeliveredNote}</p>
+          </>
+        )}
 
         <dl className="tnum m-0 mt-10 flex max-w-md flex-col border-t border-ink text-[0.875rem]">
           <div className="flex justify-between gap-6 border-b border-hairline py-3">
