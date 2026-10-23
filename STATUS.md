@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-23 to `d4682f4`. `cc/devstart-003` and the earlier
+2026-10-23 to `fdc353d`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -673,7 +673,16 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-cuyb1zo5z`, built from `d4682f4` on 2026-10-23, live about
+- Production: `rddot-3-dwebsite-94l3edt1s`, built from `fdc353d` on 2026-10-23, live about
+  two minutes after `redesign/devstart` was fast-forwarded from `d4682f4` and pushed; it
+  brings every price with VAT included (and the profile plan, documents only). Checked
+  right after, signed out, in headless Chrome: the Nussbaum Memory card says "Aufpreis
+  690 € inkl. MwSt." at 1440 and 390 px, choosing it moves the total from 10.103 to
+  10.793 €, the "Aufstellung" lists nine positions with VAT that add up to 10.793 € and ends
+  with "darin enthaltene MwSt. (19 %)", the English and Spanish lists add up, the teaser
+  says "inkl. MwSt.", the 3D scene renders, no console errors. The request panel was
+  checked on the dev server only (it needs a signed-in Project).
+- The deployment before, `rddot-3-dwebsite-cuyb1zo5z`, was built from `d4682f4` on 2026-10-23, live about
   a minute after `redesign/devstart` was fast-forwarded from `edf646b` and pushed; it brings
   the request confirmation that no longer promises an offer. Checked right after, signed
   out: `/anfrage`, `/en/anfrage` and `/es/anfrage` answer 200 with noindex and ask for
