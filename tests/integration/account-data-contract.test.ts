@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { EMPTY_CUSTOMER_PROFILE } from "@/features/customer-accounts/customer-profile";
 import type { ObjectStorageModule } from "@/features/object-storage/object-storage-module";
 import { createPostgresAccountDeletion } from "@/lib/server/db/account-deletion-postgres";
 import { exportCustomerAccount } from "@/lib/server/db/account-export-postgres";
@@ -139,7 +140,7 @@ describe("account data: delete for good, delete the account, export, storage hol
     const data = await exportCustomerAccount(context.database, {
       ownerId,
       email: "export@example.com",
-      profile: { name: "Export", phone: "", postalCode: "10115" }
+      profile: { ...EMPTY_CUSTOMER_PROFILE, name: "Export", postalCode: "10115" }
     });
     expect(data.account.email).toBe("export@example.com");
     expect(data.profile.postalCode).toBe("10115");
@@ -147,6 +148,12 @@ describe("account data: delete for good, delete the account, export, storage hol
     expect(data.projects[0].workingConfiguration.configuration).toMatchObject({ cabinetColorKey: "graphite" });
     expect(data.projects[0].shareLinks).toHaveLength(1);
     expect(data.projects[0].quoteRequests[0].contact.email).toBe("mara@example.com");
+    expect(data.projects[0].quoteRequests[0].planning).toEqual({
+      projectKind: "",
+      timeframe: "",
+      budgetBand: "",
+      wallLengthCm: null
+    });
     // The link and the request pin the same version: the configuration did not change in between.
     expect(data.projects[0].versions).toHaveLength(1);
     expect(data.projects[0].quoteRequests[0].versionId).toBe(data.projects[0].versions[0].id);

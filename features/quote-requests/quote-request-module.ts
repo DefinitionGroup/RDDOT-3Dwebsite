@@ -1,9 +1,18 @@
+import type { z } from "zod";
 import type {
   ConfigurationRevisionId,
   CustomerAccountId,
   JsonValue,
   ProjectId
 } from "@/features/projects/project-module";
+import type {
+  QuoteRequestContact,
+  quoteRequestContactSchema,
+  QuoteRequestPlanning,
+  quoteRequestPlanningSchema
+} from "@/features/quote-requests/quote-request-contract";
+
+export type { QuoteRequestContact, QuoteRequestPlanning };
 
 export type QuoteRequestId = string;
 
@@ -14,12 +23,6 @@ export type QuoteRequestId = string;
  */
 export type QuoteRequestState = "submitted" | "in-review" | "answered" | "withdrawn";
 
-export type QuoteRequestContact = {
-  name: string;
-  email: string;
-  phone: string | null;
-};
-
 export type QuoteRequest = {
   id: QuoteRequestId;
   /** Customer-facing identifier such as `A-7K3M9Q2X`. */
@@ -28,7 +31,9 @@ export type QuoteRequest = {
   projectName: string;
   revisionId: ConfigurationRevisionId;
   state: QuoteRequestState;
+  /** As submitted, with the profile's details copied in; a later profile edit never changes it. */
   contact: QuoteRequestContact;
+  planning: QuoteRequestPlanning;
   note: string;
   consent: { version: string; acceptedAt: Date };
   /** The Price Indication as computed at submission. Nonbinding. */
@@ -68,7 +73,8 @@ export type QuoteRequestModule = {
     projectId: ProjectId;
     expectedVersion: number;
     idempotencyKey: string;
-    contact: QuoteRequestContact;
+    contact: z.input<typeof quoteRequestContactSchema>;
+    planning?: z.input<typeof quoteRequestPlanningSchema>;
     note: string;
     consent: { version: string };
   }): Promise<SubmitQuoteRequestResult>;

@@ -85,7 +85,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Save a configuration as a Project, also by a signed-out guest through sign-in; autosave with conflict handling; browser recovery drafts | Done (the guest handoff fixed 2026-10-22) |
 | Versions: save, history, restore behind a safety version; rename | Done |
 | Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
-| Account area on the whole screen: project cards with finishes and Richtpreis, requests, visualisations, profile (name, phone, postcode) that fills the request form | Done (A1, A2, 2026-10-23) |
+| Account area on the whole screen: project cards with finishes and Richtpreis, requests, visualisations, profile (salutation, name, phone, postcode, how to reach, private or professional) that fills the request form | Done (A1, A2, P1, 2026-10-23); profile photo open (P3) |
 | Archive, trash, restore and duplicate Projects from the account; delete for good from the Trash unless the Project has requests | Done (A3, A4, 2026-10-23); no automatic purge by decision |
 | Download my data (JSON); delete my account after a fresh sign-in unless it has requests | Done (A4, 2026-10-23) |
 
@@ -103,7 +103,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 | Feature | State |
 | --- | --- |
-| Quote Request on a pinned revision: contact, consent, note, reference number, listed in the account | Done |
+| Quote Request on a pinned revision: contact with the profile's details, planning facts, consent, note, reference number, listed in the account | Done (planning facts and details since 2026-10-23, P1/P2) |
 | Notifying rotpunkt about a new request | Open (waits on the email provider) |
 | Catalog, cart, checkout, payment, CRM | Not planned yet; boundaries in ADR 0006 |
 
@@ -120,6 +120,27 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Profile P1 and request P2 (2026-10-23).** The profile gains salutation and title, how
+  and when to be reached (phone, email or either; mornings, afternoons, evenings or any
+  time) and private or professional with company and field; choosing "Telefonisch" needs a
+  phone number and "Beruflich" a company, at the form, the contract and the table, and a
+  company is dropped for anyone else. The request form starts from the profile, adds the
+  postcode, and asks four optional planning facts under "Ihr Vorhaben": project, timeframe,
+  budget band (placeholder bands until rotpunkt names its own) and wall length (100 to
+  2000 cm). A Quote Request stores its own copy of all of it (the board's "Requests carry
+  the postcode" with it), the idempotency check covers it, and the export lists it.
+  `formalGreeting` turns salutation, title and name into "Sehr geehrte Frau Dr. Vogel" for
+  the emails to come. One migration, `20261023120000_add_contact_details_and_planning_facts.sql`,
+  only adds columns with defaults, so older code and requests read "no answer"; applied
+  to the development database. German, English and Spanish; choices are native selects
+  (`ChoiceField`) with options short enough for a half column. Checked: lint, types,
+  171/171 unit tests (new: both contracts' rules, the greeting), 17 database tests in the
+  profile, request and export files (new: round trip, replay only with the same facts, the
+  table's own rules), build; headless Chrome on the dev server, signed in as the QA account:
+  the two rules show German messages, the profile saves and survives a reload, the request
+  form starts from it, a wall length of 50 cm is refused, the submitted request (one more in
+  the shared database) carries the copied details and the planning facts in the export;
+  every option fits its select in all three languages at 1440 and 390 px; no console errors.
 - **The desktop Datenblatt no longer covers the kitchen; the HUD reads on light walls
   (2026-10-23).** Every camera framing is composed for the whole canvas; with the panel
   open the scene now draws it into the 1000 px left of it (at 1440 px): the camera zooms
@@ -980,10 +1001,10 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
   Known Defect.
 - Then the profile, Slice P of the [account spec](.scratch/account-management/spec.md)
   (decided 2026-10-23): salutation, how to reach me and private or professional, copied
-  into each request with the postcode (P1); planning facts on the request (P2); a profile
-  photo in the account (P3); photo and first name on share links, opt-in, once Martin
-  decides how a photo is checked before strangers see it (P4). Newsletter consent (P5)
-  waits for the email provider in M2.
+  into each request with the postcode (P1), and planning facts on the request (P2), both
+  done the same day (see Done); next a profile photo in the account (P3); photo and first
+  name on share links, opt-in, once Martin decides how a photo is checked before strangers
+  see it (P4). Newsletter consent (P5) waits for the email provider in M2.
 
 ### M1 — A reviewable preview
 

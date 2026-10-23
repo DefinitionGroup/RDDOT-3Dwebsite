@@ -4,16 +4,25 @@ import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { type FormEvent, useId, useRef, useState } from "react";
 import { Emphasized } from "@/components/design-system/emphasized";
-import { FieldLabel, TextArea, TextField } from "@/components/design-system/field";
+import { ChoiceField, FieldLabel, TextArea, TextField } from "@/components/design-system/field";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
 import { INTL_LOCALE, localizePath } from "@/lib/i18n";
 import { apiErrorMessage } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
+import type { CustomerProfile } from "@/features/customer-accounts/customer-profile";
 import {
+  CustomerTypeFields,
+  customValidity,
+  ReachFields,
+  SalutationFields
+} from "@/features/customer-accounts/ui/contact-details-fields";
+import {
+  type ContactDetails,
   QUOTE_REQUEST_LIMITS,
-  QUOTE_REQUESTS_REACH_ROTPUNKT
+  QUOTE_REQUESTS_REACH_ROTPUNKT,
+  type QuoteRequestPlanning
 } from "@/features/quote-requests/quote-request-contract";
 import { formatQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
 import type { SerializedQuoteRequest } from "@/features/quote-requests/serialize-quote-request";
@@ -37,8 +46,8 @@ export function QuoteRequestForm({
   projectName
 }: {
   expectedVersion: number;
-  /** What the account already knows: the profile's name and phone, the sign-in email. */
-  initialContact?: { name: string; email: string; phone: string };
+  /** What the account already knows: the profile and the sign-in email. */
+  initialContact?: CustomerProfile & { email: string };
   projectId: string;
   projectName: string;
 }) {
@@ -48,6 +57,9 @@ export function QuoteRequestForm({
   const nameId = useId();
   const emailId = useId();
   const phoneId = useId();
+  const postalCodeId = useId();
+  const wallLengthId = useId();
+  const planningId = useId();
   const noteId = useId();
   const consentId = useId();
   const prefersReducedMotion = useReducedMotion();
@@ -56,7 +68,25 @@ export function QuoteRequestForm({
   const [name, setName] = useState(initialContact?.name ?? "");
   const [email, setEmail] = useState(initialContact?.email ?? "");
   const [phone, setPhone] = useState(initialContact?.phone ?? "");
+  const [postalCode, setPostalCode] = useState(initialContact?.postalCode ?? "");
+  const [details, setDetails] = useState<ContactDetails>({
+    salutation: initialContact?.salutation ?? "",
+    title: initialContact?.title ?? "",
+    contactChannel: initialContact?.contactChannel ?? "",
+    contactTime: initialContact?.contactTime ?? "",
+    customerType: initialContact?.customerType ?? "",
+    company: initialContact?.company ?? "",
+    professionalRole: initialContact?.professionalRole ?? ""
+  });
+  const [planning, setPlanning] = useState<Omit<QuoteRequestPlanning, "wallLengthCm">>({
+    projectKind: "",
+    timeframe: "",
+    budgetBand: ""
+  });
+  const [wallLength, setWallLength] = useState("");
   const [note, setNote] = useState("");
+  const phoneRequired = details.contactChannel === "phone";
+  const editDetails = (patch: Partial<ContactDetails>) => setDetails((current) => ({ ...current, ...patch }));
   const [consent, setConsent] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>({ kind: "idle" });
@@ -78,7 +108,8 @@ export function QuoteRequestForm({
         body: JSON.stringify({
           expectedVersion,
           idempotencyKey: idempotencyKey.current,
-          contact: { name, email, phone },
+          contact: { name, email, phone, postalCode, ...details },
+          planning: { ...planning, wallLengthCm: wallLength.trim() === "" ? null : Number(wallLength) },
           note,
           consent: true
         })
@@ -177,7 +208,8 @@ export function QuoteRequestForm({
       <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{t.intro(projectName)}</p>
 
       <form className="mt-10 max-w-xl" noValidate={false} onSubmit={submit}>
-        <div className="grid gap-8 sm:grid-cols-2">
+        <div className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
+          <SalutationFields onChange={editDetails} value={details} />
           <div>
             <FieldLabel htmlFor={nameId}>{t.name}</FieldLabel>
             <TextField
@@ -202,21 +234,84 @@ export function QuoteRequestForm({
               value={email}
             />
           </div>
+          <div>
+            <FieldLabel hint={phoneRequired ? undefined : t.optional} htmlFor={phoneId}>
+              {t.phone}
+            </FieldLabel>
+            <TextField
+              autoComplete="tel"
+              id={phoneId}
+              maxLength={QUOTE_REQUEST_LIMITS.phoneMax}
+              onChange={(event) => setPhone(event.target.value)}
+              required={phoneRequired}
+              type="tel"
+              value={phone}
+              {...customValidity(messages.contactDetails.phoneForCalls)}
+            />
+          </div>
+          <div>
+            <FieldLabel hint={t.optional} htmlFor={postalCodeId}>
+              {messages.account.postalCode}
+            </FieldLabel>
+            <TextField
+              autoCapitalize="characters"
+              autoComplete="postal-code"
+              id={postalCodeId}
+              maxLength={QUOTE_REQUEST_LIMITS.postalCodeMax}
+              onChange={(event) => setPostalCode(event.target.value)}
+              value={postalCode}
+            />
+          </div>
+          <ReachFields onChange={editDetails} value={details} />
+          <CustomerTypeFields onChange={editDetails} value={details} />
         </div>
 
-        <div className="mt-8">
-          <FieldLabel hint={t.optional} htmlFor={phoneId}>
-            {t.phone}
-          </FieldLabel>
-          <TextField
-            autoComplete="tel"
-            id={phoneId}
-            maxLength={QUOTE_REQUEST_LIMITS.phoneMax}
-            onChange={(event) => setPhone(event.target.value)}
-            type="tel"
-            value={phone}
-          />
-        </div>
+        <section aria-labelledby={planningId} className="mt-14 border-t border-hairline pt-8">
+          <h2 className="m-0 text-nav" id={planningId}>
+            {messages.planningFacts.heading}
+          </h2>
+          <p className="m-0 mt-2 max-w-[52ch] text-caption text-graphite">{messages.planningFacts.body}</p>
+          <div className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2">
+            <ChoiceField
+              emptyLabel={messages.contactDetails.noAnswer}
+              label={messages.planningFacts.projectKind}
+              onChange={(projectKind) => setPlanning((current) => ({ ...current, projectKind }))}
+              options={messages.planningFacts.projectKinds}
+              value={planning.projectKind}
+            />
+            <ChoiceField
+              emptyLabel={messages.contactDetails.noAnswer}
+              label={messages.planningFacts.timeframe}
+              onChange={(timeframe) => setPlanning((current) => ({ ...current, timeframe }))}
+              options={messages.planningFacts.timeframes}
+              value={planning.timeframe}
+            />
+            <ChoiceField
+              emptyLabel={messages.contactDetails.noAnswer}
+              label={messages.planningFacts.budget}
+              onChange={(budgetBand) => setPlanning((current) => ({ ...current, budgetBand }))}
+              options={messages.planningFacts.budgetBands}
+              value={planning.budgetBand}
+            />
+            <div>
+              <FieldLabel hint={messages.planningFacts.wallLengthHint} htmlFor={wallLengthId}>
+                {messages.planningFacts.wallLength}
+              </FieldLabel>
+              <TextField
+                className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                id={wallLengthId}
+                inputMode="numeric"
+                max={QUOTE_REQUEST_LIMITS.wallLengthMaxCm}
+                min={QUOTE_REQUEST_LIMITS.wallLengthMinCm}
+                onChange={(event) => setWallLength(event.target.value)}
+                step={1}
+                type="number"
+                value={wallLength}
+                {...customValidity(messages.planningFacts.wallLengthRange)}
+              />
+            </div>
+          </div>
+        </section>
 
         <div className="mt-8">
           <FieldLabel hint={t.optional} htmlFor={noteId}>

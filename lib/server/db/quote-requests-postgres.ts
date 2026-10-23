@@ -7,13 +7,16 @@ import { hashJson } from "@/features/projects/configuration-contract";
 import type { JsonValue } from "@/features/projects/project-module";
 import {
   quoteRequestContactSchema,
-  quoteRequestNoteSchema
+  quoteRequestNoteSchema,
+  quoteRequestPlanningSchema
 } from "@/features/quote-requests/quote-request-contract";
 import type {
   QuoteRequest,
+  QuoteRequestContact,
   QuoteRequestCursor,
   QuoteRequestModule,
   QuoteRequestPage,
+  QuoteRequestPlanning,
   SubmitQuoteRequestResult
 } from "@/features/quote-requests/quote-request-module";
 import { createQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
@@ -53,6 +56,18 @@ type Row = {
   contactName: string;
   contactEmail: string;
   contactPhone: string | null;
+  contactSalutation: QuoteRequestContact["salutation"];
+  contactTitle: string;
+  contactPostalCode: string;
+  contactChannel: QuoteRequestContact["contactChannel"];
+  contactTime: QuoteRequestContact["contactTime"];
+  customerType: QuoteRequestContact["customerType"];
+  company: string;
+  professionalRole: QuoteRequestContact["professionalRole"];
+  projectKind: QuoteRequestPlanning["projectKind"];
+  timeframe: QuoteRequestPlanning["timeframe"];
+  budgetBand: QuoteRequestPlanning["budgetBand"];
+  wallLengthCm: number | null;
   note: string;
   consentVersion: string;
   consentAcceptedAt: Date;
@@ -69,7 +84,25 @@ function mapRow(row: Row): QuoteRequest {
     projectName: row.projectName,
     revisionId: row.configurationRevisionId,
     state: row.state,
-    contact: { name: row.contactName, email: row.contactEmail, phone: row.contactPhone },
+    contact: {
+      name: row.contactName,
+      email: row.contactEmail,
+      phone: row.contactPhone,
+      postalCode: row.contactPostalCode,
+      salutation: row.contactSalutation,
+      title: row.contactTitle,
+      contactChannel: row.contactChannel,
+      contactTime: row.contactTime,
+      customerType: row.customerType,
+      company: row.company,
+      professionalRole: row.professionalRole
+    },
+    planning: {
+      projectKind: row.projectKind,
+      timeframe: row.timeframe,
+      budgetBand: row.budgetBand,
+      wallLengthCm: row.wallLengthCm
+    },
     note: row.note,
     consent: { version: row.consentVersion, acceptedAt: new Date(row.consentAcceptedAt) },
     priceIndication: row.priceIndication,
@@ -88,6 +121,18 @@ const columns = [
   "quoteRequest.contactName",
   "quoteRequest.contactEmail",
   "quoteRequest.contactPhone",
+  "quoteRequest.contactSalutation",
+  "quoteRequest.contactTitle",
+  "quoteRequest.contactPostalCode",
+  "quoteRequest.contactChannel",
+  "quoteRequest.contactTime",
+  "quoteRequest.customerType",
+  "quoteRequest.company",
+  "quoteRequest.professionalRole",
+  "quoteRequest.projectKind",
+  "quoteRequest.timeframe",
+  "quoteRequest.budgetBand",
+  "quoteRequest.wallLengthCm",
   "quoteRequest.note",
   "quoteRequest.consentVersion",
   "quoteRequest.consentAcceptedAt",
@@ -168,12 +213,14 @@ export function createPostgresQuoteRequestModule(
       const expectedVersion = z.number().int().positive().parse(input.expectedVersion);
       const idempotencyKey = idempotencyKeySchema.parse(input.idempotencyKey);
       const contact = quoteRequestContactSchema.parse(input.contact);
+      const planning = quoteRequestPlanningSchema.parse(input.planning);
       const note = quoteRequestNoteSchema.parse(input.note);
       const consentVersion = consentVersionSchema.parse(input.consent.version);
       const requestHash = hashJson({
         projectId,
         expectedVersion,
         contact,
+        planning,
         note,
         consentVersion
       });
@@ -302,6 +349,15 @@ export function createPostgresQuoteRequestModule(
                   contactName: contact.name,
                   contactEmail: contact.email,
                   contactPhone: contact.phone,
+                  contactSalutation: contact.salutation,
+                  contactTitle: contact.title,
+                  contactPostalCode: contact.postalCode,
+                  contactChannel: contact.contactChannel,
+                  contactTime: contact.contactTime,
+                  customerType: contact.customerType,
+                  company: contact.company,
+                  professionalRole: contact.professionalRole,
+                  ...planning,
                   note,
                   consentVersion,
                   consentAcceptedAt: now,

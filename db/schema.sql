@@ -124,9 +124,29 @@ CREATE TABLE app.customer_profile (
     postal_code text DEFAULT ''::text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    salutation text DEFAULT ''::text NOT NULL,
+    title text DEFAULT ''::text NOT NULL,
+    contact_channel text DEFAULT ''::text NOT NULL,
+    contact_time text DEFAULT ''::text NOT NULL,
+    customer_type text DEFAULT ''::text NOT NULL,
+    company text DEFAULT ''::text NOT NULL,
+    professional_role text DEFAULT ''::text NOT NULL,
+    CONSTRAINT customer_profile_company_check CHECK ((char_length(company) <= 120)),
+    CONSTRAINT customer_profile_company_for_professionals CHECK (
+CASE
+    WHEN (customer_type = 'professional'::text) THEN (company <> ''::text)
+    ELSE ((company = ''::text) AND (professional_role = ''::text))
+END),
+    CONSTRAINT customer_profile_contact_channel_check CHECK ((contact_channel = ANY (ARRAY[''::text, 'phone'::text, 'email'::text, 'either'::text]))),
+    CONSTRAINT customer_profile_contact_time_check CHECK ((contact_time = ANY (ARRAY[''::text, 'morning'::text, 'afternoon'::text, 'evening'::text, 'anytime'::text]))),
+    CONSTRAINT customer_profile_customer_type_check CHECK ((customer_type = ANY (ARRAY[''::text, 'private'::text, 'professional'::text]))),
     CONSTRAINT customer_profile_name_check CHECK ((char_length(name) <= 120)),
     CONSTRAINT customer_profile_phone_check CHECK (((phone = ''::text) OR ((char_length(phone) >= 3) AND (char_length(phone) <= 40)))),
-    CONSTRAINT customer_profile_postal_code_check CHECK (((postal_code = ''::text) OR (postal_code ~ '^[A-Z0-9][A-Z0-9 -]{1,8}[A-Z0-9]$'::text)))
+    CONSTRAINT customer_profile_phone_for_calls CHECK (((contact_channel <> 'phone'::text) OR (phone <> ''::text))),
+    CONSTRAINT customer_profile_postal_code_check CHECK (((postal_code = ''::text) OR (postal_code ~ '^[A-Z0-9][A-Z0-9 -]{1,8}[A-Z0-9]$'::text))),
+    CONSTRAINT customer_profile_professional_role_check CHECK ((professional_role = ANY (ARRAY[''::text, 'architecture'::text, 'developer'::text, 'trade'::text, 'other'::text]))),
+    CONSTRAINT customer_profile_salutation_check CHECK ((salutation = ANY (ARRAY[''::text, 'frau'::text, 'herr'::text, 'divers'::text]))),
+    CONSTRAINT customer_profile_title_check CHECK ((char_length(title) <= 40))
 );
 
 
@@ -326,14 +346,44 @@ CREATE TABLE app.quote_request (
     price_indication jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    contact_salutation text DEFAULT ''::text NOT NULL,
+    contact_title text DEFAULT ''::text NOT NULL,
+    contact_postal_code text DEFAULT ''::text NOT NULL,
+    contact_channel text DEFAULT ''::text NOT NULL,
+    contact_time text DEFAULT ''::text NOT NULL,
+    customer_type text DEFAULT ''::text NOT NULL,
+    company text DEFAULT ''::text NOT NULL,
+    professional_role text DEFAULT ''::text NOT NULL,
+    project_kind text DEFAULT ''::text NOT NULL,
+    timeframe text DEFAULT ''::text NOT NULL,
+    budget_band text DEFAULT ''::text NOT NULL,
+    wall_length_cm integer,
+    CONSTRAINT quote_request_budget_band_check CHECK ((budget_band = ANY (ARRAY[''::text, 'up-to-10k'::text, '10-15k'::text, '15-25k'::text, 'over-25k'::text]))),
+    CONSTRAINT quote_request_company_check CHECK ((char_length(company) <= 120)),
+    CONSTRAINT quote_request_company_for_professionals CHECK (
+CASE
+    WHEN (customer_type = 'professional'::text) THEN (company <> ''::text)
+    ELSE ((company = ''::text) AND (professional_role = ''::text))
+END),
     CONSTRAINT quote_request_consent_version_check CHECK (((char_length(consent_version) >= 1) AND (char_length(consent_version) <= 64))),
+    CONSTRAINT quote_request_contact_channel_check CHECK ((contact_channel = ANY (ARRAY[''::text, 'phone'::text, 'email'::text, 'either'::text]))),
     CONSTRAINT quote_request_contact_email_check CHECK (((char_length(contact_email) >= 3) AND (char_length(contact_email) <= 254))),
     CONSTRAINT quote_request_contact_name_check CHECK (((char_length(contact_name) >= 1) AND (char_length(contact_name) <= 120))),
     CONSTRAINT quote_request_contact_phone_check CHECK (((contact_phone IS NULL) OR ((char_length(contact_phone) >= 3) AND (char_length(contact_phone) <= 40)))),
+    CONSTRAINT quote_request_contact_postal_code_check CHECK (((contact_postal_code = ''::text) OR (contact_postal_code ~ '^[A-Z0-9][A-Z0-9 -]{1,8}[A-Z0-9]$'::text))),
+    CONSTRAINT quote_request_contact_salutation_check CHECK ((contact_salutation = ANY (ARRAY[''::text, 'frau'::text, 'herr'::text, 'divers'::text]))),
+    CONSTRAINT quote_request_contact_time_check CHECK ((contact_time = ANY (ARRAY[''::text, 'morning'::text, 'afternoon'::text, 'evening'::text, 'anytime'::text]))),
+    CONSTRAINT quote_request_contact_title_check CHECK ((char_length(contact_title) <= 40)),
+    CONSTRAINT quote_request_customer_type_check CHECK ((customer_type = ANY (ARRAY[''::text, 'private'::text, 'professional'::text]))),
     CONSTRAINT quote_request_note_check CHECK ((char_length(note) <= 2000)),
+    CONSTRAINT quote_request_phone_for_calls CHECK (((contact_channel <> 'phone'::text) OR (contact_phone IS NOT NULL))),
     CONSTRAINT quote_request_price_indication_check CHECK ((jsonb_typeof(price_indication) = 'object'::text)),
+    CONSTRAINT quote_request_professional_role_check CHECK ((professional_role = ANY (ARRAY[''::text, 'architecture'::text, 'developer'::text, 'trade'::text, 'other'::text]))),
+    CONSTRAINT quote_request_project_kind_check CHECK ((project_kind = ANY (ARRAY[''::text, 'new-build'::text, 'renovation'::text, 'move'::text, 'other'::text]))),
     CONSTRAINT quote_request_reference_check CHECK ((reference ~ '^A-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$'::text)),
-    CONSTRAINT quote_request_state_check CHECK ((state = ANY (ARRAY['submitted'::text, 'in-review'::text, 'answered'::text, 'withdrawn'::text])))
+    CONSTRAINT quote_request_state_check CHECK ((state = ANY (ARRAY['submitted'::text, 'in-review'::text, 'answered'::text, 'withdrawn'::text]))),
+    CONSTRAINT quote_request_timeframe_check CHECK ((timeframe = ANY (ARRAY[''::text, 'within-3-months'::text, '3-6-months'::text, '6-12-months'::text, 'later'::text, 'open'::text]))),
+    CONSTRAINT quote_request_wall_length_cm_check CHECK (((wall_length_cm IS NULL) OR ((wall_length_cm >= 100) AND (wall_length_cm <= 2000))))
 );
 
 
@@ -1205,4 +1255,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260902230000'),
     ('20260903100000'),
     ('20260904120000'),
-    ('20261023090000');
+    ('20261023090000'),
+    ('20261023120000');

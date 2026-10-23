@@ -105,8 +105,17 @@ describe("quote request contract", () => {
     expect(request.contact).toEqual({
       name: "Mara Vogel",
       email: "mara.vogel@example.com",
-      phone: null
+      phone: null,
+      postalCode: "",
+      salutation: "",
+      title: "",
+      contactChannel: "",
+      contactTime: "",
+      customerType: "",
+      company: "",
+      professionalRole: ""
     });
+    expect(request.planning).toEqual({ projectKind: "", timeframe: "", budgetBand: "", wallLengthCm: null });
     expect(request.note).toBe("Bitte mit Termin für ein Beratungsgespräch.");
     expect(request.consent).toEqual({ version: "anfrage-datenschutz-2026-09", acceptedAt: now });
     expect(request.priceIndication).toEqual({
@@ -139,6 +148,49 @@ describe("quote request contract", () => {
       reference: request.reference
     });
     expect(outbox.processedAt).toBeNull();
+  });
+
+  it("keeps a copy of the contact details and the planning facts, and replays only the same ones", async () => {
+    const { ownerId, projectId } = await seedProject();
+    const quoteRequests = moduleWith();
+    const contact = {
+      ...CONTACT,
+      phone: "030 1234567",
+      postalCode: "sw1a 1aa",
+      salutation: "frau",
+      title: "Dr.",
+      contactChannel: "phone",
+      contactTime: "morning",
+      customerType: "professional",
+      company: "Vogel Bau",
+      professionalRole: "developer"
+    } as const;
+    const planning = { projectKind: "new-build", timeframe: "6-12-months", budgetBand: "over-25k", wallLengthCm: 420 } as const;
+    const key = crypto.randomUUID();
+    const first = await quoteRequests.submit({ ...submission(ownerId, projectId, key), contact, planning });
+    expect(first.kind).toBe("submitted");
+    if (first.kind !== "submitted") return;
+    expect(first.quoteRequest.contact).toMatchObject({ postalCode: "SW1A 1AA", company: "Vogel Bau", contactChannel: "phone" });
+    expect(first.quoteRequest.planning).toEqual(planning);
+
+    const again = await quoteRequests.submit({ ...submission(ownerId, projectId, key), contact, planning });
+    expect(again.kind).toBe("replayed");
+    const changed = await quoteRequests.submit({
+      ...submission(ownerId, projectId, key),
+      contact,
+      planning: { ...planning, budgetBand: "10-15k" }
+    });
+    expect(changed.kind).toBe("idempotency-conflict");
+
+    // The table refuses a call without a number, like the contract does.
+    await expect(
+      context.database
+        .withSchema("app")
+        .updateTable("quoteRequest")
+        .set({ contactPhone: null })
+        .where("id", "=", first.quoteRequest.id)
+        .execute()
+    ).rejects.toThrow();
   });
 
   it("replays an identical submit and refuses the same key with different data", async () => {

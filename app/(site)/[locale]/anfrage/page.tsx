@@ -100,7 +100,7 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16">
           <QuoteRequestForm
             expectedVersion={workspace.workingConfiguration.version}
-            initialContact={{ name: profile.name, email: session.email, phone: profile.phone }}
+            initialContact={{ ...profile, email: session.email }}
             projectId={workspace.id}
             projectName={workspace.name}
           />

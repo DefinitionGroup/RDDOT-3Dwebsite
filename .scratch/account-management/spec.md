@@ -1,6 +1,6 @@
 # Account management
 
-Status: accepted 2026-10-23 — Slice A done (A1–A4); Slice P (profile) Next up, decided 2026-10-23; Slice B after launch
+Status: accepted 2026-10-23 — Slice A done (A1–A4); Slice P (profile) Next up, P1 and P2 done 2026-10-23; Slice B after launch
 Created: 2026-10-23
 
 Turn `/konto` from a sign-in screen with lists beside a photo into the customer's own
@@ -93,7 +93,9 @@ person — how to address them, how to reach them, whether they plan privately o
 client — plus a photo that makes the account and shared views personal. Facts about one
 kitchen go on its request, not on the person.
 
-**P1 Who I am and how to reach me.** The profile gains, each optional:
+**P1 Who I am and how to reach me.** Done 2026-10-23 (see STATUS); the choices are native
+selects (`ChoiceField`), and long options were shortened to fit a half-width column. The
+profile gains, each optional:
 - Salutation: Frau, Herr, divers or no answer, plus a title (Dr., Prof.; free text, up
   to 40 characters). One function, `formalGreeting(profile, locale)` with tests, turns it
   into "Sehr geehrte Frau Dr. Vogel" or, for divers and no answer, "Guten Tag Alex Vogel";
@@ -109,7 +111,8 @@ and a Quote Request copies them at submission together with the postcode (the bo
 "Requests carry the postcode" ships here), so a later profile edit never rewrites a
 request.
 
-**P2 Planning facts on the request.** Optional fields on the request form, stored on the
+**P2 Planning facts on the request.** Done 2026-10-23 with the placeholder budget bands.
+Optional fields on the request form, stored on the
 Quote Request: the project (new build, renovation, move, other), the timeframe (within 3
 months, 3–6, 6–12, later, open), a budget band and the room (wall length in cm). They
 differ per kitchen, which is why they are not in the profile. Part of the request's

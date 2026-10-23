@@ -48,6 +48,7 @@ export async function POST(
     expectedVersion: body.data.expectedVersion,
     idempotencyKey: body.data.idempotencyKey,
     contact: body.data.contact,
+    planning: body.data.planning,
     note: body.data.note,
     consent: { version: QUOTE_REQUEST_CONSENT_VERSION }
   });

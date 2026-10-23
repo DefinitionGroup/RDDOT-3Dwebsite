@@ -379,6 +379,53 @@ export const en = {
       "This configuration uses a product version that is no longer available. Open the project in the configurator to update it.",
     toProjects: "To my projects"
   },
+  contactDetails: {
+    salutation: "Salutation",
+    salutations: { frau: "Ms", herr: "Mr", divers: "Mx" },
+    title: "Title",
+    titlePlaceholder: "e.g. Dr",
+    channel: "How to reach me",
+    channels: { phone: "By phone", email: "By email", either: "Either is fine" },
+    time: "Best time",
+    times: { morning: "Mornings", afternoon: "Afternoons", evening: "Evenings", anytime: "Any time" },
+    customerType: "I am planning",
+    customerTypes: { private: "Privately", professional: "Professionally" },
+    company: "Company",
+    role: "Field",
+    roles: {
+      architecture: "Architecture/interiors",
+      developer: "Property developer",
+      trade: "Kitchen retail",
+      other: "Other"
+    },
+    noAnswer: "No answer",
+    phoneForCalls: "To call you back we need your phone number.",
+    companyForProfessionals: "Please name your company."
+  },
+  planningFacts: {
+    heading: "Your project",
+    body: "Helps our planners place your request. Everything is optional.",
+    projectKind: "Project",
+    projectKinds: { "new-build": "New build", renovation: "Renovation", move: "Move", other: "Other" },
+    timeframe: "Timeframe",
+    timeframes: {
+      "within-3-months": "Within 3 months",
+      "3-6-months": "In 3 to 6 months",
+      "6-12-months": "In 6 to 12 months",
+      later: "Later",
+      open: "Still open"
+    },
+    budget: "Budget",
+    budgetBands: {
+      "up-to-10k": "Up to €10,000",
+      "10-15k": "€10,000 to €15,000",
+      "15-25k": "€15,000 to €25,000",
+      "over-25k": "Over €25,000"
+    },
+    wallLength: "Wall length for the kitchen",
+    wallLengthHint: "in cm",
+    wallLengthRange: "Please enter a length between 100 and 2000 cm."
+  },
   requestSummary: {
     heading: "Your configuration",
     product: "Product",
@@ -512,7 +559,7 @@ export const en = {
     "project-has-requests": "Projects with requests are kept. Contact rotpunkt if one should be deleted.",
     "project-lifecycle-conflict": "The project has changed in the meantime. Reload the page and try again.",
     "invalid-profile":
-      "Please check your details: a phone number of 3 to 40 characters, a postcode of 3 to 10 letters or digits.",
+      "Please check your details: a phone number of 3 to 40 characters, a postcode of 3 to 10 letters or digits, a phone number to be called back, a company when planning professionally.",
     "invalid-revision": "The version is invalid.",
     "invalid-link": "The link is invalid.",
     "invalid-job": "The job is invalid.",
@@ -541,7 +588,8 @@ export const en = {
     "token-conflict": "The secure link could not be created. Please try again.",
     "shared-revision-unavailable": "This shared state is not available.",
     "shared-revision-gone": "This shared state is no longer available.",
-    "quote-details-required": "Please check your details. Name, email address and consent are required.",
+    "quote-details-required":
+      "Please check your details. Name, email address and consent are required, a phone number to be called back, a company when planning professionally.",
     "quote-daily-limit": "The daily limit for requests has been reached. Please try again later.",
     "photo-daily-limit": "The daily limit for visualisations has been reached.",
     "photo-budget-exhausted": "Today's allowance for visualisations is used up. Please try again later.",

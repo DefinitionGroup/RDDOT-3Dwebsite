@@ -1,4 +1,5 @@
 import type { ColumnType, Generated } from "kysely";
+import type { ContactDetails, QuoteRequestPlanning } from "@/features/quote-requests/quote-request-contract";
 
 type JsonValue =
   | null
@@ -22,6 +23,13 @@ export type CustomerProfileTable = {
   name: string;
   phone: string;
   postalCode: string;
+  salutation: Generated<ContactDetails["salutation"]>;
+  title: Generated<string>;
+  contactChannel: Generated<ContactDetails["contactChannel"]>;
+  contactTime: Generated<ContactDetails["contactTime"]>;
+  customerType: Generated<ContactDetails["customerType"]>;
+  company: Generated<string>;
+  professionalRole: Generated<ContactDetails["professionalRole"]>;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
@@ -211,6 +219,19 @@ export type QuoteRequestTable = {
   contactName: string;
   contactEmail: string;
   contactPhone: string | null;
+  // Columns added in 20261023120000: "" (no answer) by default.
+  contactSalutation: Generated<ContactDetails["salutation"]>;
+  contactTitle: Generated<string>;
+  contactPostalCode: Generated<string>;
+  contactChannel: Generated<ContactDetails["contactChannel"]>;
+  contactTime: Generated<ContactDetails["contactTime"]>;
+  customerType: Generated<ContactDetails["customerType"]>;
+  company: Generated<string>;
+  professionalRole: Generated<ContactDetails["professionalRole"]>;
+  projectKind: Generated<QuoteRequestPlanning["projectKind"]>;
+  timeframe: Generated<QuoteRequestPlanning["timeframe"]>;
+  budgetBand: Generated<QuoteRequestPlanning["budgetBand"]>;
+  wallLengthCm: number | null;
   note: string;
   consentVersion: string;
   consentAcceptedAt: Timestamp;

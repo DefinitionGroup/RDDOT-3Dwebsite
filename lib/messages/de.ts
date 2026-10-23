@@ -1,4 +1,8 @@
+import type { ContactDetails, QuoteRequestPlanning } from "@/features/quote-requests/quote-request-contract";
 import type { QuoteRequestState } from "@/features/quote-requests/quote-request-module";
+
+type Choices<K extends keyof ContactDetails> = Record<Exclude<ContactDetails[K], "">, string>;
+type PlanningChoices<K extends keyof QuoteRequestPlanning> = Record<Exclude<QuoteRequestPlanning[K], "" | null>, string>;
 import type { ApiErrorCode } from "@/lib/api-errors";
 
 /**
@@ -395,6 +399,65 @@ export const de = {
       "Diese Konfiguration verwendet eine nicht mehr verfügbare Produktversion. Öffnen Sie das Projekt im Konfigurator, um sie zu aktualisieren.",
     toProjects: "Zu meinen Projekten"
   },
+  /** How to address and reach a person: the profile and the request share these. */
+  contactDetails: {
+    salutation: "Anrede",
+    salutations: { frau: "Frau", herr: "Herr", divers: "Divers" } satisfies Choices<"salutation">,
+    title: "Titel",
+    titlePlaceholder: "z. B. Dr.",
+    channel: "So erreichen Sie mich",
+    channels: { phone: "Telefonisch", email: "Per E-Mail", either: "Beides ist recht" } satisfies Choices<"contactChannel">,
+    time: "Am besten",
+    times: {
+      morning: "Vormittags",
+      afternoon: "Nachmittags",
+      evening: "Abends",
+      anytime: "Jederzeit"
+    } satisfies Choices<"contactTime">,
+    customerType: "Ich plane",
+    customerTypes: { private: "Privat", professional: "Beruflich" } satisfies Choices<"customerType">,
+    company: "Firma",
+    role: "Tätigkeit",
+    roles: {
+      architecture: "(Innen-)Architektur",
+      developer: "Bauträger",
+      trade: "Küchen-/Möbelhandel",
+      other: "Anderes"
+    } satisfies Choices<"professionalRole">,
+    noAnswer: "Keine Angabe",
+    phoneForCalls: "Für einen Rückruf brauchen wir Ihre Telefonnummer.",
+    companyForProfessionals: "Bitte nennen Sie Ihre Firma."
+  },
+  /** P2: what one kitchen is about, asked on the request form. */
+  planningFacts: {
+    heading: "Ihr Vorhaben",
+    body: "Hilft unserer Planung, Ihre Anfrage einzuordnen. Alles ist freiwillig.",
+    projectKind: "Vorhaben",
+    projectKinds: {
+      "new-build": "Neubau",
+      renovation: "Renovierung",
+      move: "Umzug",
+      other: "Anderes"
+    } satisfies PlanningChoices<"projectKind">,
+    timeframe: "Zeitraum",
+    timeframes: {
+      "within-3-months": "In bis zu 3 Monaten",
+      "3-6-months": "In 3 bis 6 Monaten",
+      "6-12-months": "In 6 bis 12 Monaten",
+      later: "Später",
+      open: "Noch offen"
+    } satisfies PlanningChoices<"timeframe">,
+    budget: "Budgetrahmen",
+    budgetBands: {
+      "up-to-10k": "Bis 10.000 €",
+      "10-15k": "10.000 bis 15.000 €",
+      "15-25k": "15.000 bis 25.000 €",
+      "over-25k": "Über 25.000 €"
+    } satisfies PlanningChoices<"budgetBand">,
+    wallLength: "Wandlänge für die Küche",
+    wallLengthHint: "in cm",
+    wallLengthRange: "Bitte eine Länge zwischen 100 und 2000 cm."
+  },
   requestSummary: {
     heading: "Ihre Konfiguration",
     product: "Produkt",
@@ -532,7 +595,7 @@ export const de = {
     "project-has-requests": "Projekte mit Anfragen bleiben erhalten. Wenden Sie sich an rotpunkt, wenn eines gelöscht werden soll.",
     "project-lifecycle-conflict": "Das Projekt hat sich inzwischen geändert. Laden Sie die Seite neu und versuchen Sie es erneut.",
     "invalid-profile":
-      "Bitte prüfen Sie Ihre Angaben: Telefon mit 3 bis 40 Zeichen, Postleitzahl mit 3 bis 10 Buchstaben oder Ziffern.",
+      "Bitte prüfen Sie Ihre Angaben: Telefon mit 3 bis 40 Zeichen, Postleitzahl mit 3 bis 10 Buchstaben oder Ziffern, für einen Rückruf eine Telefonnummer, beruflich eine Firma.",
     "invalid-revision": "Die Version ist ungültig.",
     "invalid-link": "Der Link ist ungültig.",
     "invalid-job": "Der Auftrag ist ungültig.",
@@ -563,7 +626,7 @@ export const de = {
     "shared-revision-unavailable": "Dieser geteilte Stand ist nicht verfügbar.",
     "shared-revision-gone": "Dieser geteilte Stand ist nicht mehr verfügbar.",
     "quote-details-required":
-      "Bitte prüfen Sie Ihre Angaben. Name, E-Mail-Adresse und Einwilligung sind erforderlich.",
+      "Bitte prüfen Sie Ihre Angaben. Name, E-Mail-Adresse und Einwilligung sind erforderlich, für einen Rückruf eine Telefonnummer, beruflich eine Firma.",
     "quote-daily-limit": "Das Tageslimit für Anfragen ist erreicht. Bitte versuchen Sie es später erneut.",
     "photo-daily-limit": "Das Tageslimit für Visualisierungen ist erreicht.",
     "photo-budget-exhausted":

@@ -379,6 +379,53 @@ export const es = {
       "Esta configuración utiliza una versión de producto que ya no está disponible. Abra el proyecto en el configurador para actualizarla.",
     toProjects: "A mis proyectos"
   },
+  contactDetails: {
+    salutation: "Tratamiento",
+    salutations: { frau: "Sra.", herr: "Sr.", divers: "Diverso" },
+    title: "Título",
+    titlePlaceholder: "p. ej. Dr.",
+    channel: "Cómo contactarme",
+    channels: { phone: "Por teléfono", email: "Por correo", either: "Me da igual" },
+    time: "Mejor momento",
+    times: { morning: "Por la mañana", afternoon: "Por la tarde", evening: "Por la noche", anytime: "En cualquier momento" },
+    customerType: "Planifico",
+    customerTypes: { private: "A título particular", professional: "Profesionalmente" },
+    company: "Empresa",
+    role: "Actividad",
+    roles: {
+      architecture: "Arquitectura",
+      developer: "Promotora inmobiliaria",
+      trade: "Comercio de cocinas",
+      other: "Otra"
+    },
+    noAnswer: "Sin respuesta",
+    phoneForCalls: "Para llamarle necesitamos su número de teléfono.",
+    companyForProfessionals: "Indique su empresa, por favor."
+  },
+  planningFacts: {
+    heading: "Su proyecto",
+    body: "Ayuda a nuestros planificadores a valorar su solicitud. Todo es opcional.",
+    projectKind: "Proyecto",
+    projectKinds: { "new-build": "Obra nueva", renovation: "Reforma", move: "Mudanza", other: "Otro" },
+    timeframe: "Plazo",
+    timeframes: {
+      "within-3-months": "Antes de 3 meses",
+      "3-6-months": "En 3 a 6 meses",
+      "6-12-months": "En 6 a 12 meses",
+      later: "Más adelante",
+      open: "Aún por decidir"
+    },
+    budget: "Presupuesto",
+    budgetBands: {
+      "up-to-10k": "Hasta 10.000 €",
+      "10-15k": "De 10.000 a 15.000 €",
+      "15-25k": "De 15.000 a 25.000 €",
+      "over-25k": "Más de 25.000 €"
+    },
+    wallLength: "Longitud de la pared para la cocina",
+    wallLengthHint: "en cm",
+    wallLengthRange: "Indique una longitud entre 100 y 2000 cm."
+  },
   requestSummary: {
     heading: "Su configuración",
     product: "Producto",
@@ -513,7 +560,7 @@ export const es = {
     "project-has-requests": "Los proyectos con solicitudes se conservan. Contacte con rotpunkt si debe eliminarse alguno.",
     "project-lifecycle-conflict": "El proyecto ha cambiado mientras tanto. Recargue la página e inténtelo de nuevo.",
     "invalid-profile":
-      "Revise sus datos: un teléfono de 3 a 40 caracteres y un código postal de 3 a 10 letras o cifras.",
+      "Revise sus datos: un teléfono de 3 a 40 caracteres, un código postal de 3 a 10 letras o cifras, un teléfono si quiere que le llamemos y una empresa si planifica profesionalmente.",
     "invalid-revision": "La versión no es válida.",
     "invalid-link": "El enlace no es válido.",
     "invalid-job": "El encargo no es válido.",
@@ -542,7 +589,8 @@ export const es = {
     "token-conflict": "No se ha podido crear el enlace seguro. Inténtelo de nuevo.",
     "shared-revision-unavailable": "Este estado compartido no está disponible.",
     "shared-revision-gone": "Este estado compartido ya no está disponible.",
-    "quote-details-required": "Compruebe sus datos. Se necesitan el nombre, el correo electrónico y el consentimiento.",
+    "quote-details-required":
+      "Compruebe sus datos. Se necesitan el nombre, el correo electrónico y el consentimiento, un teléfono si quiere que le llamemos y una empresa si planifica profesionalmente.",
     "quote-daily-limit": "Se ha alcanzado el límite diario de solicitudes. Inténtelo de nuevo más tarde.",
     "photo-daily-limit": "Se ha alcanzado el límite diario de visualizaciones.",
     "photo-budget-exhausted": "El cupo de visualizaciones de hoy se ha agotado. Inténtelo de nuevo más tarde.",

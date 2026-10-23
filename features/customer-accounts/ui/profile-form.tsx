@@ -7,12 +7,21 @@ import {
   CUSTOMER_PROFILE_LIMITS,
   type CustomerProfile
 } from "@/features/customer-accounts/customer-profile";
+import {
+  CustomerTypeFields,
+  customValidity,
+  ReachFields,
+  SalutationFields
+} from "@/features/customer-accounts/ui/contact-details-fields";
 import { apiErrorMessage } from "@/lib/messages";
 import { useMessages } from "@/lib/messages/locale-context";
 
 type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
 
-/** Name, phone and postcode, each optional; the request form offers what is filled in. */
+/**
+ * Who the person is and how to reach them, every field optional; the request
+ * form offers what is filled in.
+ */
 export function ProfileForm({
   email,
   initial,
@@ -30,11 +39,11 @@ export function ProfileForm({
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState(initial);
   const [state, setState] = useState<SaveState>({ kind: "idle" });
-  const changed =
-    draft.name !== saved.name || draft.phone !== saved.phone || draft.postalCode !== saved.postalCode;
+  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
+  const phoneRequired = draft.contactChannel === "phone";
 
-  function edit(field: keyof CustomerProfile, value: string) {
-    setDraft((current) => ({ ...current, [field]: value }));
+  function edit(patch: Partial<CustomerProfile>) {
+    setDraft((current) => ({ ...current, ...patch }));
     if (state.kind !== "saving") setState({ kind: "idle" });
   }
 
@@ -65,6 +74,7 @@ export function ProfileForm({
     <form className="max-w-2xl" onSubmit={submit}>
       <p className="m-0 max-w-[52ch] text-body text-graphite">{t.profileBody}</p>
       <div className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2">
+        <SalutationFields onChange={edit} value={draft} />
         <div className="sm:col-span-2">
           <FieldLabel htmlFor={nameId} hint={t.optional}>
             {t.name}
@@ -73,12 +83,12 @@ export function ProfileForm({
             autoComplete="name"
             id={nameId}
             maxLength={CUSTOMER_PROFILE_LIMITS.nameMax}
-            onChange={(event) => edit("name", event.target.value)}
+            onChange={(event) => edit({ name: event.target.value })}
             value={draft.name}
           />
         </div>
         <div>
-          <FieldLabel htmlFor={phoneId} hint={t.optional}>
+          <FieldLabel htmlFor={phoneId} hint={phoneRequired ? undefined : t.optional}>
             {t.phone}
           </FieldLabel>
           <TextField
@@ -86,9 +96,11 @@ export function ProfileForm({
             id={phoneId}
             inputMode="tel"
             maxLength={CUSTOMER_PROFILE_LIMITS.phoneMax}
-            onChange={(event) => edit("phone", event.target.value)}
+            onChange={(event) => edit({ phone: event.target.value })}
+            required={phoneRequired}
             type="tel"
             value={draft.phone}
+            {...customValidity(messages.contactDetails.phoneForCalls)}
           />
         </div>
         <div>
@@ -100,10 +112,12 @@ export function ProfileForm({
             autoComplete="postal-code"
             id={postalCodeId}
             maxLength={CUSTOMER_PROFILE_LIMITS.postalCodeMax}
-            onChange={(event) => edit("postalCode", event.target.value)}
+            onChange={(event) => edit({ postalCode: event.target.value })}
             value={draft.postalCode}
           />
         </div>
+        <ReachFields onChange={edit} value={draft} />
+        <CustomerTypeFields onChange={edit} value={draft} />
       </div>
       <p className="m-0 mt-8 text-caption text-graphite">{t.signedInAs(email)}</p>
       <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">

@@ -11,6 +11,19 @@ import type { Database } from "@/lib/server/db/database-types";
 
 const uuidSchema = z.uuid();
 
+const PROFILE_COLUMNS = [
+  "name",
+  "phone",
+  "postalCode",
+  "salutation",
+  "title",
+  "contactChannel",
+  "contactTime",
+  "customerType",
+  "company",
+  "professionalRole"
+] as const;
+
 /** One row per Customer Account, written on the first save. */
 export function createPostgresCustomerProfileModule(database: Kysely<Database>): CustomerProfileModule {
   return {
@@ -19,7 +32,7 @@ export function createPostgresCustomerProfileModule(database: Kysely<Database>):
       const row = await database
         .withSchema("app")
         .selectFrom("customerProfile")
-        .select(["name", "phone", "postalCode"])
+        .select(PROFILE_COLUMNS)
         .where("customerAccountId", "=", ownerId)
         .executeTakeFirst();
       return row ?? { ...EMPTY_CUSTOMER_PROFILE };
@@ -35,7 +48,7 @@ export function createPostgresCustomerProfileModule(database: Kysely<Database>):
         .onConflict((conflict) =>
           conflict.column("customerAccountId").doUpdateSet({ ...profile, updatedAt: new Date() })
         )
-        .returning(["name", "phone", "postalCode"])
+        .returning(PROFILE_COLUMNS)
         .executeTakeFirstOrThrow();
     }
   };

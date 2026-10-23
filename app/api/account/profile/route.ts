@@ -5,7 +5,7 @@ import { customerProfiles } from "@/lib/server/customer-accounts/profiles";
 
 export const runtime = "nodejs";
 
-/** Replaces the signed-in person's profile: name, phone and postcode, each optional. */
+/** Replaces the signed-in person's profile; every field is optional (`customerProfileSchema`). */
 export async function PUT(request: Request) {
   const session = await customerSessions.resolve(request.headers);
   if (!session) {

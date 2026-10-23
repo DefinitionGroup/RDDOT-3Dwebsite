@@ -213,7 +213,7 @@ An immutable approved description of the exact image-generation model or deploym
 _Avoid_: Latest model, provider model name, Prompt Template Release
 
 **Quote Request**:
-A person's immutable, idempotently submitted request for commercial review of one Configuration Revision, including the contact, consent, note, selected photo, and nonbinding price context captured at submission. It is neither an authoritative price nor an Order.
+A person's immutable, idempotently submitted request for commercial review of one Configuration Revision, including the contact, consent, note, selected photo, and nonbinding price context captured at submission. The contact is a copy of how to address and reach the person (salutation, title, postcode, channel and time, private or professional with company and field), so a later profile edit never changes it; the planning facts (project, timeframe, budget band, wall length) belong to this request alone. It is neither an authoritative price nor an Order.
 _Avoid_: Checkout, order, purchase
 
 **Sales Mode**:
