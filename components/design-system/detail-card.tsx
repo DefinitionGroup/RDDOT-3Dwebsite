@@ -1,11 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useId, useRef, useSyncExternalStore } from "react";
+import { useId, useRef, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Label } from "@/components/design-system/label";
 import { RoundButton } from "@/components/design-system/pill";
+import { useModalDialog } from "@/components/design-system/use-modal-dialog";
 import { useMessages } from "@/lib/messages/locale-context";
 import { DURATION, SIGNATURE_EASE } from "@/lib/motion";
 
@@ -70,7 +71,8 @@ export function DetailTrigger({
 /**
  * A detail card over the page. It morphs out of its trigger on a spring
  * (the one place springs belong: an opening), the content fades in a beat
- * later, and it hands focus back when it closes.
+ * later. While open it keeps focus inside and the page behind inert
+ * (`useModalDialog`), and it hands focus back when it closes.
  */
 export function DetailCard({
   children,
@@ -95,48 +97,37 @@ export function DetailCard({
     () => false
   );
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const closeLabel = useMessages().common.close;
 
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = overflow;
-      previous?.focus?.();
-    };
-  }, [onClose, open]);
+  useModalDialog({ dialogRef, initialFocusRef: closeRef, onClose, open, rootRef });
 
   if (!mounted) return null;
 
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-5">
-          <motion.button
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-5" ref={rootRef}>
+          {/* A click outside closes; keyboards have Close and Escape. */}
+          <motion.div
             animate={{ opacity: 1 }}
-            aria-label={closeLabel}
+            aria-hidden="true"
             className="absolute inset-0 bg-canvas/55 backdrop-blur-sm"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             onClick={onClose}
             transition={{ duration: DURATION.overlay, ease: SIGNATURE_EASE }}
-            type="button"
           />
           <motion.section
             aria-labelledby={titleId}
             aria-modal="true"
-            className="relative flex max-h-full w-full max-w-[34rem] flex-col overflow-hidden border border-hairline bg-charcoal"
+            className="relative flex max-h-full w-full max-w-[34rem] flex-col overflow-hidden border border-hairline bg-charcoal outline-none"
             layoutId={`detail-${id}`}
+            ref={dialogRef}
             role="dialog"
+            tabIndex={-1}
             style={{ borderRadius: 10 }}
             transition={morph}
           >

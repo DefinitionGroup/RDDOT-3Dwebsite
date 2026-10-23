@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import type { ReactNode } from "react";
+import { type KeyboardEvent, type ReactNode, useRef } from "react";
 import { Label } from "@/components/design-system/label";
+import { arrowTarget } from "@/lib/keyboard";
 
 /** glass: frosted, for imagery. solid: soot, for the 3D scene, where frosting tints with the surface below. */
 export type GlassTone = "glass" | "solid";
@@ -56,9 +57,10 @@ const segmentSize = {
 };
 
 /**
- * The segmented control that carries the three decisions.
- * The active segment lifts to 14 % white and carries the red dot;
- * the highlight slides between segments.
+ * The segmented control that carries the three decisions, the view, the
+ * camera. The active segment lifts to 14 % white and carries the red dot; the
+ * highlight slides between segments. A radio group: Tab reaches the chosen
+ * segment, arrow keys, Home and End choose another.
  */
 export function GlassSegments({
   activeId,
@@ -71,20 +73,33 @@ export function GlassSegments({
   tone = "glass"
 }: GlassSegmentsProps) {
   const height = segmentSize[size];
+  const groupRef = useRef<HTMLDivElement>(null);
+  const focusIndex = Math.max(0, segments.findIndex((segment) => segment.id === activeId));
+
+  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const target = onChange ? arrowTarget(event.key, index, segments.length) : null;
+    if (target === null) return;
+    event.preventDefault();
+    onChange?.(segments[target].id);
+    groupRef.current?.querySelectorAll<HTMLButtonElement>("[role=radio]")[target]?.focus();
+  }
+
   return (
     <Glass className={`inline-flex items-center gap-0.5 p-1 ${className}`} tone={tone}>
-      <div aria-label={ariaLabel} className="contents" role="tablist">
-        {segments.map((segment) => {
+      <div aria-label={ariaLabel} className="contents" ref={groupRef} role="radiogroup">
+        {segments.map((segment, index) => {
           const active = segment.id === activeId;
           return (
             <button
-              aria-selected={active}
+              aria-checked={active}
               className={`relative inline-flex ${height} items-center gap-2 rounded-pill font-label leading-none transition-colors duration-state ease-signature ${
                 active ? "text-ink" : "text-graphite hover:text-ink"
               }`}
               key={segment.id}
               onClick={onChange ? () => onChange(segment.id) : undefined}
-              role="tab"
+              onKeyDown={(event) => onKeyDown(event, index)}
+              role="radio"
+              tabIndex={index === focusIndex ? 0 : -1}
               type="button"
             >
               {active && (

@@ -1,11 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useId, useRef, useSyncExternalStore } from "react";
+import { useId, useRef, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Label } from "@/components/design-system/label";
 import { RoundButton } from "@/components/design-system/pill";
+import { useModalDialog } from "@/components/design-system/use-modal-dialog";
 import { useMessages } from "@/lib/messages/locale-context";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
 
@@ -48,25 +49,12 @@ export function Overlay({
     () => false
   );
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const closeLabel = useMessages().common.close;
 
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = overflow;
-      previous?.focus?.();
-    };
-  }, [onClose, open]);
+  useModalDialog({ dialogRef, initialFocusRef: closeRef, onClose, open, rootRef });
 
   if (!mounted) return null;
 
@@ -75,29 +63,34 @@ export function Overlay({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className={`fixed inset-0 z-[80] flex ${sheet ? "justify-end" : "items-center justify-center p-5"}`}>
-          <motion.button
+        <div
+          className={`fixed inset-0 z-[80] flex ${sheet ? "justify-end" : "items-center justify-center p-5"}`}
+          ref={rootRef}
+        >
+          {/* A click outside closes; keyboards have Close and Escape. */}
+          <motion.div
             animate={{ opacity: 1 }}
-            aria-label={closeLabel}
+            aria-hidden="true"
             className="absolute inset-0 bg-canvas/45 backdrop-blur-sm"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             onClick={onClose}
             transition={{ duration: DURATION.overlay, ease: SIGNATURE_EASE }}
-            type="button"
           />
           <motion.section
             animate={{ opacity: 1, x: 0, y: 0 }}
             aria-labelledby={titleId}
             aria-modal="true"
-            className={`relative flex flex-col bg-charcoal/[.96] backdrop-blur-[24px] ${
+            className={`relative flex flex-col bg-charcoal/[.96] outline-none backdrop-blur-[24px] ${
               sheet
                 ? "h-full w-full max-w-[40rem] border-l border-hairline"
                 : "max-h-full w-full max-w-[36rem] rounded-card border border-hairline"
             }`}
             exit={sheet ? { opacity: 0, x: OVERLAY_SLIDE } : { opacity: 0, y: OVERLAY_SLIDE }}
             initial={sheet ? { opacity: 0, x: OVERLAY_SLIDE } : { opacity: 0, y: OVERLAY_SLIDE }}
+            ref={dialogRef}
             role="dialog"
+            tabIndex={-1}
             transition={{ duration: DURATION.overlay, ease: SIGNATURE_EASE }}
           >
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-8 md:px-12 md:pt-10">

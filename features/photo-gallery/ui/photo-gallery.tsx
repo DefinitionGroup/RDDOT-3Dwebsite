@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useModalDialog } from "@/components/design-system/use-modal-dialog";
 import {
   formatGalleryDate,
   type GalleryResponse,
@@ -226,14 +227,14 @@ export function PhotoGallery({
 
   const lightboxPhoto = photos.find((photo) => photo.id === lightboxId) ?? null;
 
-  useEffect(() => {
-    if (!lightboxPhoto) return;
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setLightboxId(null);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [lightboxPhoto]);
+  const lightboxRef = useRef<HTMLDivElement>(null);
+  const lightboxCloseRef = useRef<HTMLButtonElement>(null);
+  useModalDialog({
+    dialogRef: lightboxRef,
+    initialFocusRef: lightboxCloseRef,
+    onClose: () => setLightboxId(null),
+    open: lightboxPhoto !== null
+  });
 
   return (
     <section className="border-t border-hairline pt-5">
@@ -355,13 +356,15 @@ export function PhotoGallery({
             animate={{ opacity: 1 }}
             aria-label={t.dialog}
             aria-modal="true"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/85 p-4 backdrop-blur-sm sm:p-8"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/85 p-4 outline-none backdrop-blur-sm sm:p-8"
             exit={{ opacity: 0 }}
             initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
             onClick={(event) => {
               if (event.target === event.currentTarget) setLightboxId(null);
             }}
+            ref={lightboxRef}
             role="dialog"
+            tabIndex={-1}
             transition={{ duration: 0.2 }}
           >
             <div className="flex max-h-full w-full max-w-4xl flex-col gap-4">
@@ -408,6 +411,7 @@ export function PhotoGallery({
                   <button
                     className="inline-flex min-h-11 items-center text-caption text-graphite underline decoration-hairline underline-offset-4 transition-colors duration-state ease-signature hover:text-porcelain disabled:cursor-wait disabled:text-ash"
                     onClick={() => setLightboxId(null)}
+                    ref={lightboxCloseRef}
                     type="button"
                   >
                     {messages.common.close}
