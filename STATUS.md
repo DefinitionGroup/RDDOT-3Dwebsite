@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-23 to `fdc353d`. `cc/devstart-003` and the earlier
+2026-10-23 to `be80de2`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -711,7 +711,19 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-94l3edt1s`, built from `fdc353d` on 2026-10-23, live about
+- Production: `rddot-3-dwebsite-mhl73bc78`, built from `be80de2` on 2026-10-23, live about
+  90 s after `redesign/devstart` was fast-forwarded from `fdc353d` and pushed; it brings
+  dialog focus containment, the segment controls as radio groups, and the desktop framing
+  left of the Datenblatt with the HUD on soot chips. Checked right after, signed out, in
+  headless Chrome on the real GPU with real key presses: in the material card and the
+  teaser's explainer focus starts on Close, Tab and Shift+Tab stay inside, the page is
+  inert, Escape closes and focus returns; the view group has one Tab stop and ArrowRight,
+  End, Home and wrap-around choose and focus at 1440 and 390 px, ArrowRight on the stages
+  opens Aufbau; Studio, Appartement and Loft in Raum, Front and Detail show the whole
+  kitchen left of the panel with a readable HUD; hiding and reopening the panel moves the
+  frame to the full width and back; choosing walnut changes the picture; a click on a wall
+  module in the Edit Session selects it; no console errors.
+- The deployment before, `rddot-3-dwebsite-94l3edt1s`, was built from `fdc353d` on 2026-10-23, live about
   two minutes after `redesign/devstart` was fast-forwarded from `d4682f4` and pushed; it
   brings every price with VAT included (and the profile plan, documents only). Checked
   right after, signed out, in headless Chrome: the Nussbaum Memory card says "Aufpreis
