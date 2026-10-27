@@ -96,6 +96,9 @@ importers:
       server-only:
         specifier: 0.0.1
         version: 0.0.1
+      sharp:
+        specifier: 0.35.5
+        version: 0.35.5(@types/node@26.2.0)
       styled-components:
         specifier: ^6.5.3
         version: 6.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)

@@ -114,6 +114,23 @@ CREATE TABLE app.customer_account (
 
 
 --
+-- Name: customer_avatar; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.customer_avatar (
+    id uuid NOT NULL,
+    customer_account_id uuid NOT NULL,
+    storage_key text NOT NULL,
+    byte_size integer NOT NULL,
+    edge_px integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT customer_avatar_byte_size_check CHECK (((byte_size >= 1) AND (byte_size <= 1048576))),
+    CONSTRAINT customer_avatar_edge_px_check CHECK (((edge_px >= 200) AND (edge_px <= 1024))),
+    CONSTRAINT customer_avatar_storage_key_check CHECK ((storage_key ~ '^avatars/[0-9a-f-]{36}/[0-9a-f-]{36}\.webp$'::text))
+);
+
+
+--
 -- Name: customer_profile; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -629,6 +646,30 @@ ALTER TABLE ONLY app.customer_account
 
 
 --
+-- Name: customer_avatar customer_avatar_customer_account_id_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.customer_avatar
+    ADD CONSTRAINT customer_avatar_customer_account_id_key UNIQUE (customer_account_id);
+
+
+--
+-- Name: customer_avatar customer_avatar_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.customer_avatar
+    ADD CONSTRAINT customer_avatar_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: customer_avatar customer_avatar_storage_key_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.customer_avatar
+    ADD CONSTRAINT customer_avatar_storage_key_key UNIQUE (storage_key);
+
+
+--
 -- Name: customer_profile customer_profile_pkey; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -1085,6 +1126,13 @@ CREATE INDEX verification_identifier_idx ON auth.verification USING btree (ident
 
 
 --
+-- Name: customer_avatar customer_avatar_enqueue_deletion; Type: TRIGGER; Schema: app; Owner: -
+--
+
+CREATE TRIGGER customer_avatar_enqueue_deletion AFTER DELETE ON app.customer_avatar FOR EACH ROW EXECUTE FUNCTION app.enqueue_storage_object_deletion('customer-avatar');
+
+
+--
 -- Name: generated_photo generated_photo_enqueue_deletion; Type: TRIGGER; Schema: app; Owner: -
 --
 
@@ -1112,6 +1160,14 @@ ALTER TABLE ONLY app.auth_identity
 
 ALTER TABLE ONLY app.configuration_revision
     ADD CONSTRAINT configuration_revision_project_id_fkey FOREIGN KEY (project_id) REFERENCES app.project(id) ON DELETE CASCADE;
+
+
+--
+-- Name: customer_avatar customer_avatar_customer_account_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.customer_avatar
+    ADD CONSTRAINT customer_avatar_customer_account_id_fkey FOREIGN KEY (customer_account_id) REFERENCES app.customer_account(id) ON DELETE CASCADE;
 
 
 --
@@ -1256,4 +1312,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260903100000'),
     ('20260904120000'),
     ('20261023090000'),
-    ('20261023120000');
+    ('20261023120000'),
+    ('20261027090000');

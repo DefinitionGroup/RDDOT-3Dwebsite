@@ -34,6 +34,15 @@ export type CustomerProfileTable = {
   updatedAt: Timestamp;
 };
 
+export type CustomerAvatarTable = {
+  id: string;
+  customerAccountId: string;
+  storageKey: string;
+  byteSize: number;
+  edgePx: number;
+  createdAt: Timestamp;
+};
+
 export type AuthIdentityTable = {
   id: string;
   customerAccountId: string;
@@ -250,6 +259,7 @@ export type DevelopmentEmailCaptureTable = {
 export type Database = {
   customerAccount: CustomerAccountTable;
   customerProfile: CustomerProfileTable;
+  customerAvatar: CustomerAvatarTable;
   authIdentity: AuthIdentityTable;
   project: ProjectTable;
   workingConfiguration: WorkingConfigurationTable;

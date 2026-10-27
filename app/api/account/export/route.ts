@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { customerSessions } from "@/lib/server/auth/customer-session";
+import { getCustomerAvatars } from "@/lib/server/customer-accounts/avatars";
 import { customerProfiles } from "@/lib/server/customer-accounts/profiles";
 import { exportCustomerAccount } from "@/lib/server/db/account-export-postgres";
 import { getDatabase } from "@/lib/server/db/database";
@@ -14,10 +15,15 @@ export async function GET(request: Request) {
   }
 
   const exportedAt = new Date();
+  const [profile, photo] = await Promise.all([
+    customerProfiles.getProfile({ ownerId: session.customerAccountId }),
+    getCustomerAvatars().readBytes({ ownerId: session.customerAccountId })
+  ]);
   const data = await exportCustomerAccount(getDatabase(), {
     ownerId: session.customerAccountId,
     email: session.email,
-    profile: await customerProfiles.getProfile({ ownerId: session.customerAccountId }),
+    profile,
+    photo: photo ? `data:image/webp;base64,${Buffer.from(photo).toString("base64")}` : null,
     exportedAt
   });
 

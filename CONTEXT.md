@@ -125,7 +125,7 @@ A shareable Kitchen Configuration that is not owned by a Customer Account and ma
 _Avoid_: Anonymous account, guest order, claimed configuration
 
 **Customer Account**:
-The application-owned identity and private workspace of a person planning their own kitchen. Authentication Identities grant access, while Sanity editors and future internal sales or planning staff remain separate identities. Its owner can download everything it holds and, after a recent sign-in, delete it with all it owns; an account with Quote Requests is deleted by rotpunkt by hand. Stored files of deleted rows leave object storage 30 days later.
+The application-owned identity and private workspace of a person planning their own kitchen. Authentication Identities grant access, while Sanity editors and future internal sales or planning staff remain separate identities. It may hold a profile photo, which the application re-encodes without metadata and only its owner sees. Its owner can download everything it holds and, after a recent sign-in, delete it with all it owns; an account with Quote Requests is deleted by rotpunkt by hand. Stored files of deleted rows leave object storage 30 days later.
 _Avoid_: User account, editor account, Shopify customer
 
 **Authentication Identity**:

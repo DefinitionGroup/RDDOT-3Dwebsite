@@ -11,6 +11,7 @@ import { AccountWorkspace } from "@/features/customer-accounts/ui/account-worksp
 import { CONFIG_QUERY_PARAM } from "@/features/configurator/state-codec";
 import { isDevelopmentEmailCaptureActive } from "@/features/transactional-email/adapters/development-capture";
 import { customerSessions } from "@/lib/server/auth/customer-session";
+import { getCustomerAvatars } from "@/lib/server/customer-accounts/avatars";
 import { customerProfiles } from "@/lib/server/customer-accounts/profiles";
 import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
@@ -83,17 +84,19 @@ export default async function AccountPage({ params: routeParams, searchParams }:
 
   // Signed in, the account is a workspace: the whole width, no picture beside it.
   if (session) {
-    const [accountProjects, gallery, requests, profile] = await Promise.all([
+    const [accountProjects, gallery, requests, profile, avatar] = await Promise.all([
       projects.listProjects({ ownerId: session.customerAccountId, includeArchived: true, includeTrashed: true }),
       loadInitialGallery({ ownerId: session.customerAccountId }),
       quoteRequests.listForAccount({ ownerId: session.customerAccountId, limit: 10 }),
-      customerProfiles.getProfile({ ownerId: session.customerAccountId })
+      customerProfiles.getProfile({ ownerId: session.customerAccountId }),
+      getCustomerAvatars().getAvatar({ ownerId: session.customerAccountId })
     ]);
     return (
       <main className="min-h-svh bg-canvas px-5 py-6 text-ink sm:px-10 lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
         {header("mx-auto max-w-6xl")}
         <div className="mx-auto mt-12 max-w-6xl pb-16 lg:mt-16">
           <AccountWorkspace
+            avatarId={avatar?.id ?? null}
             email={session.email}
             expiresAt={session.expiresAt.toISOString()}
             gallery={gallery}

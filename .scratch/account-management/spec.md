@@ -1,6 +1,6 @@
 # Account management
 
-Status: accepted 2026-10-23 — Slice A done (A1–A4); Slice P (profile) Next up, P1 and P2 done 2026-10-23; Slice B after launch
+Status: accepted 2026-10-23 — Slice A done (A1–A4); Slice P (profile) Next up, P1 and P2 done 2026-10-23, P3 done 2026-10-27; Slice B after launch
 Created: 2026-10-23
 
 Turn `/konto` from a sign-in screen with lists beside a photo into the customer's own
@@ -120,7 +120,9 @@ idempotency check, the export and, later, the notification to rotpunkt. The budg
 are rotpunkt's call; until they name them the form ships with bands around the Richtpreis
 (up to 10.000 €, 10–15.000 €, 15–25.000 €, over 25.000 €, no answer).
 
-**P3 Profile photo in the account.** Upload and remove in the profile section; the
+**P3 Profile photo in the account.** Done 2026-10-27 (see STATUS); reads go through
+`GET /api/account/avatar`, a redirect to a fresh two-minute URL, so the `<img>` never
+expires. Upload and remove in the profile section; the
 account's title row shows it, the initials stay as fallback (no photo, still loading).
 The header's account button keeps its icon, so no page but the account has to look up a
 photo. The browser scales the picture to at most 1600 px and posts it to

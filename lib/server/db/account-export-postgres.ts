@@ -17,7 +17,14 @@ const iso = (value: Date | string | null) => (value ? new Date(value).toISOStrin
  */
 export async function exportCustomerAccount(
   database: Kysely<Database>,
-  input: { ownerId: string; email: string; profile: CustomerProfile; exportedAt?: Date }
+  input: {
+    ownerId: string;
+    email: string;
+    profile: CustomerProfile;
+    /** The profile photo as a `data:` URL, so the file needs no link that expires. */
+    photo?: string | null;
+    exportedAt?: Date;
+  }
 ) {
   const ownerId = uuidSchema.parse(input.ownerId);
   const app = database.withSchema("app");
@@ -112,7 +119,7 @@ export async function exportCustomerAccount(
     format: "rotpunkt-signature-account-export@1",
     exportedAt: (input.exportedAt ?? new Date()).toISOString(),
     account: { id: account.id, email: input.email, createdAt: iso(account.createdAt) },
-    profile: input.profile,
+    profile: { ...input.profile, photo: input.photo ?? null },
     projects: projects.map((project) => ({
       id: project.id,
       name: project.name,

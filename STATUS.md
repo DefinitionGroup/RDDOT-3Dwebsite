@@ -85,7 +85,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Save a configuration as a Project, also by a signed-out guest through sign-in; autosave with conflict handling; browser recovery drafts | Done (the guest handoff fixed 2026-10-22) |
 | Versions: save, history, restore behind a safety version; rename | Done |
 | Secure share links (90 days, revocable, secret only in the URL fragment); public shared view | Done |
-| Account area on the whole screen: project cards with finishes and Richtpreis, requests, visualisations, profile (salutation, name, phone, postcode, how to reach, private or professional) that fills the request form | Done (A1, A2, P1, 2026-10-23); profile photo open (P3) |
+| Account area on the whole screen: project cards with finishes and Richtpreis, requests, visualisations, profile (salutation, name, phone, postcode, how to reach, private or professional) that fills the request form | Done (A1, A2, P1 2026-10-23; profile photo P3 2026-10-27) |
 | Archive, trash, restore and duplicate Projects from the account; delete for good from the Trash unless the Project has requests | Done (A3, A4, 2026-10-23); no automatic purge by decision |
 | Download my data (JSON); delete my account after a fresh sign-in unless it has requests | Done (A4, 2026-10-23) |
 
@@ -120,6 +120,27 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Profile photo (P3, 2026-10-27).** "Foto" in the account's profile: upload, change,
+  remove; the title row's circle shows it, the initials stay beneath while it loads and
+  without one. The browser scales the picture to at most 1600 px (drawing it anew already
+  leaves its EXIF behind) and posts it to `POST /api/account/avatar`; the server decodes
+  it with `sharp` (now a direct dependency, 0.35.5 as Next.js already used), refuses
+  anything but JPEG, PNG or WebP or a shorter edge under 200 px, turns it upright, crops the
+  centre square and stores a 512 px WebP without any metadata in the private photo bucket
+  under `avatars/`. `app.customer_avatar` (migration `20261027090000_create_customer_avatar.sql`,
+  applied to the development database) owns the file, so replacing, removing or deleting
+  the account queues it for the storage sweep. `GET /api/account/avatar` answers with a
+  redirect to a two-minute URL, so the `<img>` never expires; the export embeds the photo as
+  a `data:` URL. Only the owner sees it; share links follow with P4. German, English and
+  Spanish. Checked: lint, types, 175/175 unit tests (new: format, size, EXIF and GPS gone,
+  an asymmetric picture tagged "rotate 90°" comes out upright), 7 database tests in the avatar
+  and export files (new: owner-only reads, replace, remove and account deletion queue the
+  file), build; headless Chrome on the dev server, signed in as the QA account: a 150 px
+  picture and text named `.jpg` are refused in German, a sideways phone photo with GPS shows
+  in both circles, is stored upright as a 512 px WebP without EXIF (read back from the
+  export), the editor fits 390 px, removing brings the initials back and the photo answers
+  404; no console errors. Not checked: HEIC from an iPhone (the picker should hand over a
+  JPEG) needs a real device.
 - **Profile P1 and request P2 (2026-10-23).** The profile gains salutation and title, how
   and when to be reached (phone, email or either; mornings, afternoons, evenings or any
   time) and private or professional with company and field; choosing "Telefonisch" needs a
@@ -901,6 +922,10 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 
 ## Known Warnings
 
+- `pnpm build` on Node 26 prints an `ExperimentalWarning: localStorage is not available`
+  once per page-data worker: Node's experimental Web Storage warns when a dependency probes
+  `localStorage` on the server. Harmless; no application code reads it on the server
+  (noticed 2026-10-27).
 - The dev browser logs warnings from the current Three/R3F stack:
   - `THREE.Clock` is deprecated in favor of `THREE.Timer`.
   - `PCFSoftShadowMap` is deprecated and falls back to `PCFShadowMap`.
@@ -1013,9 +1038,9 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 - Then the profile, Slice P of the [account spec](.scratch/account-management/spec.md)
   (decided 2026-10-23): salutation, how to reach me and private or professional, copied
   into each request with the postcode (P1), and planning facts on the request (P2), both
-  done the same day (see Done); next a profile photo in the account (P3); photo and first
-  name on share links, opt-in, once Martin decides how a photo is checked before strangers
-  see it (P4). Newsletter consent (P5) waits for the email provider in M2.
+  done the same day (see Done), and the profile photo in the account (P3, 2026-10-27);
+  next the photo and first name on share links, opt-in, once Martin decides how a photo is
+  checked before strangers see it (P4). Newsletter consent (P5) waits for the email provider in M2.
 
 ### M1 — A reviewable preview
 

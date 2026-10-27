@@ -10,6 +10,7 @@ import { Pill } from "@/components/design-system/pill";
 import type { AccountProject } from "@/features/customer-accounts/account-projects";
 import { profileInitials, type CustomerProfile } from "@/features/customer-accounts/customer-profile";
 import { AccountData } from "@/features/customer-accounts/ui/account-data";
+import { AccountAvatar, AvatarEditor } from "@/features/customer-accounts/ui/account-avatar";
 import { ProfileForm } from "@/features/customer-accounts/ui/profile-form";
 import {
   ProjectMenu,
@@ -122,6 +123,7 @@ function ProjectCard({ actions, project }: { actions: ProjectActions; project: A
 }
 
 export function AccountWorkspace({
+  avatarId: initialAvatarId,
   email,
   expiresAt,
   gallery,
@@ -130,6 +132,8 @@ export function AccountWorkspace({
   projects,
   quoteRequests
 }: {
+  /** The profile photo's id, or null for the initials (P3). */
+  avatarId: string | null;
   email: string;
   expiresAt: string;
   gallery: SerializedGalleryPage;
@@ -147,6 +151,8 @@ export function AccountWorkspace({
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
   const [profile, setProfile] = useState(initialProfile);
+  const [avatarId, setAvatarId] = useState(initialAvatarId);
+  const initials = profileInitials(profile.name, email);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importAttempt, setImportAttempt] = useState(0);
@@ -209,12 +215,7 @@ export function AccountWorkspace({
     >
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 items-center gap-5">
-          <span
-            aria-hidden="true"
-            className="flex size-14 shrink-0 items-center justify-center rounded-pill border border-hairline bg-charcoal font-display text-[1.25rem] tracking-[-0.02em] text-ink"
-          >
-            {profileInitials(profile.name, email)}
-          </span>
+          <AccountAvatar avatarId={avatarId} className="size-14 text-[1.25rem]" initials={initials} />
           <div className="min-w-0">
             <h1 className="m-0 text-heading">
               <Emphasized text={t.title} />
@@ -368,6 +369,9 @@ export function AccountWorkspace({
               </h2>
             </div>
             <div className="mt-6">
+              <AvatarEditor avatarId={avatarId} initials={initials} onChange={setAvatarId} />
+            </div>
+            <div className="mt-10">
               <ProfileForm email={email} initial={profile} onSaved={setProfile} />
             </div>
           </section>
