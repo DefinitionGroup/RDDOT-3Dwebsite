@@ -1,7 +1,7 @@
 import "server-only";
 
 import { APIError } from "better-auth/api";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import {
   ACCOUNT_DELETION_FRESH_SECONDS,
   ACCOUNT_HAS_REQUESTS
@@ -10,6 +10,7 @@ import { createAuthenticationOtpSender } from "@/features/transactional-email/au
 import { createAuth } from "@/lib/server/auth/create-auth";
 import { createPostgresAccountDeletion } from "@/lib/server/db/account-deletion-postgres";
 import { getDatabase } from "@/lib/server/db/database";
+import { createPostgresPool } from "@/lib/server/db/postgres-pool";
 import { createTransactionalEmailDeliveryFromEnvironment } from "@/lib/server/transactional-email/delivery";
 
 declare global {
@@ -23,11 +24,9 @@ function requiredEnvironment(name: string) {
 }
 
 function getAuthPool() {
-  globalThis.__rddotAuthPool ??= new Pool({
+  globalThis.__rddotAuthPool ??= createPostgresPool({
     connectionString: requiredEnvironment("DATABASE_URL_AUTH"),
-    max: 3,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000
+    max: 3
   });
 
   return globalThis.__rddotAuthPool;

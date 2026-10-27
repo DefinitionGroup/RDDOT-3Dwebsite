@@ -120,6 +120,27 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **First sign-in after a quiet period (2026-10-27).** Neon suspends the idle database and
+  wakes it on the next connection. On 2026-10-22 the first code request after a quiet spell
+  answered 500 (`Connection terminated due to connection timeout`): both pools gave a
+  connection 5 s, and the wake-up plus every handshake round trip from `iad1` to Frankfurt
+  took longer. Both pools, the app's and Better Auth's, now come from
+  `lib/server/db/postgres-pool.ts`: 10 s per attempt (Neon's documented value) and one more
+  attempt after about half a second when a connection fails to open — not after wrong
+  credentials or a missing database, and never for a statement, since nothing ran on a
+  connection that never opened. An idle connection the database closes is logged instead
+  of reaching Node as an unhandled `error` event, and `attachDatabasePool` from
+  `@vercel/functions` (new dependency, 3.10.1) keeps a function up until the pool has closed
+  its idle connections, so none survives into a suspended function to fail after the
+  database slept. Measured from here: after 7 idle minutes the first connection took 1.8 s,
+  against 0.37 s awake. Checked: lint, types, 175/175 unit tests, 5 new database tests
+  through a relay that holds connections the way Neon's proxy does while the database wakes
+  (a plain pool fails with the 2026-10-22 error; the new pool connects on its second attempt
+  through Kysely and `pool.query`, gives up after two, does not retry a wrong password, and
+  survives dropped idle connections), build; on the dev server after 7 idle minutes, a
+  signed-out headless Chrome requested a code as the QA account (200 in 2.9 s, wake-up
+  included) and signed in. The live test site is not checked yet, and the function region
+  (`iad1`, see Deployment) still adds a transatlantic round trip to every query.
 - **Profile photo (P3, 2026-10-27).** "Foto" in the account's profile: upload, change,
   remove; the title row's circle shows it, the initials stay beneath while it loads and
   without one. The browser scales the picture to at most 1600 px (drawing it anew already
@@ -942,10 +963,10 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - These warnings do not currently block rendering or production build, but they should be revisited before production hardening. On production on 2026-10-22 only the `THREE.Clock` warning appeared.
 - `pnpm lint` reports one warning: `components/page-builder/exit-preview.tsx` navigates to an
   internal page with `window.location.assign`.
-- The first sign-in code request after the Neon database had idled answered 500
-  (`Connection terminated due to connection timeout`) on 2026-10-22; the retry a minute
-  later worked. A customer sees "Das hat noch nicht funktioniert". Worth a longer connect
-  timeout or one retry before production.
+- `pnpm test:db` against the remote Neon test database: tests with many round trips run
+  close to vitest's 5 s default, and a different few time out on each run (5, then 2 of 86
+  on 2026-10-27, each at 5.0 s); none of them touches the code they were run for. A longer
+  timeout for the integration run would settle it.
 - One React hydration-mismatch error ("attributes of the server rendered HTML didn't match")
   appeared once during the 500 px journey on the dev server; loading each page of that
   journey directly, signed in and out, showed none.

@@ -1,8 +1,8 @@
 import "server-only";
 
 import { CamelCasePlugin, Kysely, PostgresDialect } from "kysely";
-import { Pool } from "pg";
 import type { Database } from "@/lib/server/db/database-types";
+import { createPostgresPool } from "@/lib/server/db/postgres-pool";
 
 declare global {
   var __rddotDatabase: Kysely<Database> | undefined;
@@ -17,12 +17,7 @@ function createDatabase() {
 
   return new Kysely<Database>({
     dialect: new PostgresDialect({
-      pool: new Pool({
-        connectionString,
-        max: 5,
-        idleTimeoutMillis: 30_000,
-        connectionTimeoutMillis: 5_000
-      })
+      pool: createPostgresPool({ connectionString, max: 5 })
     }),
     plugins: [new CamelCasePlugin()]
   });
