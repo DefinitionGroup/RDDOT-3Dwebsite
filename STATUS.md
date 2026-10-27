@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-23 to `8811e17`. `cc/devstart-003` and the earlier
+2026-10-27 to `7b79139`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -753,7 +753,17 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-l7tae03wl`, built from `8811e17` on 2026-10-23, live about
+- Production: `rddot-3-dwebsite-cm83hlhwa`, built from `7b79139` on 2026-10-27, live about
+  90 s after `redesign/devstart` was fast-forwarded from `8811e17` and pushed; it brings
+  profile P3, the profile photo (the `customer_avatar` table was created in the shared
+  development database before the push). Checked right after, signed out: `GET`, `POST` and
+  `DELETE /api/account/avatar` answer 401 `session-expired` with `private, no-store` and no
+  redirect; `/konto` asks for sign-in at 1440 and 390 px with no account, profile or photo
+  on the page and nothing past the edge; the configurator renders at both widths and
+  picking the Fenix front changes the picture and the URL; no console errors. Uploading,
+  showing and removing a photo need a signed-in account, so they were checked on the dev
+  server only.
+- The deployment before, `rddot-3-dwebsite-l7tae03wl`, was built from `8811e17` on 2026-10-23, live about
   90 s after `redesign/devstart` was fast-forwarded from `be80de2` and pushed; it brings
   profile P1 and request P2 (the migration was applied to the shared development database
   before the push, so the previous deployment ran against the new columns unharmed).
