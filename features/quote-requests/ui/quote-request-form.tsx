@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
-import { type FormEvent, useId, useRef, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Emphasized } from "@/components/design-system/emphasized";
 import { ChoiceField, FieldLabel, TextArea, TextField } from "@/components/design-system/field";
 import { Label } from "@/components/design-system/label";
@@ -24,8 +24,18 @@ import {
   QUOTE_REQUESTS_REACH_ROTPUNKT,
   type QuoteRequestPlanning
 } from "@/features/quote-requests/quote-request-contract";
+import { keepQuoteRequestDraft, takeQuoteRequestDraft } from "@/features/quote-requests/quote-request-draft";
 import { formatQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
 import type { SerializedQuoteRequest } from "@/features/quote-requests/serialize-quote-request";
+
+/** The tab's session storage, or null where the browser refuses it. */
+function tabStorage() {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 type Outcome =
   | { kind: "idle" }
@@ -92,6 +102,29 @@ export function QuoteRequestForm({
   const [outcome, setOutcome] = useState<Outcome>({ kind: "idle" });
   const [submitted, setSubmitted] = useState<SerializedQuoteRequest | null>(null);
 
+  // Back from signing in again after the session expired: the form fills
+  // itself with what was typed before (quote-request-draft.ts). After the
+  // first paint, so the server's markup hydrates unchanged; the draft is taken
+  // in the timer, so an effect run twice in development cannot lose it.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const storage = tabStorage();
+      const draft = storage && takeQuoteRequestDraft(storage, projectId);
+      if (!draft) return;
+      const { name, email, phone, postalCode, ...contactDetails } = draft.contact;
+      setName(name);
+      setEmail(email);
+      setPhone(phone);
+      setPostalCode(postalCode);
+      setDetails(contactDetails);
+      setPlanning(draft.planning);
+      setWallLength(draft.wallLength);
+      setNote(draft.note);
+      setConsent(draft.consent);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [projectId]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!consent) return;
@@ -125,6 +158,16 @@ export function QuoteRequestForm({
         return;
       }
       if (response.status === 401) {
+        const storage = tabStorage();
+        if (storage) {
+          keepQuoteRequestDraft(storage, projectId, {
+            contact: { name, email, phone, postalCode, ...details },
+            planning,
+            wallLength,
+            note,
+            consent
+          });
+        }
         setOutcome({ kind: "signed-out" });
         return;
       }

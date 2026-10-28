@@ -256,6 +256,12 @@ export type DevelopmentEmailCaptureTable = {
   capturedAt: Timestamp;
 };
 
+export type SignInCodeLimitTable = {
+  emailKey: string;
+  windowStartedAt: Timestamp;
+  requests: number;
+};
+
 export type Database = {
   customerAccount: CustomerAccountTable;
   customerProfile: CustomerProfileTable;
@@ -274,4 +280,5 @@ export type Database = {
   modelRelease: ModelReleaseTable;
   quoteRequest: QuoteRequestTable;
   developmentEmailCapture: DevelopmentEmailCaptureTable;
+  signInCodeLimit: SignInCodeLimitTable;
 };

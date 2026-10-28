@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
 import { createAuth } from "@/lib/server/auth/create-auth";
@@ -5,6 +6,7 @@ import { createBetterAuthCustomerSessionResolver } from "@/lib/server/auth/custo
 import { createPostgresIdentityAdapter } from "@/lib/server/db/identity-postgres";
 import { createPostgresProjectModule } from "@/lib/server/db/project-postgres";
 import { createPostgresSharingModule } from "@/lib/server/db/sharing-postgres";
+import { createPostgresSignInCodeLimit } from "@/lib/server/db/sign-in-code-limit-postgres";
 import {
   startPostgresTestContext,
   type PostgresTestContext
@@ -146,7 +148,7 @@ describe("PostgreSQL persistence contract", () => {
     }
   });
 
-  it("rate limits repeated OTP delivery requests in shared database state", async () => {
+  it("limits sign-in codes per address and leaves room for a shared client address", { timeout: 120_000 }, async () => {
     const authUrl = new URL(context.connectionString);
     authUrl.searchParams.set("options", "-c search_path=auth");
     const authPool = new Pool({ connectionString: authUrl.toString(), max: 2 });
@@ -155,42 +157,68 @@ describe("PostgreSQL persistence contract", () => {
       database: authPool,
       secret: "integration-test-secret-that-is-longer-than-thirty-two-characters",
       baseURL: "http://localhost:3000",
-      sendAuthenticationOtp: delivered
+      sendAuthenticationOtp: delivered,
+      signInCodeLimit: createPostgresSignInCodeLimit(context.database)
     });
-    const email = `rate-limit-${crypto.randomUUID()}@example.invalid`;
-    const ip = `10.${Math.floor(Math.random() * 200) + 1}.${Math.floor(Math.random() * 200) + 1}.${Math.floor(Math.random() * 200) + 1}`;
+    const randomIp = () =>
+      `10.${Array.from({ length: 3 }, () => Math.floor(Math.random() * 200) + 1).join(".")}`;
+    const sharedIp = randomIp();
+    const ips = [sharedIp];
+    const emails: string[] = [];
+
+    async function requestCode(email: string, ip: string) {
+      const response = await auth.handler(
+        new Request("http://localhost:3000/api/auth/email-otp/send-verification-otp", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            origin: "http://localhost:3000",
+            "x-forwarded-for": ip
+          },
+          body: JSON.stringify({ email, type: "sign-in" })
+        })
+      );
+      return response.status;
+    }
 
     try {
+      // Twenty people behind one address each get a code; the twenty-first waits.
+      const colleagues = Array.from({ length: 21 }, () => `shared-${crypto.randomUUID()}@example.invalid`);
+      emails.push(...colleagues);
+      const shared: number[] = [];
+      for (const email of colleagues) shared.push(await requestCode(email, sharedIp));
+      expect(shared.slice(0, 20)).toEqual(Array(20).fill(200));
+      expect(shared[20]).toBe(429);
+
+      // One inbox gets three codes, from wherever they are requested.
+      const target = `rate-limit-${crypto.randomUUID()}@example.invalid`;
+      emails.push(target);
       const statuses: number[] = [];
-
       for (let attempt = 0; attempt < 4; attempt += 1) {
-        const response = await auth.handler(
-          new Request(
-            "http://localhost:3000/api/auth/email-otp/send-verification-otp",
-            {
-              method: "POST",
-              headers: {
-                "content-type": "application/json",
-                origin: "http://localhost:3000",
-                "x-forwarded-for": ip
-              },
-              body: JSON.stringify({ email, type: "sign-in" })
-            }
-          )
-        );
-        statuses.push(response.status);
+        const ip = randomIp();
+        ips.push(ip);
+        statuses.push(await requestCode(target, ip));
       }
-
       expect(statuses).toEqual([200, 200, 200, 429]);
-      expect(delivered).toHaveBeenCalledTimes(3);
+      expect(delivered).toHaveBeenCalledTimes(23);
     } finally {
-      await authPool.query(
-        'DELETE FROM auth."verification" WHERE identifier LIKE $1',
-        [`${email}:%`]
-      );
-      await authPool.query('DELETE FROM auth."rateLimit" WHERE "key" LIKE $1', [
-        `%${ip}%`
-      ]);
+      for (const email of emails) {
+        await authPool.query('DELETE FROM auth."verification" WHERE identifier = $1', [
+          `sign-in-otp-${email}`
+        ]);
+      }
+      await context.database
+        .withSchema("app")
+        .deleteFrom("signInCodeLimit")
+        .where(
+          "emailKey",
+          "in",
+          emails.map((email) => createHash("sha256").update(email).digest("hex"))
+        )
+        .execute();
+      for (const ip of ips) {
+        await authPool.query('DELETE FROM auth."rateLimit" WHERE "key" LIKE $1', [`%${ip}%`]);
+      }
       await authPool.end();
     }
   });

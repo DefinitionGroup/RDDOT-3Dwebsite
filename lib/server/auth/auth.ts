@@ -11,6 +11,7 @@ import { createAuth } from "@/lib/server/auth/create-auth";
 import { createPostgresAccountDeletion } from "@/lib/server/db/account-deletion-postgres";
 import { getDatabase } from "@/lib/server/db/database";
 import { createPostgresPool } from "@/lib/server/db/postgres-pool";
+import { createPostgresSignInCodeLimit } from "@/lib/server/db/sign-in-code-limit-postgres";
 import { createTransactionalEmailDeliveryFromEnvironment } from "@/lib/server/transactional-email/delivery";
 
 declare global {
@@ -96,6 +97,9 @@ export const auth = createAuth({
     createTransactionalEmailDeliveryFromEnvironment()
   ),
   freshAgeSeconds: ACCOUNT_DELETION_FRESH_SECONDS,
+  signInCodeLimit: {
+    consume: (email) => createPostgresSignInCodeLimit(getDatabase()).consume(email)
+  },
   // The application's account goes first: if that fails, the login survives and
   // the person can try again. An account with Quote Requests stays (A4).
   async beforeDeleteUser(userId) {

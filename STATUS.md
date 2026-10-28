@@ -120,6 +120,40 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Sign-in for a shared address, an early click and an expired request (2026-10-28).**
+  Three fixes on the way from sign-in to a Quote Request. *Code limit:* Better Auth counts
+  code requests per client address, three in ten minutes, so the fourth person in a
+  showroom, an office or behind a mobile network's shared address was told "Zu viele
+  Versuche". The per-client limits are now 20 code requests in ten minutes and 20
+  sign-ins in five (`create-auth.ts`), and each email address gets at most three codes in
+  ten minutes wherever they are asked for: a Better Auth `before` hook counts them in the
+  new `app.sign_in_code_limit` table (migration `20261028120000`, one upsert per request,
+  only a SHA-256 of the address stored, rows gone with their window;
+  `sign-in-code-limit-postgres.ts`) and answers 429, which the form already shows as "Zu
+  viele Versuche". *Early click:* a sign-in sent before the page's script had loaded went
+  out as a plain form, loaded `/konto` again without its query and so dropped a pending
+  save or return. Both sign-in forms are now React form actions: React holds a
+  submission made before hydration and replays it after, and the actions read the
+  address and code from the submitted form. *Expired request:* when submitting a request
+  answers 401, the form keeps what was typed (contact, planning facts, note, consent) in
+  the tab's session storage, and back from signing in again it fills itself once
+  (`quote-request-draft.ts`): kept half an hour, the consent only while its wording is
+  the one accepted, nothing sent anywhere. Checked: lint, types, 188/188 unit tests (new:
+  the draft comes back once, per project, not after half an hour, without a changed
+  consent, not from rubbish or refused storage), 15 database tests (new: three codes per
+  address then the wait until the window reopens, however the address is written, kept
+  apart, a new window after ten minutes, exactly three of six simultaneous requests, only
+  a hash stored; through Better Auth: twenty people on one client address get codes and
+  the twenty-first waits, one address gets three codes from four addresses), build. On
+  the dev server in headless Chrome: with the page's scripts held back, an address typed
+  and sent reaches the code step for that address once they load and keeps
+  `?next=/anfrage`, where the previous form reloaded `/konto` without it; five addresses
+  from one client get codes, a fourth code for one address shows "Zu viele Versuche" with
+  the address kept; signed in as the QA account, a request typed with a note, a wall
+  length and consent, its session cookie removed, says the session ended, and after
+  signing in again through its link the form shows the note, the wall length, the consent
+  and the contact, and a reload starts empty; no console errors. The migration is applied
+  to the shared development database, which the test site also uses.
 - **The configurator frames the kitchen on phones and tablets (2026-10-28).** There the
   controls above the scene and the sheet below it cover about 60 % of the canvas, and
   every framing was composed for the whole of it: in all nine room and camera
@@ -968,15 +1002,9 @@ configuration at sign-in, is fixed (Done, 2026-10-22).
   Entscheidungen", "drei Entscheidungen" and "in vier Klicks" explain the same flow three
   ways.
 
-Found by the journey test of 2026-10-22:
-
-- **A request typed before the session expired loses its note and consent.** After "Ihre
-  Sitzung ist abgelaufen." and the sign-in, `/anfrage` opens a fresh form. Since A2
-  (2026-10-23) name, email and phone come back from the profile; the note and the consent
-  box have to be entered again (`quote-request-form.tsx` keeps them only in state).
-- **A sign-in submitted before the page's script has loaded posts natively** to `/konto?`
-  and drops a pending save (`account-access.tsx` forms have no action). Rare on a fast
-  connection; seen in the test when it typed faster than the dev server compiled.
+The two defects the journey test of 2026-10-22 found (a request losing its note and
+consent at a new sign-in, a sign-in sent before the script loaded) are fixed (Done,
+2026-10-28).
 
 ## Deferred Decisions
 
@@ -1010,6 +1038,11 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 
 ## Known Warnings
 
+- Better Auth 1.6.27 prunes its rate-limit rows older than its default window (60 s)
+  whenever some row's window resets, custom rules included: a client address's
+  ten-minute count of code requests and five-minute count of sign-ins can start over
+  after a minute without requests from it. The per-address code limit keeps its own
+  table and holds its ten minutes (seen in `dist/api/rate-limiter`, 2026-10-28).
 - `pnpm build` on Node 26 prints an `ExperimentalWarning: localStorage is not available`
   once per page-data worker: Node's experimental Web Storage warns when a dependency probes
   `localStorage` on the server. Harmless; no application code reads it on the server
@@ -1162,10 +1195,6 @@ Engineering:
   offer, the configurator on a phone held sideways.
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
-- The sign-in code limit counts per client address: 3 code requests per 10 minutes
-  (`create-auth.ts`). Everyone behind one address shares them — a showroom's tablets, an
-  office, a mobile network's shared address — so the fourth person there is told "Zu viele
-  Versuche". Key the limit on the email as well, or raise it, before launch.
 - Production Vercel environment: it runs as a test environment until then (see
   Deployment). Remove `TEST_DATABASE_URL`, the capture flag, `OPEN_ALL_LOCALES` and the
   `development` dataset settings; set the production domain and the function region

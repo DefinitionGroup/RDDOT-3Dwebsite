@@ -2,7 +2,8 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { FormEvent, startTransition, useId, useState } from "react";
+import { type ReactNode, startTransition, useId, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Emphasized } from "@/components/design-system/emphasized";
 import { FieldLabel, TextField } from "@/components/design-system/field";
 import { Pill } from "@/components/design-system/pill";
@@ -24,6 +25,24 @@ function getErrorMessage(
   t: Messages["account"]
 ) {
   return error?.status === 429 ? t.tooManyAttempts : t.signInFailed;
+}
+
+/** Busy while the form's action runs, including one replayed after hydration. */
+function SubmitPill({
+  busyLabel,
+  children,
+  disabled = false
+}: {
+  busyLabel: string;
+  children: ReactNode;
+  disabled?: boolean;
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <Pill className="mt-8 w-full" disabled={pending || disabled} type="submit">
+      {pending ? busyLabel : children}
+    </Pill>
+  );
 }
 
 const step = {
@@ -51,7 +70,6 @@ export function AccountAccess({
   const [code, setCode] = useState("");
   const [developmentCapture, setDevelopmentCapture] =
     useState<DevelopmentCapture | null>(null);
-  const [isPending, setIsPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   async function loadDevelopmentCapture(address: string) {
@@ -65,42 +83,41 @@ export function AccountAccess({
     setDevelopmentCapture((await response.json()) as DevelopmentCapture);
   }
 
-  async function sendCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsPending(true);
+  // Both forms are actions, not submit handlers: a form sent before the page's
+  // script has loaded is held by React and replayed once it has, with what was
+  // typed. A plain form would load the page again without its query and drop
+  // a pending save. So each action reads its fields from the submitted form.
+  async function sendCode(form: FormData) {
+    const address = String(form.get("email") ?? "").trim();
+    setEmail(address);
     setMessage(null);
     setDevelopmentCapture(null);
 
     // The code arrives in the language of this page.
     const result = await authClient.emailOtp.sendVerificationOtp(
-      { email, type: "sign-in" },
+      { email: address, type: "sign-in" },
       { headers: { [LOCALE_HEADER]: locale } }
     );
 
     if (result.error) {
       setMessage(getErrorMessage(result.error, t));
-      setIsPending(false);
       return;
     }
 
-    await loadDevelopmentCapture(email);
+    await loadDevelopmentCapture(address);
     setStep("code");
-    setIsPending(false);
   }
 
-  async function verifyCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setIsPending(true);
+  async function verifyCode(form: FormData) {
     setMessage(null);
 
     const result = await authClient.signIn.emailOtp({
       email,
-      otp: code
+      otp: String(form.get("code") ?? "")
     });
 
     if (result.error) {
       setMessage(getErrorMessage(result.error, t));
-      setIsPending(false);
       return;
     }
 
@@ -124,21 +141,20 @@ export function AccountAccess({
             </h1>
             <p className="m-0 mt-6 max-w-[42ch] text-body text-graphite">{t.signInBody}</p>
 
-            <form className="mt-10" onSubmit={sendCode}>
+            <form action={sendCode} className="mt-10">
               <FieldLabel htmlFor={emailId}>{t.email}</FieldLabel>
               <TextField
                 autoComplete="email"
                 autoFocus
                 id={emailId}
+                name="email"
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder={t.emailPlaceholder}
                 required
                 type="email"
                 value={email}
               />
-              <Pill className="mt-8 w-full" disabled={isPending} type="submit">
-                {isPending ? t.preparingCode : t.requestCode}
-              </Pill>
+              <SubmitPill busyLabel={t.preparingCode}>{t.requestCode}</SubmitPill>
             </form>
 
             <p className="m-0 mt-5 text-caption text-graphite">{t.signInNote}</p>
@@ -157,7 +173,7 @@ export function AccountAccess({
               {t.codeSentAfter}
             </p>
 
-            <form className="mt-10" onSubmit={verifyCode}>
+            <form action={verifyCode} className="mt-10">
               <FieldLabel htmlFor={codeId}>{t.code}</FieldLabel>
               <TextField
                 autoComplete="one-time-code"
@@ -166,6 +182,7 @@ export function AccountAccess({
                 id={codeId}
                 inputMode="numeric"
                 maxLength={6}
+                name="code"
                 onChange={(event) =>
                   setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
                 }
@@ -174,13 +191,9 @@ export function AccountAccess({
                 required
                 value={code}
               />
-              <Pill
-                className="mt-8 w-full"
-                disabled={isPending || code.length !== 6}
-                type="submit"
-              >
-                {isPending ? t.signingIn : t.signIn}
-              </Pill>
+              <SubmitPill busyLabel={t.signingIn} disabled={code.length !== 6}>
+                {t.signIn}
+              </SubmitPill>
             </form>
 
             {developmentCapture && (

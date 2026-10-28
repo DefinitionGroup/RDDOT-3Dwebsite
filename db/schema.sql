@@ -424,6 +424,19 @@ CREATE TABLE app.shared_revision_link (
 
 
 --
+-- Name: sign_in_code_limit; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.sign_in_code_limit (
+    email_key text NOT NULL,
+    window_started_at timestamp with time zone NOT NULL,
+    requests integer NOT NULL,
+    CONSTRAINT sign_in_code_limit_email_key_check CHECK ((email_key ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT sign_in_code_limit_requests_check CHECK ((requests >= 1))
+);
+
+
+--
 -- Name: source_capture; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -854,6 +867,14 @@ ALTER TABLE ONLY app.shared_revision_link
 
 
 --
+-- Name: sign_in_code_limit sign_in_code_limit_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.sign_in_code_limit
+    ADD CONSTRAINT sign_in_code_limit_pkey PRIMARY KEY (email_key);
+
+
+--
 -- Name: source_capture source_capture_pkey; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -1091,6 +1112,13 @@ CREATE INDEX shared_revision_link_project_created_idx ON app.shared_revision_lin
 
 
 --
+-- Name: sign_in_code_limit_window_started_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX sign_in_code_limit_window_started_idx ON app.sign_in_code_limit USING btree (window_started_at);
+
+
+--
 -- Name: source_capture_project_created_idx; Type: INDEX; Schema: app; Owner: -
 --
 
@@ -1313,4 +1341,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20260904120000'),
     ('20261023090000'),
     ('20261023120000'),
-    ('20261027090000');
+    ('20261027090000'),
+    ('20261028120000');
