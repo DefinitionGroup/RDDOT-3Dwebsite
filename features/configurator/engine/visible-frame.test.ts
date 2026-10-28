@@ -1,60 +1,111 @@
-import { PerspectiveCamera, Vector3 } from "three";
+import { Vector2, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
-import { frameRect, lensShift, visibleShare } from "./visible-frame";
-
-describe("visibleShare", () => {
-  it("is the uncovered share of the width, 1 without a panel", () => {
-    expect(visibleShare(1440, 440)).toBeCloseTo(1000 / 1440);
-    expect(visibleShare(1440, 0)).toBe(1);
-    expect(visibleShare(0, 440)).toBe(1);
-    expect(visibleShare(500, 440)).toBe(0.4);
-  });
-});
-
-describe("lensShift", () => {
-  // A desktop canvas, the studio lens, a point on the optical axis and one on
-  // the frame's right edge as the unshifted camera saw them.
-  const aspect = 1440 / 900;
-  const share = visibleShare(1440, 440);
-
-  function project(point: Vector3, shifted: boolean) {
-    const camera = new PerspectiveCamera(38, aspect, 0.08, 50);
-    if (shifted) {
-      camera.zoom = share;
-      camera.filmOffset = lensShift(camera, share);
-    }
-    camera.updateProjectionMatrix();
-    camera.updateMatrixWorld();
-    return point.clone().project(camera);
-  }
-
-  it("puts the optical axis in the middle of the visible part", () => {
-    const axis = project(new Vector3(0, 0, -5), true);
-    // NDC: the visible part spans -1 … 2·share − 1, its middle is share − 1.
-    expect(axis.x).toBeCloseTo(share - 1);
-    expect(axis.y).toBeCloseTo(0);
-  });
-
-  it("draws the whole frame into the visible part, scaled by its share", () => {
-    const edge = new Vector3(0, 0, -5);
-    const unshifted = project(edge, false);
-    expect(unshifted.x).toBeCloseTo(0);
-    const right = new Vector3(5 * Math.tan((38 * Math.PI) / 360) * aspect, 0, -5);
-    expect(project(right, false).x).toBeCloseTo(1);
-    expect(project(right, true).x).toBeCloseTo(2 * share - 1);
-    const top = new Vector3(0, 5 * Math.tan((38 * Math.PI) / 360), -5);
-    expect(project(top, true).y).toBeCloseTo(share);
-  });
-
-  it("does nothing without a panel", () => {
-    expect(lensShift(new PerspectiveCamera(38, aspect), 1)).toBe(0);
-  });
-});
+import {
+  easeAxis,
+  frameLens,
+  frameRect,
+  ShiftedLensCamera,
+  UNCOVERED
+} from "./visible-frame";
 
 describe("frameRect", () => {
-  it("is the left share of the canvas, vertically centred, at its aspect", () => {
-    const rect = frameRect(2880, 1800, 0.5);
-    expect(rect).toEqual({ x: 0, y: 450, width: 1440, height: 900 });
-    expect(rect.width / rect.height).toBeCloseTo(2880 / 1800);
+  it("is the whole canvas when nothing covers a 16:10 canvas", () => {
+    expect(frameRect(1440, 900, UNCOVERED)).toEqual({ x: 0, y: 0, width: 1440, height: 900 });
+  });
+
+  it("sits left of the desktop Datenblatt, vertically centred", () => {
+    const frame = frameRect(1440, 900, { top: 0, right: 440, bottom: 0 });
+    expect(frame).toEqual({ x: 0, y: 137.5, width: 1000, height: 625 });
+  });
+
+  it("fills a phone's band between the controls and the sheet across its width", () => {
+    // 390 × 844: the decisions end at 124 px, the camera row starts 440 px above the bottom.
+    const frame = frameRect(390, 844, { top: 124, right: 0, bottom: 440 });
+    expect(frame.width).toBe(390);
+    expect(frame.height).toBeCloseTo(243.75);
+    expect(frame.y + frame.height / 2).toBeCloseTo(124 + 280 / 2);
+  });
+
+  it("is centred across a band wider than 16:10", () => {
+    const frame = frameRect(768, 1024, { top: 124, right: 0, bottom: 521 });
+    expect(frame.height).toBeCloseTo(379);
+    expect(frame.width).toBeCloseTo(606.4);
+    expect(frame.x + frame.width / 2).toBeCloseTo(384);
+  });
+
+  it("keeps a fifth of each side however much is covered", () => {
+    const frame = frameRect(844, 390, { top: 124, right: 0, bottom: 400 });
+    expect(frame.height).toBeCloseTo(78);
+    expect(frame.y).toBeGreaterThanOrEqual(0);
+    expect(frame.y + frame.height).toBeLessThanOrEqual(390);
+  });
+});
+
+describe("frameLens on a ShiftedLensCamera", () => {
+  function cameraFor(width: number, height: number, covered = UNCOVERED, fov = 38) {
+    const camera = new ShiftedLensCamera(fov, width / height, 0.08, 50);
+    const lens = frameLens(width, height, frameRect(width, height, covered));
+    camera.zoom = lens.zoom;
+    camera.axis.copy(lens.axis);
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld();
+    return camera;
+  }
+
+  /** A point straight ahead, `up` along the frame's vertical half field of view. */
+  function ahead(up = 0, fov = 38) {
+    return new Vector3(0, 5 * Math.tan((fov * Math.PI) / 360) * up, -5);
+  }
+
+  it("matches the desktop framing left of the Datenblatt", () => {
+    const share = 1000 / 1440;
+    const camera = cameraFor(1440, 900, { top: 0, right: 440, bottom: 0 });
+    expect(camera.zoom).toBeCloseTo(share);
+    const axis = ahead().project(camera);
+    expect(axis.x).toBeCloseTo(share - 1);
+    expect(axis.y).toBeCloseTo(0);
+    // The framing's top edge reaches the frame's top edge, at the share's height.
+    expect(ahead(1).project(camera).y).toBeCloseTo(share);
+  });
+
+  it("draws a phone's framing into its band", () => {
+    const camera = cameraFor(390, 844, { top: 124, right: 0, bottom: 440 }, 54);
+    const toPixelY = (ndcY: number) => ((1 - ndcY) / 2) * 844;
+    expect(toPixelY(ahead(0, 54).project(camera).y)).toBeCloseTo(264);
+    expect(toPixelY(ahead(1, 54).project(camera).y)).toBeCloseTo(264 - 243.75 / 2);
+    expect(toPixelY(ahead(-1, 54).project(camera).y)).toBeCloseTo(264 + 243.75 / 2);
+  });
+
+  it("keeps the shift under the temporal accumulation's jitter", () => {
+    const camera = cameraFor(390, 844, { top: 124, right: 0, bottom: 440 });
+    const before = ahead().project(camera).y;
+    camera.setViewOffset(780, 1688, 0.25, -0.25, 780, 1688);
+    expect(ahead().project(camera).y).toBeCloseTo(before, 3);
+    camera.clearViewOffset();
+    expect(ahead().project(camera).y).toBeCloseTo(before);
+  });
+
+  it("unprojects what it projects, so raycasting hits what is drawn", () => {
+    const camera = cameraFor(390, 844, { top: 124, right: 0, bottom: 440 });
+    const point = new Vector3(0.4, -0.3, -4);
+    expect(point.clone().project(camera).unproject(camera).distanceTo(point)).toBeLessThan(1e-6);
+  });
+});
+
+describe("easeAxis", () => {
+  it("eases towards the frame's centre and lands on it", () => {
+    const camera = new ShiftedLensCamera(38, 390 / 844, 0.08, 50);
+    const target = new Vector2(0, 0.37);
+    easeAxis(camera, target, 1 / 60, false);
+    expect(camera.axis.y).toBeGreaterThan(0);
+    expect(camera.axis.y).toBeLessThan(0.37);
+    for (let frame = 0; frame < 240; frame += 1) easeAxis(camera, target, 1 / 60, false);
+    expect(camera.axis.equals(target)).toBe(true);
+  });
+
+  it("jumps when asked to", () => {
+    const camera = new ShiftedLensCamera(38, 1.6, 0.08, 50);
+    easeAxis(camera, new Vector2(-0.3, 0), 1 / 60, true);
+    expect(camera.axis.x).toBe(-0.3);
   });
 });

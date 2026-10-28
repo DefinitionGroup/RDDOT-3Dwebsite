@@ -15,12 +15,13 @@ import type {
 import type { SceneCaptureRef } from "@/features/configurator/photo/use-scene-capture";
 import type { KitchenEditProps } from "@/features/configurator/engine/kitchen-model";
 import { KitchenScene } from "@/features/configurator/engine/kitchen-scene";
+import { UNCOVERED, type CoveredEdges } from "@/features/configurator/engine/visible-frame";
 
 type ConfiguratorCanvasProps = {
   cameraView: CameraView;
   captureRef?: SceneCaptureRef;
-  /** CSS pixels of the canvas the Datenblatt covers on the right; the framing moves left of it. */
-  coveredRight?: number;
+  /** What the HUD covers of the canvas; the framing is drawn into the rest. */
+  covered?: CoveredEdges;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   /** What the Loft's glass looks out on. */
@@ -106,7 +107,7 @@ export function ConfiguratorCanvas(props: ConfiguratorCanvasProps) {
 function SceneCanvas({
   cameraView,
   captureRef,
-  coveredRight = 0,
+  covered = UNCOVERED,
   edit,
   onCameraInteraction,
   outlook = "street",
@@ -132,7 +133,7 @@ function SceneCanvas({
       <Suspense fallback={null}>
         <RenderPipeline
           cameraView={cameraView}
-          coveredRight={coveredRight}
+          covered={covered}
           edit={edit}
           onCameraInteraction={onCameraInteraction}
           outlook={outlook}
@@ -148,7 +149,7 @@ function SceneCanvas({
 
 type RenderPipelineProps = {
   cameraView: CameraView;
-  coveredRight: number;
+  covered: CoveredEdges;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   outlook: LoftOutlook;
@@ -159,7 +160,7 @@ type RenderPipelineProps = {
 
 function RenderPipeline({
   cameraView,
-  coveredRight,
+  covered,
   edit,
   onCameraInteraction,
   outlook,
@@ -174,7 +175,7 @@ function RenderPipeline({
     return (
       <KitchenScene
         cameraView={cameraView}
-        coveredRight={coveredRight}
+        covered={covered}
         edit={edit}
         outlook={outlook}
         pathTracing={false}
@@ -188,7 +189,7 @@ function RenderPipeline({
     <PathTracingPipeline
       cameraView={cameraView}
       compact={isCompactViewport}
-      coveredRight={coveredRight}
+      covered={covered}
       onCameraInteraction={onCameraInteraction}
       outlook={outlook}
       state={state}
@@ -200,7 +201,7 @@ function RenderPipeline({
 function PathTracingPipeline({
   cameraView,
   compact,
-  coveredRight,
+  covered,
   onCameraInteraction,
   outlook,
   state,
@@ -221,7 +222,7 @@ function PathTracingPipeline({
     >
       <KitchenScene
         cameraView={cameraView}
-        coveredRight={coveredRight}
+        covered={covered}
         onCameraInteraction={onCameraInteraction}
         outlook={outlook}
         pathTracing

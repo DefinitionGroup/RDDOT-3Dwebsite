@@ -87,6 +87,7 @@ import { apiErrorMessage, getMessages, type Messages } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
 import { useIsDesktop } from "@/lib/use-media";
+import { useCoveredEdges } from "@/features/configurator/ui/use-covered-edges";
 
 type ConfiguratorShellProps = {
   initialState: ConfiguratorState;
@@ -203,8 +204,17 @@ export function ConfiguratorShell({
   const [autosaveStatus, setAutosaveStatus] = useState<ProjectAutosaveStatus | null>(null);
   const { captureRef, capturePhoto } = useSceneCapture();
   const isDesktop = useIsDesktop();
-  // What the open Datenblatt covers of the scene; the framing moves left of it.
-  const coveredRight = isDesktop && isPanelOpen ? DATASHEET_WIDTH_PX + DATASHEET_GAP_PX : 0;
+  const mainRef = useRef<HTMLElement | null>(null);
+  // What the HUD covers of the scene, which draws its framing into the rest:
+  // the open Datenblatt on desktop, the controls above and below on phones.
+  const phoneCovered = useCoveredEdges(
+    mainRef,
+    !isDesktop,
+    `${editSession ? "edit" : "nav"}|${sheetExpanded}|${sharedView ? "shared" : "own"}`
+  );
+  const covered = isDesktop
+    ? { top: 0, right: isPanelOpen ? DATASHEET_WIDTH_PX + DATASHEET_GAP_PX : 0, bottom: 0 }
+    : phoneCovered;
   // An element dragged from the Datenblatt into the scene.
   const [drag, setDrag] = useState<{ key: WallModuleKey } | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -497,7 +507,7 @@ export function ConfiguratorShell({
     }
     const savedVersionNow = currentPayload.version;
 
-    const captured = await capturePhoto({ coveredRight });
+    const captured = await capturePhoto({ covered });
     if (!captured) {
       setPhotoStatus({ phase: "error", message: messages.photo.captureFailed });
       return;
@@ -877,12 +887,12 @@ export function ConfiguratorShell({
     : project?.name ?? getLocalizedLabel(RDTD_KITCHEN_PRODUCT_V2.title, locale);
 
   return (
-    <main className="relative h-svh overflow-hidden bg-canvas text-ink">
+    <main className="relative h-svh overflow-hidden bg-canvas text-ink" ref={mainRef}>
       <div className="absolute inset-0">
         <ConfiguratorCanvas
           cameraView={cameraView}
           captureRef={captureRef}
-          coveredRight={coveredRight}
+          covered={covered}
           edit={canvasEdit}
           outlook={outlook}
           state={effectiveConfig}
@@ -893,7 +903,10 @@ export function ConfiguratorShell({
       <VisualizationPreloader active={visualization !== "studio"} />
 
       {/* HUD · top; above the Datenblatt card so the language list can open over it */}
-      <div className="pointer-events-none absolute inset-x-5 top-5 z-30 flex items-center justify-between gap-4 lg:inset-x-10 lg:top-7">
+      <div
+        className="pointer-events-none absolute inset-x-5 top-5 z-30 flex items-center justify-between gap-4 lg:inset-x-10 lg:top-7"
+        data-covers="top"
+      >
         <HudBrand context={hudContext} />
         {!sharedView && isDesktop && (
           <div className="pointer-events-auto">
@@ -934,7 +947,7 @@ export function ConfiguratorShell({
 
       {/* HUD · decisions (phones) */}
       {!sharedView && !isDesktop && (
-        <div className="pointer-events-auto absolute left-5 top-[76px] z-20">
+        <div className="pointer-events-auto absolute left-5 top-[76px] z-20" data-covers="top">
           <StageSegments active={stage} onSelect={selectStage} size="compact" />
         </div>
       )}
@@ -1001,7 +1014,10 @@ export function ConfiguratorShell({
 
       {/* HUD · camera and actions above the sheet (phones) */}
       {!isDesktop && !editSession && !sheetExpanded && (
-        <div className="pointer-events-none absolute inset-x-5 bottom-[calc(45svh+0.75rem)] z-20 flex items-center justify-between gap-2">
+        <div
+          className="pointer-events-none absolute inset-x-5 bottom-[calc(45svh+0.75rem)] z-20 flex items-center justify-between gap-2"
+          data-covers="bottom"
+        >
           <div className="pointer-events-auto">
             <CameraSegments active={cameraView} onSelect={setCameraView} size="compact" />
           </div>
@@ -1013,7 +1029,7 @@ export function ConfiguratorShell({
 
       {/* Edit Session bar (phones) */}
       {!isDesktop && editSession && (
-        <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30">
+        <div className="pointer-events-auto absolute inset-x-3 bottom-3 z-30" data-covers="bottom">
           {editBar}
         </div>
       )}

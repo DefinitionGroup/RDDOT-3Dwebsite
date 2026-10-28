@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { PerspectiveCamera, Vector2 } from "three";
 import { AccumulationPass } from "@/features/configurator/engine/accumulation-pass";
+import { ShiftedLensCamera } from "@/features/configurator/engine/visible-frame";
 
 /** Halton sequence: well-spread sub-pixel offsets in (0, 1). */
 function halton(index: number, base: number) {
@@ -49,7 +50,8 @@ export function TemporalAccumulation({
 
     const matrix = camera.matrixWorld.elements;
     // A zoom or lens shift changes the picture without moving the camera.
-    const lens = `${camera.fov}|${camera.zoom}|${camera.aspect}|${camera.filmOffset}`;
+    const axis = camera instanceof ShiftedLensCamera ? `${camera.axis.x}|${camera.axis.y}` : "";
+    const lens = `${camera.fov}|${camera.zoom}|${camera.aspect}|${camera.filmOffset}|${axis}`;
     const moved =
       previousMatrix.current.length !== 16 ||
       lens !== previousLens.current ||

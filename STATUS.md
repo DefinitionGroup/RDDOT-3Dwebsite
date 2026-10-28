@@ -120,6 +120,35 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The configurator frames the kitchen on phones and tablets (2026-10-28).** There the
+  controls above the scene and the sheet below it cover about 60 % of the canvas, and
+  every framing was composed for the whole of it: in all nine room and camera
+  combinations the kitchen showed cropped large at 390 px, and at 768 px the island
+  vanished behind the sheet. The way the desktop draws its framing beside the Datenblatt
+  now covers every edge: each framing is composed for a 16:10 frame and drawn into the
+  largest 16:10 rectangle the uncovered part holds (`visible-frame.ts`). The camera zooms
+  out to that rectangle's height and a lens shift moves the optical axis to its centre;
+  three.js shifts a lens only sideways, so the scene's camera is a `ShiftedLensCamera`
+  that shifts it both ways, after the zoom and the anti-aliasing jitter. On phones and
+  tablets the shell measures what the controls cover (`use-covered-edges.ts`): the
+  decisions above, the camera row below, or the Edit Session's bar while editing; with
+  the sheet expanded the framing stays where it was. Phones now use the desktop framings
+  and lenses; the phone-only framings that aimed low to lift the kitchen above the sheet
+  are gone, from the scene and from the Asset Manifest's studio cameras. Desktop is
+  unchanged: with the panel open at 1440 px the frame is the same 1000 × 625 px, and the
+  picture matches the live site to a mean difference of 0.2 of 255. Checked: lint, types,
+  181/181 unit tests (new: where the frame sits on desktop, phone, tablet and a crowded
+  screen; the axis and the frame's edges land where they belong; the shift survives the
+  jitter; what is drawn unprojects to the same point), build; headless Chrome on the dev
+  server's real GPU: Studio, Appartement and Loft in Raum, Front and Detail at 360, 390,
+  430 and 768 px show the whole kitchen between the controls and the camera row, and at
+  1024 and 1440 px left of the panel; in the Edit Session at 390 px the kitchen sits above
+  the edit bar and a tap selects the module under it; expanding and collapsing the sheet
+  leaves the framing in place; hiding and reopening the desktop panel moves the framing
+  and back; picking a front changes the picture at 1440 and 390 px; nothing past the edge,
+  no console errors. The photo capture crops the same frame but was not taken in the
+  browser (it needs a saved Project and photo generation). A phone held sideways keeps
+  only a 30 px band (Known Defects).
 - **First sign-in after a quiet period (2026-10-27).** Neon suspends the idle database and
   wakes it on the next connection. On 2026-10-22 the first code request after a quiet spell
   answered 500 (`Connection terminated due to connection timeout`): both pools gave a
@@ -911,10 +940,11 @@ Found by the 2026-10-16 assessment. Items marked *rechecked* were confirmed agai
 2026-10-22. The first finding, a signed-out guest's "Als Projekt speichern" losing the
 configuration at sign-in, is fixed (Done, 2026-10-22).
 
-- **On phones the configurator UI still covers much of the product.** The sheet takes the
-  lower 45 % of the viewport and the camera row sits above it; in the Appartement and the
-  Loft the Room camera then shows the kitchen cropped large in the band between the top
-  controls and the sheet. Desktop is fixed (Done, 2026-10-23).
+- **Held sideways, a phone has almost no room for the scene.** At 844 × 390 px the two
+  control rows, the camera row and the sheet (45 % of the height) leave a 30 px band; the
+  kitchen is drawn whole but small into the fifth of the height the framing always keeps,
+  where before 2026-10-28 it showed cropped large. The landscape layout needs its own
+  arrangement. The upright phone framing is fixed (Done, 2026-10-28).
 - **The hero film has no pause control**; "Den Film ansehen" requests fullscreen on the same
   muted loop. Reduced motion is honoured, but that does not replace a control.
 - **The request consent has no privacy-policy link** (waits on the Datenschutz page).
@@ -1078,8 +1108,8 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 - Moved up from M2 on 2026-10-23, in this order: the request confirmation that matches
   the real follow-up, one VAT basis for prices, dialog focus containment and the
   configurator's tab semantics, and the configurator's framing and HUD contrast over the
-  rooms on desktop (all four done the same day, see Done). The phone framing stays a
-  Known Defect.
+  rooms on desktop (all four done the same day, see Done). The phone and tablet framing
+  followed on 2026-10-28 (see Done).
 - Then the profile, Slice P of the [account spec](.scratch/account-management/spec.md)
   (decided 2026-10-23): salutation, how to reach me and private or professional, copied
   into each request with the postcode (P1), and planning facts on the request (P2), both
@@ -1116,7 +1146,7 @@ Engineering:
   output moderation gate; billed cost against the estimate; then switch generation on.
 - The customer-facing items under Known Defects not taken into M0: a pause control for
   the hero film, the privacy link on the request consent, marketing copy that matches the
-  offer, the configurator's framing on phones.
+  offer, the configurator on a phone held sideways.
 - CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
   configurator → change → save → share → request.
 - The sign-in code limit counts per client address: 3 code requests per 10 minutes

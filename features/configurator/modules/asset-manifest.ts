@@ -109,7 +109,7 @@ export const assetManifestSchema = z.object({
     })
   ),
   cameras: z.object({
-    studio: z.object({ desktop: cameraSetSchema, compact: cameraSetSchema })
+    studio: cameraSetSchema
   }),
   fallback: z.object({
     kind: z.literal("poster"),
@@ -191,10 +191,8 @@ export function resolveSemanticRole(nodeName: string): SemanticSceneRole {
   return role;
 }
 
-export function getStudioCameraPresets(compact: boolean) {
-  return compact
-    ? KITCHEN_ASSET_MANIFEST.cameras.studio.compact
-    : KITCHEN_ASSET_MANIFEST.cameras.studio.desktop;
+export function getStudioCameraPresets() {
+  return KITCHEN_ASSET_MANIFEST.cameras.studio;
 }
 
 export function getVisualFallback() {

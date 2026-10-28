@@ -1,7 +1,11 @@
 "use client";
 
 import { useRef } from "react";
-import { frameRect, visibleShare } from "@/features/configurator/engine/visible-frame";
+import {
+  frameRect,
+  UNCOVERED,
+  type CoveredEdges
+} from "@/features/configurator/engine/visible-frame";
 
 export type SceneCaptureRef = React.MutableRefObject<(() => HTMLCanvasElement) | null>;
 
@@ -28,19 +32,23 @@ export function useSceneCapture() {
   const captureRef: SceneCaptureRef = useRef(null);
 
   /**
-   * `coveredRight` is what the Datenblatt covers of the canvas, in CSS pixels:
-   * the scene draws its framing into the rest, so that is what is captured.
+   * `covered` is what the HUD covers of the canvas, in CSS pixels: the scene
+   * draws its framing into the rest, so that is what is captured.
    */
-  async function capturePhoto({ coveredRight = 0 }: { coveredRight?: number } = {}): Promise<SceneCapture | null> {
+  async function capturePhoto({ covered = UNCOVERED }: { covered?: CoveredEdges } = {}): Promise<SceneCapture | null> {
     const sourceCanvas = captureRef.current?.();
     if (!sourceCanvas || sourceCanvas.width === 0 || sourceCanvas.height === 0) {
       return null;
     }
-    const frame = frameRect(
-      sourceCanvas.width,
-      sourceCanvas.height,
-      visibleShare(sourceCanvas.clientWidth || sourceCanvas.width, coveredRight)
-    );
+    // The covered edges are CSS pixels, the canvas's buffer is device pixels.
+    const scale = sourceCanvas.width / (sourceCanvas.clientWidth || sourceCanvas.width);
+    const cssFrame = frameRect(sourceCanvas.width / scale, sourceCanvas.height / scale, covered);
+    const frame = {
+      x: cssFrame.x * scale,
+      y: cssFrame.y * scale,
+      width: cssFrame.width * scale,
+      height: cssFrame.height * scale
+    };
 
     const target = document.createElement("canvas");
     target.width = TARGET_WIDTH;
@@ -48,7 +56,7 @@ export function useSceneCapture() {
     const context = target.getContext("2d");
     if (!context) return null;
 
-    // Cover-crop the (possibly portrait) frame to 16:9 around its center.
+    // Cover-crop the 16:10 frame to 16:9 around its center.
     const targetAspect = TARGET_WIDTH / TARGET_HEIGHT;
     const sourceAspect = frame.width / frame.height;
     let cropWidth = frame.width;

@@ -5,7 +5,6 @@ import {
   CameraControls,
   Environment,
   MeshReflectorMaterial,
-  PerspectiveCamera,
   RandomizedLight
 } from "@react-three/drei";
 import {
@@ -15,14 +14,21 @@ import {
   SMAA,
   ToneMapping
 } from "@react-three/postprocessing";
-import { useFrame, useThree } from "@react-three/fiber";
+import { extend, useFrame, useThree, type ThreeElement } from "@react-three/fiber";
 import {
   BlendFunction,
   SMAAPreset,
   ToneMappingMode
 } from "postprocessing";
-import { Suspense, useEffect, useRef, type ComponentType, type ElementRef } from "react";
-import { Box3, PerspectiveCamera as ThreePerspectiveCamera, RectAreaLight, Vector3 } from "three";
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type ComponentType,
+  type ElementRef
+} from "react";
+import { Box3, RectAreaLight, Vector3 } from "three";
 import type {
   CameraView,
   ConfiguratorState,
@@ -31,7 +37,14 @@ import type {
   VisualizationMode
 } from "@/features/configurator/types";
 import { findFinish, RDTD_KITCHEN_PRODUCT_V2 } from "@/features/configurator/product-definition";
-import { lensShift, visibleShare } from "@/features/configurator/engine/visible-frame";
+import {
+  easeAxis,
+  frameLens,
+  frameRect,
+  ShiftedLensCamera,
+  UNCOVERED,
+  type CoveredEdges
+} from "@/features/configurator/engine/visible-frame";
 import {
   APARTMENT_CAMERA_BOUNDS,
   ApartmentRoom
@@ -45,6 +58,14 @@ import { getStudioCameraPresets } from "@/features/configurator/modules/asset-ma
 import { TemporalAccumulation } from "@/features/configurator/engine/temporal-accumulation";
 import { useWoodFloorMaps, WOOD_FLOOR_TILE_M } from "@/features/configurator/engine/wood-floor";
 
+extend({ ShiftedLensCamera });
+
+declare module "@react-three/fiber" {
+  interface ThreeElements {
+    shiftedLensCamera: ThreeElement<typeof ShiftedLensCamera>;
+  }
+}
+
 /**
  * Poly Haven "Brown Photostudio 02" (CC0), downsampled to 1k. Lights the
  * studio, and fills the rooms' shadows beside their window light.
@@ -54,8 +75,8 @@ const STUDIO_FLOOR_SIZE = 40;
 
 type KitchenSceneProps = {
   cameraView: CameraView;
-  /** CSS pixels of the canvas the Datenblatt covers on the right (see visible-frame.ts). */
-  coveredRight?: number;
+  /** What the HUD covers of the canvas; the framing is drawn into the rest (see visible-frame.ts). */
+  covered?: CoveredEdges;
   edit?: KitchenEditProps;
   onCameraInteraction?: () => void;
   outlook: LoftOutlook;
@@ -80,16 +101,6 @@ const apartmentCameraPresets: Record<CameraView, CameraPreset> = {
   detail: [2.4, 1.9, -0.55, -0.8, 1.05, 4.25]
 };
 
-// Phones see only the canvas above the sheet, and the walls keep the target
-// off the floor, so these aim low between camera and kitchen to lift it into
-// the upper half. Detail stays on the island: the window view would sit
-// under the sheet.
-const mobileApartmentCameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [3.3, 2.1, 4.4, 1.1, 0.35, 1.1],
-  front: [0, 2.2, 4.45, 0, 0.4, 1.3],
-  detail: [2.9, 1.6, 3.6, 1.3, 0.35, 1.5]
-};
-
 // The Loft's kitchen backs onto its left wall at z = -1.8; the glass facade
 // runs along x = -3.2 to -3.9 on the left, the dining table stands ahead of
 // the island and the record sideboard against the far wall at z = +5.8.
@@ -99,14 +110,6 @@ const loftCameraPresets: Record<CameraView, CameraPreset> = {
   signature: [2.75, 2.4, 5.45, -0.6, 0.85, -0.6],
   front: [0.6, 2.7, 5.45, 0.3, 1.1, -1.2],
   detail: [2.6, 2.0, 0.1, -1.6, 0.9, 1.5]
-};
-
-// Phones aim low between camera and kitchen, as in the Appartement, to lift
-// the kitchen above the sheet.
-const mobileLoftCameraPresets: Record<CameraView, CameraPreset> = {
-  signature: [2.7, 2.1, 5.4, 0.6, 0.35, 1.3],
-  front: [0.6, 2.2, 5.4, 0.3, 0.4, 1.4],
-  detail: [2.6, 1.7, 3.6, 0.6, 0.35, 1.0]
 };
 
 type CameraBounds = {
@@ -135,35 +138,32 @@ const ROOMS: Record<
   {
     Room: ComponentType<RoomProps>;
     presets: Record<CameraView, CameraPreset>;
-    compactPresets: Record<CameraView, CameraPreset>;
     cameraBox: Box3;
   }
 > = {
   apartment: {
     Room: ApartmentRoom,
     presets: apartmentCameraPresets,
-    compactPresets: mobileApartmentCameraPresets,
     cameraBox: boundsBox(APARTMENT_CAMERA_BOUNDS)
   },
   loft: {
     Room: LoftRoom,
     presets: loftCameraPresets,
-    compactPresets: mobileLoftCameraPresets,
     cameraBox: boundsBox(LOFT_CAMERA_BOUNDS)
   }
 };
 
-/** Vertical field of view: the rooms are shot with a wider lens. */
-function cameraFov(room: boolean, compact: boolean) {
-  if (room) {
-    return compact ? 72 : 54;
-  }
-  return compact ? 50 : 38;
+/**
+ * Vertical field of view of the 16:10 frame, on every screen (see
+ * visible-frame.ts): the rooms are shot with a wider lens.
+ */
+function cameraFov(room: boolean) {
+  return room ? 54 : 38;
 }
 
 export function KitchenScene({
   cameraView,
-  coveredRight = 0,
+  covered = UNCOVERED,
   edit,
   onCameraInteraction,
   outlook,
@@ -173,6 +173,10 @@ export function KitchenScene({
 }: KitchenSceneProps) {
   const controlsRef = useRef<ElementRef<typeof CameraControls> | null>(null);
   const width = useThree((rootState) => rootState.size.width);
+  const height = useThree((rootState) => rootState.size.height);
+  const get = useThree((rootState) => rootState.get);
+  const set = useThree((rootState) => rootState.set);
+  const cameraRef = useRef<ShiftedLensCamera | null>(null);
   // The controls are rebuilt once the scene's own camera becomes the default;
   // framing follows the instance that finally drives it.
   const defaultControls = useThree((rootState) => rootState.controls);
@@ -195,11 +199,7 @@ export function KitchenScene({
   ].join("|");
 
   useEffect(() => {
-    const presets = room
-      ? isCompactViewport
-        ? room.compactPresets
-        : room.presets
-      : getStudioCameraPresets(isCompactViewport);
+    const presets = room ? room.presets : getStudioCameraPresets();
     const preset = presets[cameraView];
     const frame = () => {
       const controls = controlsRef.current;
@@ -217,33 +217,41 @@ export function KitchenScene({
     frame();
     const retries = [300, 900, 1800].map((delay) => window.setTimeout(frame, delay));
     return () => retries.forEach((timer) => window.clearTimeout(timer));
-  }, [cameraView, defaultControls, isCompactViewport, pathTracing, room]);
+  }, [cameraView, defaultControls, pathTracing, room]);
 
-  // The framing is drawn into the part of the canvas the Datenblatt leaves
-  // free: zoomed out to its share of the width here, centred by the lens
-  // shift below. Opening or closing the panel eases between the two.
-  const share = visibleShare(width, coveredRight);
-  useEffect(() => {
-    void controlsRef.current?.zoomTo(share, !pathTracing);
-  }, [defaultControls, pathTracing, share]);
+  // The scene's own camera drives the canvas from the first frame on.
+  useLayoutEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    const previous = get().camera;
+    set({ camera });
+    return () => set({ camera: previous });
+  }, [get, set]);
 
-  useFrame(({ camera }) => {
-    if (!(camera instanceof ThreePerspectiveCamera)) return;
-    const offset = lensShift(camera, share);
-    if (Math.abs(camera.filmOffset - offset) < 1e-6) return;
-    camera.filmOffset = offset;
+  const fov = cameraFov(isRoom);
+  useLayoutEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    camera.fov = fov;
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
+  }, [fov, height, width]);
+
+  // The framing is drawn into the part of the canvas the HUD leaves free:
+  // zoomed out to the frame's height here, its axis eased to the frame's
+  // centre below. Opening or closing the panel eases between the two.
+  const { zoom, axis } = frameLens(width, height, frameRect(width, height, covered));
+  useEffect(() => {
+    void controlsRef.current?.zoomTo(zoom, !pathTracing);
+  }, [defaultControls, pathTracing, zoom]);
+
+  useFrame((_, delta) => {
+    if (cameraRef.current) easeAxis(cameraRef.current, axis, delta, pathTracing);
   });
 
   return (
     <>
-      <PerspectiveCamera
-        far={50}
-        fov={cameraFov(isRoom, isCompactViewport)}
-        makeDefault
-        near={0.08}
-        position={[4.2, 2.4, 5.6]}
-      />
+      <shiftedLensCamera far={50} near={0.08} position={[4.2, 2.4, 5.6]} ref={cameraRef} />
       {!pathTracing && !isRoom && (
         <fog args={["#000000", 6.5, 16]} attach="fog" />
       )}
@@ -312,7 +320,7 @@ export function KitchenScene({
       <CameraControls
         dollySpeed={0.65}
         makeDefault
-        maxDistance={isRoom ? 8 : isCompactViewport ? 13 : 8.4}
+        maxDistance={isRoom ? 8 : 8.4}
         maxPolarAngle={Math.PI / 2.08}
         minDistance={2.2}
         minPolarAngle={Math.PI / 8}

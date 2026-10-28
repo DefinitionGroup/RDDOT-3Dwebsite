@@ -84,8 +84,8 @@ describe("Asset Manifest (release gate)", () => {
   });
 
   it("declares approved cameras and a fallback that exists", () => {
-    expect(manifest.cameras.studio.desktop.signature).toHaveLength(6);
-    expect(manifest.cameras.studio.compact.detail).toHaveLength(6);
+    expect(manifest.cameras.studio.signature).toHaveLength(6);
+    expect(manifest.cameras.studio.detail).toHaveLength(6);
     expect(existsSync(`public${manifest.fallback.src}`)).toBe(true);
   });
 
