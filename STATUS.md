@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-27 to `7b79139`. `cc/devstart-003` and the earlier
+2026-10-28 to `6cf216a`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -113,7 +113,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; the daily storage sweep (30-day hold) waits for `CRON_SECRET` on Vercel |
 | Gates: lint, types, 149 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
-| Vercel project | Production builds `redesign/devstart` from Git, at `edf646b` since 2026-10-23, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
+| Vercel project | Production builds `redesign/devstart` from Git, at `6cf216a` since 2026-10-28, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
@@ -139,8 +139,10 @@ built. Details for each line are under Done, Known Defects and Missing.
   through Kysely and `pool.query`, gives up after two, does not retry a wrong password, and
   survives dropped idle connections), build; on the dev server after 7 idle minutes, a
   signed-out headless Chrome requested a code as the QA account (200 in 2.9 s, wake-up
-  included) and signed in. The live test site is not checked yet, and the function region
-  (`iad1`, see Deployment) still adds a transatlantic round trip to every query.
+  included) and signed in. Live since 2026-10-28 (`6cf216a`, see Deployment); the checks
+  there were signed out and never opened a connection, so a code request after the
+  database slept has been seen on the dev server only. The function region (`iad1`) still
+  adds a transatlantic round trip to every query.
 - **Profile photo (P3, 2026-10-27).** "Foto" in the account's profile: upload, change,
   remove; the title row's circle shows it, the initials stay beneath while it loads and
   without one. The browser scales the picture to at most 1600 px (drawing it anew already
@@ -774,7 +776,19 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-cm83hlhwa`, built from `7b79139` on 2026-10-27, live about
+- Production: `rddot-3-dwebsite-8666zrpwe`, built from `6cf216a` on 2026-10-28, live about
+  two minutes after `redesign/devstart` was fast-forwarded from `7b79139` and pushed; it
+  brings the database pools that survive the first connection after Neon suspended the
+  database (no database change; new dependency `@vercel/functions`). Checked right after,
+  signed out: `GET`, `POST` and `DELETE /api/account/avatar`, `PUT /api/account/profile`,
+  the export, `GET /api/quote-requests` and `GET /api/photos` answer 401 `session-expired`
+  with no redirect; `/`, `/konto`, `/anfrage` and `/configure` answer 200 with noindex;
+  `/konto` asks for sign-in at 1440 and 390 px with no account on the page and nothing past
+  the edge; the configurator renders at both widths and picking the Fenix front changes
+  the picture and the URL; no console errors. Without a session cookie Better Auth answers
+  before it asks the database, so none of these opened a connection: the fix itself, a
+  code request after the database slept, was checked on the dev server only.
+- The deployment before, `rddot-3-dwebsite-cm83hlhwa`, was built from `7b79139` on 2026-10-27, live about
   90 s after `redesign/devstart` was fast-forwarded from `8811e17` and pushed; it brings
   profile P3, the profile photo (the `customer_avatar` table was created in the shared
   development database before the push). Checked right after, signed out: `GET`, `POST` and
