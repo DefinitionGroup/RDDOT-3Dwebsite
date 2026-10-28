@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-28 to `6cf216a`. `cc/devstart-003` and the earlier
+2026-10-28 to `4dc7cf7`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -113,7 +113,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; the daily storage sweep (30-day hold) waits for `CRON_SECRET` on Vercel |
 | Gates: lint, types, 149 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
-| Vercel project | Production builds `redesign/devstart` from Git, at `6cf216a` since 2026-10-28, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
+| Vercel project | Production builds `redesign/devstart` from Git, at `4dc7cf7` since 2026-10-28, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
@@ -147,8 +147,9 @@ built. Details for each line are under Done, Known Defects and Missing.
   leaves the framing in place; hiding and reopening the desktop panel moves the framing
   and back; picking a front changes the picture at 1440 and 390 px; nothing past the edge,
   no console errors. The photo capture crops the same frame but was not taken in the
-  browser (it needs a saved Project and photo generation). A phone held sideways keeps
-  only a 30 px band (Known Defects).
+  browser (it needs a saved Project and photo generation). Live on the test site the same
+  day (`4dc7cf7`, see Deployment). A phone held sideways keeps only a 30 px band (Known
+  Defects).
 - **First sign-in after a quiet period (2026-10-27).** Neon suspends the idle database and
   wakes it on the next connection. On 2026-10-22 the first code request after a quiet spell
   answered 500 (`Connection terminated due to connection timeout`): both pools gave a
@@ -805,7 +806,19 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-8666zrpwe`, built from `6cf216a` on 2026-10-28, live about
+- Production: `rddot-3-dwebsite-fbcowjqpm`, built from `4dc7cf7` on 2026-10-28, live about
+  90 s after `redesign/devstart` was fast-forwarded from `6cf216a` and pushed; it brings the
+  configurator's framing on phones and tablets (no database change). Checked right after,
+  signed out, in headless Chrome on the real GPU: Studio, Appartement and Loft in Raum,
+  Front and Detail at 390 and 768 px show the whole kitchen between the controls and the
+  camera row; in the Edit Session at 390 px the kitchen sits above the edit bar and a tap
+  selects the module under it; expanding and collapsing the sheet leaves the framing in
+  place; at 1440 px the kitchen sits left of the open Datenblatt as on the deployment
+  before (mean difference 0.19 of 255), hiding the panel moves it to the full width and
+  reopening it moves it back; `/konto` asks for sign-in at 1440 and 390 px; the
+  configurator renders at both widths and picking the Fenix front changes the picture
+  and the URL; nothing past the edge, no console errors.
+- The deployment before, `rddot-3-dwebsite-8666zrpwe`, was built from `6cf216a` on 2026-10-28, live about
   two minutes after `redesign/devstart` was fast-forwarded from `7b79139` and pushed; it
   brings the database pools that survive the first connection after Neon suspended the
   database (no database change; new dependency `@vercel/functions`). Checked right after,
