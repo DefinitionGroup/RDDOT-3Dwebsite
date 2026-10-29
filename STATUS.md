@@ -120,6 +120,34 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **CI on every push and a browser smoke test (2026-10-29).** `.github/workflows/ci.yml`
+  runs three jobs on every push and pull request: lint, types and unit tests; the
+  database contract tests, each file against its own Postgres 17 container; and the
+  production build followed by the browser smoke test against a throwaway Postgres
+  service, with the development email capture and no Sanity variables (demo content).
+  The build job also fails when `schema.json` or `sanity.types.ts` differ from what
+  TypeGen produces. The smoke test (`pnpm test:smoke`, Playwright 1.64.1,
+  `playwright.config.ts`, `tests/smoke/`) drives the real build at 1440 px:
+  `journey.smoke.ts` goes from the homepage's call to action into the configurator, picks
+  the Fenix front (Datenblatt, URL and price follow), saves the kitchen as a Project
+  through sign-in with the on-screen code, reopens it with the same front and price,
+  creates a share link that a second, signed-out browser opens with that front and price,
+  and requests it; the request is confirmed with a reference and listed in the account.
+  The journey runs without WebGL, so the configurator shows its poster and every task is
+  checked to work without 3D (ADR 0009); a software-rendered scene would also hold
+  several cores of a runner without a GPU for the whole journey. `scene.smoke.ts` checks
+  with WebGL that the kitchen model loads and the scene builds without falling back to
+  the poster (a corrupted model swaps to it within a second, checked). Any uncaught
+  exception or console error fails either test. Rehearsed locally the way the workflow
+  runs: a clean copy without `.env.local`, a new Postgres 17 database migrated from
+  scratch, the build in demo mode, both smoke tests (18 s, three runs in a row), and all
+  database tests on new databases. Getting those to pass on a local database surfaced
+  three test problems, fixed: the tests' own container fallback could never have worked
+  (dbmate asks for TLS unless the URL says `sslmode=disable`), the pool test read
+  `sslmode=disable` as a request for TLS, and three storage-sweep tests swept in the same
+  millisecond as the deletion, before its intent was due (the database stamps to the
+  microsecond; a remote database's latency had hidden it). It also found a paging defect
+  (Known Defects). Not yet run on GitHub.
 - **Sign-in for a shared address, an early click and an expired request (2026-10-28).**
   Three fixes on the way from sign-in to a Quote Request. *Code limit:* Better Auth counts
   code requests per client address, three in ten minutes, so the fourth person in a
@@ -773,10 +801,20 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean
-pnpm test                                  # 149/149
-pnpm test:db                               # 64 passed, 1 skipped (needs TEST_DATABASE_URL or Docker)
+pnpm test                                  # 188/188
+pnpm test:db                               # 91 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
+pnpm test:smoke                            # 2 passed; needs a build that runs on port 3100 (below)
 ```
+
+CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request, each
+job against a database of its own. The smoke test needs a production build with the
+development email capture (`TRANSACTIONAL_EMAIL_PROVIDER=development-capture` plus
+`ALLOW_DEVELOPMENT_EMAIL_CAPTURE_IN_PRODUCTION=true`), `BETTER_AUTH_URL=http://localhost:3100`
+and a migrated database; it starts `next start` on port 3100 itself unless a server already
+answers there, and signs up a new `smoke-…@example.invalid` account in whatever database
+that server uses. The workflow's `smoke` job lists the whole environment. Run locally against
+`.env.local`, it would write into the shared development database.
 
 With the Sanity project in `.env.local`, the build reads `06g3ozu4/development` through the
 Viewer token (`SANITY_API_READ_TOKEN`); without `NEXT_PUBLIC_SANITY_PROJECT_ID` it builds in
@@ -1011,6 +1049,15 @@ configuration at sign-in, is fixed (Done, 2026-10-22).
   kitchen is drawn whole but small into the fifth of the height the framing always keeps,
   where before 2026-10-28 it showed cropped large. The landscape layout needs its own
   arrangement. The upright phone framing is fixed (Done, 2026-10-28).
+- **Paging can skip an item created in the same millisecond as the page's last one**
+  (found 2026-10-29 by the database tests on a local database). The photo gallery, the
+  version list and the account's request list page by creation time and id, but the
+  cursor carries the time to the millisecond while the database keeps microseconds, so an
+  older item stamped within the same millisecond as the last item shown falls between the
+  pages (`photo-gallery-postgres.ts`, `project-postgres.ts`,
+  `quote-requests-postgres.ts`). Rare in use, since photos, versions and requests come
+  seconds apart; the gallery's pagination test hit it in two of nine runs on new local
+  databases, so the CI database job can fail on it until it is fixed.
 - **The hero film has no pause control**; "Den Film ansehen" requests fullscreen on the same
   muted loop. Reduced motion is honoured, but that does not replace a control.
 - **The request consent has no privacy-policy link** (waits on the Datenschutz page).
@@ -1057,6 +1104,10 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 
 ## Known Warnings
 
+- The signed-in account page needs the `OBJECT_STORAGE_*` variables even for an account
+  without a photo: `getCustomerAvatars()` builds the storage client before it reads the
+  avatar row, and without them `/konto` answers with a server error. Every real deployment
+  sets them; the CI smoke job sets placeholders that nothing contacts (2026-10-29).
 - Better Auth 1.6.27 prunes its rate-limit rows older than its default window (60 s)
   whenever some row's window resets, custom rules included: a client address's
   ten-minute count of code requests and five-minute count of sign-ins can start over
@@ -1124,7 +1175,6 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders or browser render smoke test in CI, no engine-upgrade guard for historical manifests, and the Appartement and Loft scenes have no manifest of their own (both are placeholders awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
 - No analytics/event tracking exists for configurator interactions.
-- The current Project workflow has unit/integration coverage, but no automated end-to-end browser coverage yet.
 - Project Archive/Trash/lifecycle restoration is not implemented yet. The sharing persistence boundary already treats archived links as available and trashed links as unavailable.
 - No accessibility audit has been formalized.
 - Performance budgets exist only for the kitchen model (the Asset Manifest's bytes,
@@ -1132,8 +1182,9 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   time, GPU memory, Core Web Vitals, the hero film (8.3 MB and 2.6 MB files). The
   configurator prefetches both rooms and both Loft outlooks 1.2 s after it opens
   (`configurator-shell.tsx`), about 5.4 MB that a Studio-only visit never uses.
-- No automated browser/E2E coverage exists at all: the configurator, the Edit Session, the Project workflows, and the share surface are verified by hand each slice.
-- No CI pipeline runs the gates. Lint, types, unit, DB, and build are run locally and by convention.
+- The browser smoke test covers one desktop journey (Done, 2026-10-29). The phone layout,
+  the Edit Session, versions, photos, the account's other sections and the rendered picture
+  are still checked by hand each slice.
 
 ## Architecture Direction
 
@@ -1163,8 +1214,8 @@ in below; their history is in git and in the Done section.
 The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
 
 - The journey from a guest kitchen through sign-in to a Quote Request, with sessions
-  expiring on the way, is fixed and browser-tested (2026-10-22, see Done); its script is the
-  starting point for the Playwright smoke test (M2).
+  expiring on the way, is fixed and browser-tested (2026-10-22, see Done); the Playwright
+  smoke test has walked it in CI since 2026-10-29.
 - Noindex on every deployment but the launched site is live (2026-10-22, `1aee72f`), and the
   test environment runs it. *Martin:* confirm `PHOTO_GENERATION_ENABLED` on Production is
   `false` (or accept the budget breaker as the bound).
@@ -1212,8 +1263,9 @@ Engineering:
 - The customer-facing items under Known Defects not taken into M0: a pause control for
   the hero film, the privacy link on the request consent, marketing copy that matches the
   offer, the configurator on a phone held sideways.
-- CI on every push (lint, types, unit, DB, build) and a Playwright smoke path: homepage →
-  configurator → change → save → share → request.
+- CI on every push and the Playwright smoke path (homepage → configurator → change → save
+  → share → request) are done (2026-10-29, see Done). Next for it: the same journey at
+  phone width.
 - Production Vercel environment: it runs as a test environment until then (see
   Deployment). Remove `TEST_DATABASE_URL`, the capture flag, `OPEN_ALL_LOCALES` and the
   `development` dataset settings; set the production domain and the function region

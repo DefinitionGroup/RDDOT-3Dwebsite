@@ -153,6 +153,8 @@ TRANSACTIONAL_EMAIL_PROVIDER= pnpm build
 
 A plain `pnpm build` fails locally: `.env.local` selects the development email capture, which refuses to run in a production build (ADR 0010). `pnpm test:db` can migrate the configured remote test database.
 
+CI (`.github/workflows/ci.yml`) runs lint, types, unit and database tests, the build and `pnpm test:smoke` (Playwright, `tests/smoke/`) on every push, each against a throwaway database. Run the smoke test locally only against a throwaway database too: it signs up an account and sends a Quote Request in whatever database the server uses (`STATUS.md` → Build & Verification Gates).
+
 ## Important Files
 
 - `STATUS.md`: current implementation status and missing work.

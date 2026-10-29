@@ -43,6 +43,13 @@ function fakeStorage(
   };
 }
 
+/**
+ * A sweep clock one second ahead. The database stamps an intent to the
+ * microsecond, so against a local database a sweep in the same millisecond
+ * would not count it as due yet.
+ */
+const justAfter = () => new Date(Date.now() + 1_000);
+
 describe("photo artifact storage contract", () => {
   let context: PostgresTestContext;
 
@@ -214,7 +221,7 @@ describe("photo artifact storage contract", () => {
       .execute();
 
     const storage = fakeStorage();
-    await sweepStorageDeletions(context.database, storage, { batchSize: 500 });
+    await sweepStorageDeletions(context.database, storage, { batchSize: 500, clock: justAfter });
 
     expect(storage.deleted).toEqual(
       expect.arrayContaining([fixture.photoKey, fixture.captureKey])
@@ -233,7 +240,7 @@ describe("photo artifact storage contract", () => {
       .execute();
 
     const failing = fakeStorage({ failFor: new Set([fixture.photoKey]) });
-    await sweepStorageDeletions(context.database, failing, { batchSize: 500 });
+    await sweepStorageDeletions(context.database, failing, { batchSize: 500, clock: justAfter });
 
     const [photoIntent] = await deletionIntents([fixture.photoKey]);
     expect(photoIntent.processedAt).toBeNull();
@@ -260,7 +267,8 @@ describe("photo artifact storage contract", () => {
 
     const storage = fakeStorage();
     const result = await sweepStorageDeletions(context.database, storage, {
-      batchSize: 500
+      batchSize: 500,
+      clock: justAfter
     });
 
     expect(result.deleted).toBeGreaterThan(0);

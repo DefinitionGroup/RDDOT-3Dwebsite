@@ -1,0 +1,113 @@
+# The gates STATUS.md lists under Build & Verification, on every push and pull
+# request: lint, types and unit tests; the database contract tests; and the
+# production build with the browser smoke test. Nothing here reaches a shared
+# service: each job's database lives and dies with the job.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, types and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm exec tsc --noEmit
+      - run: pnpm test
+
+  database:
+    name: Database contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Without TEST_DATABASE_URL the tests start their own Postgres container.
+      # The runner's pg_dump is older than that server, so dbmate leaves
+      # db/schema.sql alone.
+      - run: pnpm test:db
+        env:
+          DBMATE_NO_DUMP_SCHEMA: "true"
+
+  smoke:
+    name: Build and browser smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: smoke
+          POSTGRES_PASSWORD: smoke
+          POSTGRES_DB: smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smoke"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: postgres://smoke:smoke@localhost:5432/smoke?sslmode=disable
+      # Better Auth's tables live in the auth schema (docs/development/persistence-foundation.md).
+      DATABASE_URL_AUTH: postgres://smoke:smoke@localhost:5432/smoke?sslmode=disable&options=-c%20search_path%3Dauth
+      # Not a secret: it signs sessions of a database that exists for one job.
+      BETTER_AUTH_SECRET: ci-smoke-test-only-0f6c2d8e4b1a4f7d9e3c5b2a1d8f6e4c
+      BETTER_AUTH_URL: http://localhost:3100
+      # The sign-in code shows on screen; the build refuses this without the second flag.
+      TRANSACTIONAL_EMAIL_PROVIDER: development-capture
+      ALLOW_DEVELOPMENT_EMAIL_CAPTURE_IN_PRODUCTION: "true"
+      # The account page builds the photo modules, which read these, but the
+      # journey stores no photo, so nothing is ever sent to this address.
+      OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9
+      OBJECT_STORAGE_REGION: ci
+      OBJECT_STORAGE_BUCKET: ci-unused
+      OBJECT_STORAGE_ACCESS_KEY_ID: ci-unused
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ci-unused
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply the migrations to a new database
+        run: node_modules/.bin/dbmate --url "$DATABASE_URL" --migrations-dir db/migrations --no-dump-schema up
+      # Without the Sanity variables the site builds from the demo content in content/.
+      - run: pnpm build
+      - name: The Sanity schema and types match what is committed
+        run: git diff --exit-code schema.json sanity.types.ts
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:smoke
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

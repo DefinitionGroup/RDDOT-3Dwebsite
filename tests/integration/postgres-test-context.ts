@@ -25,7 +25,10 @@ export async function startPostgresTestContext(): Promise<PostgresTestContext> {
 
   if (!connectionString) {
     container = await new PostgreSqlContainer("postgres:17.6-alpine").start();
-    connectionString = container.getConnectionUri();
+    // The container serves plain connections; dbmate's driver asks for TLS unless told not to.
+    const url = new URL(container.getConnectionUri());
+    url.searchParams.set("sslmode", "disable");
+    connectionString = url.toString();
   }
 
   await execFileAsync("node_modules/.bin/dbmate", [

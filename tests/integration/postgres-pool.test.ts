@@ -72,6 +72,7 @@ describe("postgres pool while the database wakes", { timeout: 60_000 }, () => {
   beforeAll(async () => {
     context = await startPostgresTestContext();
     const url = new URL(context.connectionString);
+    const sslmode = url.searchParams.get("sslmode");
     relay = await startRelay({ host: url.hostname, port: Number(url.port || 5432) });
     viaRelay = {
       host: "127.0.0.1",
@@ -80,7 +81,7 @@ describe("postgres pool while the database wakes", { timeout: 60_000 }, () => {
       password: decodeURIComponent(url.password),
       database: url.pathname.slice(1),
       // Through the relay, TLS still ends at the database: name it for SNI and the certificate.
-      ssl: url.searchParams.has("sslmode") ? { servername: url.hostname } : undefined,
+      ssl: sslmode && sslmode !== "disable" ? { servername: url.hostname } : undefined,
       connectionTimeoutMillis: 4_000
     };
   }, 120_000);

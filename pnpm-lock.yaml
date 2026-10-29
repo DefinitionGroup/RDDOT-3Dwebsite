@@ -53,7 +53,7 @@ importers:
         version: 3.10.1(@aws-sdk/credential-provider-web-identity@3.972.76)(ws@8.21.3)
       better-auth:
         specifier: 1.6.27
-        version: 1.6.27(next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
+        version: 1.6.27(next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
       kysely:
         specifier: 0.29.5
         version: 0.29.5
@@ -71,10 +71,10 @@ importers:
         version: 1.10.2(postprocessing@6.39.2(three@0.184.0))(three@0.184.0)
       next:
         specifier: 16.4.1
-        version: 16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       next-sanity:
         specifier: ^13.3.4
-        version: 13.3.4(edc33c9acf85ab24513d6239337dc8ff)
+        version: 13.3.4(146f430d727706bbf370e29be157be84)
       pg:
         specifier: 8.23.0
         version: 8.23.0
@@ -121,6 +121,9 @@ importers:
       '@gltf-transform/core':
         specifier: ^4.5.1
         version: 4.5.1
+      '@playwright/test':
+        specifier: 1.64.1
+        version: 1.64.1
       '@testcontainers/postgresql':
         specifier: 12.2.1
         version: 12.2.1
@@ -138,7 +141,7 @@ importers:
         version: 19.3.0(@types/react@19.3.0)
       auth:
         specifier: 1.6.27
-        version: 1.6.27(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.8)(kysely@0.29.5)(nanostores@1.4.2)(next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
+        version: 1.6.27(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.8)(kysely@0.29.5)(nanostores@1.4.2)(next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.5.2(postcss@8.5.30)
@@ -1959,6 +1962,11 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@playwright/test@1.64.1':
+    resolution: {integrity: sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@pnpm/config.env-replace@1.1.0':
     resolution: {integrity: sha512-htyl8TWnKL7K/ESFa1oW2UB5lVDxuF5DpM7tBi6Hu2LNL3mWkIzNLG6N4zoCUP1lCKNxWy/3iu8mS8MvToGd6w==}
@@ -6117,6 +6125,16 @@ packages:
   player.style@0.3.5:
     resolution: {integrity: sha512-hknPiLjNtJP5zM0vCVXsl3Pef+uQnecYg8X/1vjd/Y3TdAgs/zxhck02SFTxRSckaObKemP5tUT8wTH7ByUmnw==}
 
+  playwright-core@1.64.1:
+    resolution: {integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.64.1:
+    resolution: {integrity: sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   pluralize-esm@9.0.5:
     resolution: {integrity: sha512-Kb2dcpMsIutFw2hYrN0EhsAXOUJTd6FVMIxvNAkZCMQLVt9NGZqQczvGpYDxNWCZeCWLHUPxQIBudWzt1h7VVA==}
     engines: {node: '>=14.0.0'}
@@ -9792,6 +9810,10 @@ snapshots:
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
+  '@playwright/test@1.64.1':
+    dependencies:
+      playwright: 1.64.1
+
   '@pnpm/config.env-replace@1.1.0': {}
 
   '@pnpm/network.ca-file@1.0.2':
@@ -11005,7 +11027,7 @@ snapshots:
     optionalDependencies:
       '@sanity/types': 6.20.0(@types/react@19.3.0)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
 
-  '@sanity/visual-editing@6.1.2(@sanity/client@7.27.0)(@types/react@19.3.0)(next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(styled-components@6.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@6.0.3)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))':
+  '@sanity/visual-editing@6.1.2(@sanity/client@7.27.0)(@types/react@19.3.0)(next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(styled-components@6.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@6.0.3)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))':
     dependencies:
       '@sanity/comlink': 4.0.3
       '@sanity/icons': 5.2.3(react@19.3.1)
@@ -11028,7 +11050,7 @@ snapshots:
       xstate: 5.33.2
     optionalDependencies:
       '@sanity/client': 7.27.0
-      next: 16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      next: 16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     transitivePeerDependencies:
       - '@types/react'
       - typescript
@@ -11897,7 +11919,7 @@ snapshots:
 
   asynckit@0.4.0: {}
 
-  auth@1.6.27(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.8)(kysely@0.29.5)(nanostores@1.4.2)(next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))):
+  auth@1.6.27(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.8)(kysely@0.29.5)(nanostores@1.4.2)(next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))):
     dependencies:
       '@babel/core': 7.29.7
       '@babel/preset-react': 7.29.7(@babel/core@7.29.7)
@@ -11907,7 +11929,7 @@ snapshots:
       '@better-auth/utils': 0.4.2
       '@clack/prompts': 1.7.0
       '@mrleebo/prisma-ast': 0.13.1
-      better-auth: 1.6.27(next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
+      better-auth: 1.6.27(next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
       c12: 3.3.4
       chalk: 5.6.2
       commander: 12.1.0
@@ -12035,7 +12057,7 @@ snapshots:
     dependencies:
       tweetnacl: 0.14.5
 
-  better-auth@1.6.27(next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))):
+  better-auth@1.6.27(next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(pg@8.23.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))):
     dependencies:
       '@better-auth/core': 1.6.27(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.8)(kysely@0.29.5)(nanostores@1.4.2)
       '@better-auth/drizzle-adapter': 1.6.27(@better-auth/core@1.6.27(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.4.3))(jose@6.2.8)(kysely@0.29.5)(nanostores@1.4.2))(@better-auth/utils@0.4.2)
@@ -12055,7 +12077,7 @@ snapshots:
       nanostores: 1.4.2
       zod: 4.4.3
     optionalDependencies:
-      next: 16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      next: 16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       pg: 8.23.0
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
@@ -14301,17 +14323,17 @@ snapshots:
       iota-array: 1.0.0
       is-buffer: 1.1.6
 
-  next-sanity@13.3.4(edc33c9acf85ab24513d6239337dc8ff):
+  next-sanity@13.3.4(146f430d727706bbf370e29be157be84):
     dependencies:
       '@portabletext/react': 7.0.1(react@19.3.1)
       '@sanity/client': 7.27.0
       '@sanity/generate-help-url': 4.0.0
       '@sanity/preview-url-secret': 4.1.5(@sanity/client@7.27.0)
-      '@sanity/visual-editing': 6.1.2(@sanity/client@7.27.0)(@types/react@19.3.0)(next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(styled-components@6.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@6.0.3)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
+      '@sanity/visual-editing': 6.1.2(@sanity/client@7.27.0)(@types/react@19.3.0)(next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(styled-components@6.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@6.0.3)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
       '@sanity/webhook': 4.0.4
       groq: 6.17.0
       history: 5.3.0
-      next: 16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      next: 16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       sanity: 6.20.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@noble/hashes@2.3.0)(@rolldown/plugin-babel@0.2.4(@babel/core@7.29.7)(@babel/runtime@7.29.7)(rolldown@1.2.14)(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))(@sanity/workflow-blueprint@0.36.0(@sanity/workflow-engine@0.36.0(@types/react@19.3.0)(typescript@6.0.3))(typescript@6.0.3))(@types/node@26.2.0)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(jiti@2.7.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.14)(styled-components@6.5.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(typescript@6.0.3)(vitest@4.1.12(@types/node@26.2.0)(jsdom@29.1.1(@noble/hashes@2.3.0))(vite@8.3.4(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)))
@@ -14324,7 +14346,7 @@ snapshots:
       - typescript
       - vitest
 
-  next@16.4.1(@babel/core@7.29.7)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  next@16.4.1(@babel/core@7.29.7)(@playwright/test@1.64.1)(@types/node@26.2.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       '@next/env': 16.4.1
       '@swc/helpers': 0.5.23
@@ -14343,6 +14365,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.4.1
       '@next/swc-win32-arm64-msvc': 16.4.1
       '@next/swc-win32-x64-msvc': 16.4.1
+      '@playwright/test': 1.64.1
       sharp: 0.35.5(@types/node@26.2.0)
     transitivePeerDependencies:
       - '@babel/core'
@@ -14648,6 +14671,12 @@ snapshots:
       media-chrome: 4.19.3(react@19.3.1)
     transitivePeerDependencies:
       - react
+
+  playwright-core@1.64.1: {}
+
+  playwright@1.64.1:
+    dependencies:
+      playwright-core: 1.64.1
 
   pluralize-esm@9.0.5: {}
 
