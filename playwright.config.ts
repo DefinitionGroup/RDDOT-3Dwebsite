@@ -12,6 +12,8 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3100;
 const baseURL = process.env.SMOKE_BASE_URL ?? `http://localhost:${PORT}`;
 const desktop = { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } };
+/** A Chromium phone at the width the layouts are checked at. */
+const phone = { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } };
 
 export default defineConfig({
   testDir: "tests/smoke",
@@ -35,6 +37,13 @@ export default defineConfig({
       name: "journey",
       testMatch: "journey.smoke.ts",
       use: { ...desktop, launchOptions: { args: ["--disable-3d-apis"] } }
+    },
+    {
+      // The same journey at phone width, where the configurator's controls and
+      // Datenblatt live in its bottom sheet.
+      name: "journey-phone",
+      testMatch: "journey.smoke.ts",
+      use: { ...phone, launchOptions: { args: ["--disable-3d-apis"] } }
     },
     {
       // On a runner without a GPU, Chromium renders WebGL in software only with this switch.

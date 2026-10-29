@@ -120,6 +120,18 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The smoke journey at phone width (2026-10-29).** `journey.smoke.ts` now also runs as
+  the Playwright project `journey-phone`: a Chromium phone (Pixel 7 descriptor, 390 × 844,
+  touch, phone user agent), again without WebGL. It walks the same journey through the
+  phone layout: the hero's call to action, the front picked in the bottom sheet, saving
+  through sign-in, the account, reopening, the share link opened by a stranger on the same
+  kind of phone, and the request. The test reads the sheet's briefer words where the
+  layouts differ by design ("Richtpreis" for "Richtpreis inkl. MwSt., unverbindlich",
+  "Anfragen" for "Konfiguration anfragen", "Selbst planen" for "Eigene Küche
+  konfigurieren"); the first runs failed on exactly those, which shows it walks the phone
+  layout. Checked on a clean copy against a new Postgres 17 database with no storage
+  settings: all three smoke projects passed three runs in a row (about 24 s a run, the
+  phone journey 5 s).
 - **The hero film can be paused; the statement is lit under reduced motion (2026-10-29).**
   *Pause:* the homepage film loops on its own, and
   nothing could stop it: "Den Film ansehen" only plays it full screen. A round control now
@@ -890,7 +902,7 @@ pnpm exec tsc --noEmit                     # clean; on a fresh clone run `pnpm e
 pnpm test                                  # 190/190
 pnpm test:db                               # 97 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
-pnpm test:smoke                            # 2 passed; needs a build that runs on port 3100 (below)
+pnpm test:smoke                            # 3 passed; needs a build that runs on port 3100 (below)
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request, each
@@ -1267,9 +1279,9 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   time, GPU memory, Core Web Vitals, the hero film (8.3 MB and 2.6 MB files). The
   configurator prefetches both rooms and both Loft outlooks 1.2 s after it opens
   (`configurator-shell.tsx`), about 5.4 MB that a Studio-only visit never uses.
-- The browser smoke test covers one desktop journey (Done, 2026-10-29). The phone layout,
-  the Edit Session, versions, photos, the account's other sections and the rendered picture
-  are still checked by hand each slice.
+- The browser smoke test walks one journey at desktop and at phone width (Done,
+  2026-10-29). A phone held sideways, the Edit Session, versions, photos, the account's
+  other sections and the rendered picture are still checked by hand each slice.
 
 ## Architecture Direction
 
@@ -1350,8 +1362,7 @@ Engineering:
   sideways. The hero film's pause control and the dimmed statement under reduced motion are
   done (2026-10-29).
 - CI on every push and the Playwright smoke path (homepage → configurator → change → save
-  → share → request) are done (2026-10-29, see Done). Next for it: the same journey at
-  phone width.
+  → share → request), at desktop and at phone width, are done (2026-10-29, see Done).
 - Production Vercel environment: it runs as a test environment until then (see
   Deployment). Remove `TEST_DATABASE_URL`, the capture flag, `OPEN_ALL_LOCALES` and the
   `development` dataset settings; set the production domain and the function region

@@ -7,7 +7,9 @@ import { watchErrors } from "./browser-errors";
  * Project through sign-in, shared as a link a stranger can open, and requested
  * from rotpunkt. Sign-in reads its code from the development email capture.
  * The browser runs without WebGL, so the configurator shows its poster;
- * `scene.smoke.ts` checks the 3D scene itself.
+ * `scene.smoke.ts` checks the 3D scene itself. It runs at desktop and at
+ * phone width (`playwright.config.ts`), where the Datenblatt is the bottom
+ * sheet and words its price and its request link more briefly.
  */
 
 const FRONT = "Fenix Castoro Ottawa";
@@ -19,9 +21,12 @@ const POSTER_ERRORS = [
   /3D scene unavailable, showing the visual fallback/
 ];
 
-/** The price under the Datenblatt, e.g. "10.674 €", with a plain space before the sign. */
+/**
+ * The price at the foot of the Datenblatt, e.g. "10.674 €", with a plain space
+ * before the sign. The desktop HUD repeats it; both read the same.
+ */
 async function datasheetPrice(page: Page) {
-  const row = page.getByText("Richtpreis inkl. MwSt., unverbindlich", { exact: true }).locator("..");
+  const row = page.getByText(/^Richtpreis( inkl\. MwSt\., unverbindlich)?$/).last().locator("..");
   const text = await row.innerText();
   const price = /[\d.]+\s€/.exec(text)?.[0];
   if (!price) throw new Error(`No price in "${text}"`);
@@ -33,7 +38,16 @@ function datasheetValue(page: Page, term: string) {
   return page.locator(`dt:text-is("${term}") + dd`);
 }
 
-test("a kitchen goes from the homepage to a saved, shared and requested Project", async ({ browser, page }) => {
+test("a kitchen goes from the homepage to a saved, shared and requested Project", async ({
+  browser,
+  page,
+  viewport,
+  isMobile,
+  hasTouch,
+  userAgent,
+  deviceScaleFactor,
+  locale
+}) => {
   const errors: string[] = [];
   watchErrors(page, errors);
   const email = `smoke-${Date.now()}@example.invalid`;
@@ -96,19 +110,20 @@ test("a kitchen goes from the homepage to a saved, shared and requested Project"
   });
 
   await test.step("someone without an account opens the shared kitchen", async () => {
-    const stranger = await browser.newContext({ locale: "de-DE" });
+    // A second person on the same kind of device, without the account's cookies.
+    const stranger = await browser.newContext({ viewport, isMobile, hasTouch, userAgent, deviceScaleFactor, locale });
     const shared = await stranger.newPage();
     watchErrors(shared, errors);
     await shared.goto(shareUrl);
     await expect(shared.getByText("Geteilter, unveränderlicher Küchenstand ohne private Projektdaten.")).toBeVisible();
     await expect(datasheetValue(shared, "Front")).toContainText(FRONT);
     expect(await datasheetPrice(shared)).toBe(priceSaved);
-    await expect(shared.getByRole("link", { name: "Eigene Küche konfigurieren" })).toBeVisible();
+    await expect(shared.getByRole("link", { name: /^(Eigene Küche konfigurieren|Selbst planen)$/ })).toBeVisible();
     await stranger.close();
   });
 
   await test.step("the Project is requested from rotpunkt and listed in the account", async () => {
-    await page.getByRole("link", { name: "Konfiguration anfragen" }).click();
+    await page.getByRole("link", { name: /^(Konfiguration anfragen|Anfragen)$/ }).click();
     await expect(page).toHaveURL(/\/anfrage\?project=[0-9a-f-]{36}/);
     await expect(page.getByRole("textbox", { name: "E-Mail-Adresse" })).toHaveValue(email);
     const summary = page.getByRole("complementary");
