@@ -1,6 +1,6 @@
 # The homepage headline without waiting for JavaScript
 
-Status: ready-for-agent
+Status: done (2026-10-30)
 Audit: P1
 
 ## Scope
@@ -17,3 +17,10 @@ render.
 
 Homepage LCP on the phone profile is at most 2.5 s, the hero still rises in on desktop and
 phone, and reduced motion shows it at once.
+
+## Done
+
+Eyebrow, headline, summary, actions and badge rise in with the CSS `animate-soft-reveal`
+(same 12 px, 600 ms, signature curve and stagger), so they paint with the page. Under
+reduced motion every animation delay is now zero too, so the hero stands at once. Homepage
+LCP on the phone profile against a local production build: 1.1 s (FCP 0.74 s).

@@ -15,11 +15,12 @@ import type { ApiErrorCode } from "@/lib/api-errors";
  */
 export const de = {
   header: {
-    home: "rotpunkt Signature Startseite",
+    skipToContent: "Zum Inhalt springen",
+    home: "Startseite",
     openMenu: "Menü öffnen",
     closeMenu: "Menü schließen",
     language: "Sprache",
-    currentLanguage: (name: string) => `Sprache: ${name}`
+    currentLanguage: (code: string, name: string) => `Sprache ${code}: ${name}`
   },
   preview: {
     exit: "Vorschau beenden"
@@ -66,6 +67,7 @@ export const de = {
     sharedDescription: "Read-only Ansicht eines freigegebenen Küchenstands."
   },
   notFound: {
+    pageTitle: "Seite nicht gefunden",
     title: "Diese Seite gibt es *nicht*.",
     body: "Vielleicht wurde sie verschoben, oder der Link ist nicht mehr gültig.",
     home: "Zur Startseite"
@@ -187,7 +189,7 @@ export const de = {
   palette: {
     hint: "Ein Element in die Szene ziehen — es stellt sich links oder rechts an die Zeile. Antippen fügt es rechts an.",
     label: "Elemente",
-    add: (label: string) => `${label} hinzufügen`
+    add: (label: string, width: string) => `${label} ${width} hinzufügen`
   },
   materialOverlay: {
     label: "Material",

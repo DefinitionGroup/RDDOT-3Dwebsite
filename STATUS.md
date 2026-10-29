@@ -120,6 +120,19 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The audit's first fixes (2026-10-30).** Issues 01–04 and 06 of
+  `.scratch/a11y-perf/issues/`. The logo link is named from its content ("rotpunkt
+  Signature Startseite", the wordmark one image), the language switch "Sprache DE:
+  Deutsch", the palette's tiles by label and width; the "100 °C" counter reads its final
+  value once; Editorial Pages open with a skip link to `main`; the 404 page has its own
+  title; the sign-in panel's wordmark is no second home link. The hero's words rise in by
+  CSS instead of after hydration, and under reduced motion no animation waits on a delay.
+  The configurator loads a room when someone points at, focuses or touches its segment,
+  ahead of time only on a fast connection without Save-Data. On a local production build:
+  homepage LCP on the phone profile 1.1 s (5.0 s in the audit), no room or outlook fetched
+  while staying in the Studio, the configurator's first 15 s about 6.0 MB at Vercel's
+  compression (11.2 MB), axe clean everywhere but the statement's dimmed words (08). Not yet
+  on the test site.
 - **Accessibility and performance audit (2026-10-29).** `.scratch/a11y-perf/audit.md`,
   measured on the test site (`1ejmowgnl`) signed out. *Accessibility:* axe-core 4.14 (WCAG
   2.2 A/AA and best practice) on the homepage in de/en/es, `/konto`, `/anfrage`, a share
@@ -1321,14 +1334,12 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
 - No analytics/event tracking exists for configurator interactions.
 - The accessibility and performance audit (2026-10-29, `.scratch/a11y-perf/audit.md`)
-  left nine issues, none fixed yet (`.scratch/a11y-perf/issues/`): accessible names that
-  do not contain the visible label (logo, language switch, palette), the "100 °C"
-  counter's label, a skip link, the 404 title and a doubled logo stop; the homepage
-  headline that waits for JavaScript (LCP 5.0 s on a slow phone), the hero film's weight
-  (2.7 and 8.7 MB, also on slow connections), the configurator's room prefetch (5.25 MB of
-  its 11.2 MB in the first 15 s), heavy textures, and the budgets in CI. Budgets other than
-  the kitchen model's Asset Manifest are proposed there, not enforced; frame time and GPU
-  memory need a real device.
+  left nine issues (`.scratch/a11y-perf/issues/`); 01–04 and 06 are fixed (2026-10-30, see
+  Done). Open: the hero film's weight (2.7 and 8.7 MB, also on slow connections, 05), heavy
+  textures (the configurator's ~6 MB first 15 s are mostly the HDR, floor textures and a
+  PNG swatch, 07), the statement's dimmed contrast (08) and the budgets in CI (09). Budgets
+  other than the kitchen model's Asset Manifest are proposed there, not enforced; frame time
+  and GPU memory need a real device.
 - The browser smoke test walks one journey at desktop width, on a phone and on a phone held
   sideways (Done, 2026-10-29). The Edit Session, versions, photos, the account's other
   sections and the rendered picture are still checked by hand each slice.
@@ -1422,8 +1433,9 @@ Engineering:
   value shared by Preview and Production, which ADR 0011 rules out.
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS
   deployment, encryption at rest and credential rotation recorded.
-- Accessibility and performance: the audit is done (2026-10-29, see Done); its fixes and
-  the budgets in CI are `.scratch/a11y-perf/issues/` 01–09.
+- Accessibility and performance: the audit is done (2026-10-29) and issues 01–04 and 06
+  fixed (2026-10-30, see Done); 05, 07, 08 and the budgets in CI (09) remain in
+  `.scratch/a11y-perf/issues/`.
 - Account management, Slice A ([spec](.scratch/account-management/spec.md)) is done:
   A1 to A4 on 2026-10-23 (see Done). Slice B follows after launch (Later).
 

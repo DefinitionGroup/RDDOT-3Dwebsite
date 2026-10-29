@@ -41,6 +41,11 @@ type GlassSegmentsProps = {
   segments: Segment[];
   activeId: string;
   onChange?: (id: string) => void;
+  /**
+   * A segment is about to be chosen: the pointer is over it, it has focus or
+   * a finger is down on it. Lets what it opens start loading.
+   */
+  onIntent?: (id: string) => void;
   /** Shares the sliding highlight between instances. */
   layoutGroup: string;
   className?: string;
@@ -68,6 +73,7 @@ export function GlassSegments({
   className = "",
   layoutGroup,
   onChange,
+  onIntent,
   segments,
   size = "card",
   tone = "glass"
@@ -89,6 +95,7 @@ export function GlassSegments({
       <div aria-label={ariaLabel} className="contents" ref={groupRef} role="radiogroup">
         {segments.map((segment, index) => {
           const active = segment.id === activeId;
+          const intent = onIntent ? () => onIntent(segment.id) : undefined;
           return (
             <button
               aria-checked={active}
@@ -97,7 +104,10 @@ export function GlassSegments({
               }`}
               key={segment.id}
               onClick={onChange ? () => onChange(segment.id) : undefined}
+              onFocus={intent}
               onKeyDown={(event) => onKeyDown(event, index)}
+              onPointerDown={intent}
+              onPointerEnter={intent}
               role="radio"
               tabIndex={index === focusIndex ? 0 : -1}
               type="button"

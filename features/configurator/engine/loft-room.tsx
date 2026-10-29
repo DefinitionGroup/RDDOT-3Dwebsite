@@ -301,7 +301,12 @@ const MATERIAL_TUNING: MaterialTuning = {
   }
 };
 
-export function preloadLoftRoom() {
+/** What the Loft needs before it can be shown: its model and the outlook it opens on. */
+export function preloadLoftRoom(outlook: LoftOutlook) {
   useGLTF.preload(LOFT_ROOM_MODEL_PATH, ROOM_DRACO_PATH);
-  Object.values(OUTLOOKS).forEach((view) => useLoader.preload(TextureLoader, view.url));
+  preloadLoftOutlook(outlook);
+}
+
+export function preloadLoftOutlook(outlook: LoftOutlook) {
+  useLoader.preload(TextureLoader, OUTLOOKS[outlook].url);
 }

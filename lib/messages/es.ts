@@ -2,11 +2,12 @@ import type { Messages } from "./de";
 
 export const es = {
   header: {
-    home: "Inicio de rotpunkt Signature",
+    skipToContent: "Saltar al contenido",
+    home: "página de inicio",
     openMenu: "Abrir menú",
     closeMenu: "Cerrar menú",
     language: "Idioma",
-    currentLanguage: (name: string) => `Idioma: ${name}`
+    currentLanguage: (code: string, name: string) => `Idioma ${code}: ${name}`
   },
   preview: {
     exit: "Salir de la vista previa"
@@ -51,6 +52,7 @@ export const es = {
     sharedDescription: "Vista de solo lectura de un estado de cocina compartido."
   },
   notFound: {
+    pageTitle: "Página no encontrada",
     title: "Esta página *no* existe.",
     body: "Puede que se haya trasladado o que el enlace ya no sea válido.",
     home: "Ir a la página de inicio"
@@ -170,7 +172,7 @@ export const es = {
   palette: {
     hint: "Arrastre un elemento a la escena: se coloca a la izquierda o a la derecha de la línea. Al tocarlo se añade a la derecha.",
     label: "Elementos",
-    add: (label: string) => `Añadir ${label}`
+    add: (label: string, width: string) => `Añadir ${label} ${width}`
   },
   materialOverlay: {
     label: "Material",

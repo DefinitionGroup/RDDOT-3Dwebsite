@@ -127,7 +127,8 @@ export default async function AccountPage({ params: routeParams, searchParams }:
           className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.25)_0%,rgba(0,0,0,0.05)_40%,rgba(0,0,0,0.82)_100%)]"
         />
         <div className="absolute inset-x-0 bottom-0 p-5 sm:p-10 lg:p-14">
-          <BrandLogo href={localizePath(locale, "/")} label={messages.header.home} />
+          {/* The header beside it holds the home link; this is the brand, not a second Tab stop. */}
+          <BrandLogo href={null} />
           <p className="m-0 mt-5 max-w-[34ch] text-body text-graphite">{messages.account.intro}</p>
         </div>
       </section>

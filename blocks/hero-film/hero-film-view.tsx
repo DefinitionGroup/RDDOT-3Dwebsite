@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Emphasized } from "@/components/design-system/emphasized";
 import { GlassBadge } from "@/components/design-system/glass";
 import { Pill } from "@/components/design-system/pill";
-import { DURATION, REVEAL_RISE, SIGNATURE_EASE, STAGGER } from "@/lib/motion";
+import { SIGNATURE_EASE, STAGGER } from "@/lib/motion";
 
 type FullscreenVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void };
 
@@ -56,7 +56,8 @@ function PlayCircle() {
  * the page fades in from black once the first frame is there. People who
  * asked for less motion get the still, and the film only on request. A
  * round control beside the film button stops and restarts the loop, as a
- * moving picture that runs on its own must allow.
+ * moving picture that runs on its own must allow. The words rise in by CSS,
+ * so they paint with the page instead of waiting for it to hydrate.
  */
 export function HeroFilmView({
   anchor,
@@ -106,11 +107,7 @@ export function HeroFilmView({
     }
   }, []);
 
-  const rise = (index: number) => ({
-    initial: { opacity: 0, y: REVEAL_RISE },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: DURATION.reveal, ease: SIGNATURE_EASE, delay: 0.2 + index * STAGGER }
-  });
+  const rise = (index: number) => ({ animationDelay: `${0.2 + index * STAGGER}s` });
 
   return (
     <section
@@ -151,22 +148,22 @@ export function HeroFilmView({
       <div className="signature-container absolute inset-x-0 bottom-8 flex items-end justify-between gap-16 md:bottom-[72px]">
         <div className="flex max-w-[860px] flex-col gap-5 md:gap-7">
           {eyebrow && (
-            <motion.p
-              className="m-0 font-label text-label uppercase tracking-label text-graphite"
-              {...rise(0)}
+            <p
+              className="m-0 animate-soft-reveal font-label text-label uppercase tracking-label text-graphite"
+              style={rise(0)}
             >
               {eyebrow}
-            </motion.p>
+            </p>
           )}
-          <motion.h1 className="m-0 text-balance text-display" {...rise(0)}>
+          <h1 className="m-0 animate-soft-reveal text-balance text-display" style={rise(0)}>
             <Emphasized text={headline} />
-          </motion.h1>
+          </h1>
           {summary && (
-            <motion.p className="m-0 max-w-[42ch] text-body text-graphite md:text-lead" {...rise(1)}>
+            <p className="m-0 max-w-[42ch] animate-soft-reveal text-body text-graphite md:text-lead" style={rise(1)}>
               {summary}
-            </motion.p>
+            </p>
           )}
-          <motion.div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" {...rise(2)}>
+          <div className="flex animate-soft-reveal flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" style={rise(2)}>
             {primaryCta && (
               <Pill className="w-full sm:w-auto" href={primaryCta.href}>
                 {primaryCta.label}
@@ -193,12 +190,12 @@ export function HeroFilmView({
                 {playing ? <PauseGlyph /> : <PlayGlyph />}
               </button>
             </div>
-          </motion.div>
+          </div>
         </div>
         {badge && (
-          <motion.div className="hidden md:block" {...rise(3)}>
+          <div className="hidden animate-soft-reveal md:block" style={rise(3)}>
             <GlassBadge className="h-9 px-4">{badge}</GlassBadge>
-          </motion.div>
+          </div>
         )}
       </div>
     </section>

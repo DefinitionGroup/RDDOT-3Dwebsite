@@ -6,7 +6,8 @@ import { useEffect, useRef } from "react";
 /**
  * "Von 0 auf 100 °C": the number climbs on a slow spring once it is in
  * view. The value lives in a MotionValue and is written straight to the
- * text node, so nothing re-renders per frame.
+ * text node, so nothing re-renders per frame. Assistive technology reads the
+ * final value once, in the page's language, instead of the climbing digits.
  */
 export function TemperatureCounter({ className = "" }: { className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -25,7 +26,8 @@ export function TemperatureCounter({ className = "" }: { className?: string }) {
   }, [inView, reduceMotion, value]);
 
   return (
-    <span aria-label="100 Grad" className={`tnum ${className}`} ref={ref}>
+    <span className={`tnum ${className}`} ref={ref}>
+      <span className="sr-only">100 °C</span>
       <motion.span aria-hidden="true">{rounded}</motion.span>
       <span aria-hidden="true"> °C</span>
     </span>

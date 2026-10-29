@@ -1,6 +1,6 @@
 # Accessible names that contain the visible label
 
-Status: ready-for-agent
+Status: done (2026-10-30)
 Audit: A1 (WCAG 2.5.3 Label in Name, level A)
 
 ## Scope
@@ -21,3 +21,12 @@ Audit: A1 (WCAG 2.5.3 Label in Name, level A)
 
 axe's `label-content-name-mismatch` reports nothing on the pages and configurator states
 of the audit, in de, en and es, and the smoke test still passes.
+
+## Done
+
+The wordmark is one image named "rotpunkt" and the logo link takes its name from its
+content: "rotpunkt Signature" plus visually hidden "Startseite" / "home page" / "página
+de inicio" (`header.home` now holds only that word). The language switch reads "Sprache
+DE: Deutsch" (axe drops parentheses, so not "(DE)"); the palette "Hochschrank 62 cm
+hinzufügen", with a space between label and width so the visible text reads as two words.
+axe on a local production build: no `label-content-name-mismatch` anywhere.

@@ -10,7 +10,7 @@ import { DURATION, SIGNATURE_EASE } from "@/lib/motion";
 type LanguageSwitchProps = {
   links: LanguageLink[];
   /** Interface words in the page's language; by default the header's own. */
-  labels?: { nav: string; current: (name: string) => string };
+  labels?: { nav: string; current: (code: string, name: string) => string };
   /**
    * `bar`: the current language as a small button in the header bar, the
    * list opening below it. `sheet`: larger, in the phone menu, the list
@@ -87,7 +87,7 @@ export function LanguageSwitch({ className = "", labels: labelsProp, links, onNa
       <button
         aria-controls={listId}
         aria-expanded={open}
-        aria-label={labels.current(LOCALE_TITLES[current.locale])}
+        aria-label={labels.current(current.locale.toUpperCase(), LOCALE_TITLES[current.locale])}
         className={`inline-flex items-center gap-2 leading-none text-ink transition-colors duration-state ease-signature hover:text-porcelain ${
           sheet
             ? "min-h-12 rounded-pill border border-hairline px-5 text-body"

@@ -1,6 +1,6 @@
 # The "100 °C" counter's label
 
-Status: ready-for-agent
+Status: done (2026-10-30)
 Audit: A2 (WCAG 4.1.2, level A)
 
 ## Scope
@@ -14,3 +14,8 @@ Grad" in each language.
 ## Done when
 
 axe's `aria-prohibited-attr` reports nothing on the homepage in de, en and es.
+
+## Done
+
+The digits and the unit are hidden from assistive technology; a visually hidden "100 °C"
+gives the final value, which screen readers speak in the page's language.

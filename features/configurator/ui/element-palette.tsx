@@ -51,11 +51,12 @@ export function ElementPalette({ canAdd, locale, onAdd, onDragStart }: ElementPa
         {ELEMENT_KEYS.map((key) => {
           const entry = findWallCatalogEntry(RDTD_KITCHEN_PRODUCT_V2, key);
           const label = getLocalizedLabel(entry.label, locale);
+          const width = `${Math.round(entry.widthM * 100)} cm`;
           const enabled = canAdd(key);
           return (
             <li key={key}>
               <button
-                aria-label={t.add(label)}
+                aria-label={t.add(label, width)}
                 className="flex w-full cursor-grab touch-none select-none flex-col items-center gap-2.5 rounded-card border border-hairline px-2 py-3 text-center transition-colors duration-state ease-signature hover:border-ink active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-35"
                 disabled={!enabled}
                 onClick={() => onAdd(key)}
@@ -67,10 +68,8 @@ export function ElementPalette({ canAdd, locale, onAdd, onDragStart }: ElementPa
               >
                 <Glyph moduleKey={key} widthM={entry.widthM} />
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-caption font-label leading-tight text-ink">{label}</span>
-                  <span className="tnum text-[0.6875rem] text-graphite">
-                    {Math.round(entry.widthM * 100)} cm
-                  </span>
+                  <span className="text-caption font-label leading-tight text-ink">{label}</span>{" "}
+                  <span className="tnum text-[0.6875rem] text-graphite">{width}</span>
                 </span>
               </button>
             </li>

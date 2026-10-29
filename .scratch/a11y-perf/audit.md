@@ -1,6 +1,6 @@
 # Accessibility and performance audit (2026-10-29)
 
-Status: findings filed as issues 01–09; nothing fixed yet
+Status: findings filed as issues 01–09; 01–04 and 06 fixed on 2026-10-30, 05, 07, 08 and 09 open
 Scope: the Roadmap M2 item "Accessibility audit and performance budgets" (STATUS.md)
 Measured on: the test site `rddot-3-dwebsite-1ejmowgnl` (built from `1fe6086`), signed out
 

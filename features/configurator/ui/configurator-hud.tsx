@@ -105,10 +105,13 @@ export function StageSegments({
 
 export function ViewSegments({
   active,
+  onIntent,
   onSelect,
   size
 }: {
   active: VisualizationMode;
+  /** A view is about to be chosen; its room can start loading. */
+  onIntent?: (mode: VisualizationMode) => void;
   onSelect: (mode: VisualizationMode) => void;
   size: "hud" | "compact";
 }) {
@@ -119,6 +122,7 @@ export function ViewSegments({
       ariaLabel={t.label}
       layoutGroup={`view-${size}`}
       onChange={(id) => onSelect(id as VisualizationMode)}
+      onIntent={onIntent && ((id) => onIntent(id as VisualizationMode))}
       segments={VISUALIZATIONS.map((id) => ({ id, label: t[id] }))}
       size={size}
       tone="solid"
@@ -129,10 +133,13 @@ export function ViewSegments({
 /** The Loft's view out of its windows: Berlin's street or a skyline at dusk. */
 export function OutlookSegments({
   active,
+  onIntent,
   onSelect,
   size
 }: {
   active: LoftOutlook;
+  /** An outlook is about to be chosen; its picture can start loading. */
+  onIntent?: (outlook: LoftOutlook) => void;
   onSelect: (outlook: LoftOutlook) => void;
   size: "card" | "compact";
 }) {
@@ -143,6 +150,7 @@ export function OutlookSegments({
       ariaLabel={t.label}
       layoutGroup={`outlook-${size}`}
       onChange={(id) => onSelect(id as LoftOutlook)}
+      onIntent={onIntent && ((id) => onIntent(id as LoftOutlook))}
       segments={LOFT_OUTLOOKS.map((id) => ({ id, label: t[id] }))}
       size={size}
       tone="solid"

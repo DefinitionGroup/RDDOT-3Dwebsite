@@ -9,7 +9,7 @@ import { Label } from "@/components/design-system/label";
 import { LanguageSwitch } from "@/components/design-system/language-switch";
 import { Pill } from "@/components/design-system/pill";
 import { preloadApartmentRoom } from "@/features/configurator/engine/apartment-room";
-import { preloadLoftRoom } from "@/features/configurator/engine/loft-room";
+import { preloadLoftOutlook, preloadLoftRoom } from "@/features/configurator/engine/loft-room";
 import { ConfiguratorCanvas } from "@/features/configurator/engine/configurator-canvas";
 import type {
   EditTarget,
@@ -274,16 +274,28 @@ export function ConfiguratorShell({
     window.history.replaceState(null, "", localizePath(locale, configurePath));
   }, [configurePath, locale, sharedView]);
 
+  // A room loads when someone reaches for it: the pointer over its segment,
+  // focus on it or a finger down. Only on a fast connection without Save-Data
+  // do both load ahead, once the kitchen has loaded and the browser is idle;
+  // elsewhere they would compete with the kitchen's own files.
+  const prefetchView = (mode: VisualizationMode) => {
+    if (mode === "apartment") preloadApartmentRoom();
+    if (mode === "loft") preloadLoftRoom(outlook);
+  };
+  const kitchenLoaded = useProgress((state) => !state.active && state.loaded > 0);
+  const roomsAhead = useRef(false);
   useEffect(() => {
-    const roomsTimer = window.setTimeout(() => {
-      preloadApartmentRoom();
-      preloadLoftRoom();
-    }, 1200);
-
-    return () => {
-      window.clearTimeout(roomsTimer);
-    };
-  }, []);
+    if (!kitchenLoaded || roomsAhead.current || !isFastConnection()) return;
+    const idle = window.requestIdleCallback(
+      () => {
+        roomsAhead.current = true;
+        preloadApartmentRoom();
+        preloadLoftRoom(outlook);
+      },
+      { timeout: 4000 }
+    );
+    return () => window.cancelIdleCallback(idle);
+  }, [kitchenLoaded, outlook]);
 
   // A Photo Job survives the browser (PLAN.md Phase 5): if this Project has one
   // in flight when the page loads, pick it up again instead of leaving the
@@ -945,7 +957,7 @@ export function ConfiguratorShell({
             )
           ) : (
             <div className="pointer-events-auto">
-              <ViewSegments active={visualization} onSelect={setVisualization} size="compact" />
+              <ViewSegments active={visualization} onIntent={prefetchView} onSelect={setVisualization} size="compact" />
             </div>
           )}
           {isDesktop && languages.length > 1 && (
@@ -961,7 +973,7 @@ export function ConfiguratorShell({
       {isDesktop && (
         <div className="pointer-events-none absolute left-10 top-24 z-20 flex flex-col items-end gap-2">
           <div className="pointer-events-auto">
-            <ViewSegments active={visualization} onSelect={setVisualization} size="hud" />
+            <ViewSegments active={visualization} onIntent={prefetchView} onSelect={setVisualization} size="hud" />
           </div>
           <OutlookControl
             active={outlook}
@@ -977,7 +989,7 @@ export function ConfiguratorShell({
       {isSideways && !editSession && (
         <>
           <div className="pointer-events-auto absolute left-3 top-[4.5rem] z-20" data-covers="top">
-            <ViewSegments active={visualization} onSelect={setVisualization} size="compact" />
+            <ViewSegments active={visualization} onIntent={prefetchView} onSelect={setVisualization} size="compact" />
           </div>
           <div className="pointer-events-none absolute left-3 top-[8.25rem] z-20">
             <OutlookControl
@@ -1217,11 +1229,20 @@ function OutlookControl({
           initial={{ opacity: 0, y: -6 }}
           transition={{ duration: DURATION.accordion, ease: SIGNATURE_EASE }}
         >
-          <OutlookSegments active={active} onSelect={onSelect} size={size} />
+          <OutlookSegments active={active} onIntent={preloadLoftOutlook} onSelect={onSelect} size={size} />
         </motion.div>
       )}
     </AnimatePresence>
   );
+}
+
+/**
+ * Chromium's estimate of the connection: at least 5 Mbit/s and no Save-Data.
+ * Browsers that do not say count as slow, and load a room only on intent.
+ */
+function isFastConnection() {
+  const connection = (navigator as Navigator & { connection?: { downlink?: number; saveData?: boolean } }).connection;
+  return Boolean(connection && !connection.saveData && (connection.downlink ?? 0) >= 5 && "requestIdleCallback" in window);
 }
 
 function VisualizationPreloader({ active }: { active: boolean }) {

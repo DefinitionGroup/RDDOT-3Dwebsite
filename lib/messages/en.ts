@@ -2,11 +2,12 @@ import type { Messages } from "./de";
 
 export const en = {
   header: {
-    home: "rotpunkt Signature home",
+    skipToContent: "Skip to content",
+    home: "home page",
     openMenu: "Open menu",
     closeMenu: "Close menu",
     language: "Language",
-    currentLanguage: (name: string) => `Language: ${name}`
+    currentLanguage: (code: string, name: string) => `Language ${code}: ${name}`
   },
   preview: {
     exit: "Exit preview"
@@ -51,6 +52,7 @@ export const en = {
     sharedDescription: "Read-only view of a shared kitchen state."
   },
   notFound: {
+    pageTitle: "Page not found",
     title: "This page does *not* exist.",
     body: "It may have moved, or the link is no longer valid.",
     home: "To the homepage"
@@ -170,7 +172,7 @@ export const en = {
   palette: {
     hint: "Drag an element into the scene — it joins the run on the left or the right. A tap adds it on the right.",
     label: "Elements",
-    add: (label: string) => `Add ${label}`
+    add: (label: string, width: string) => `Add ${label} ${width}`
   },
   materialOverlay: {
     label: "Material",
