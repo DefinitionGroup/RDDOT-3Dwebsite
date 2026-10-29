@@ -840,7 +840,26 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-fbcowjqpm`, built from `4dc7cf7` on 2026-10-28, live about
+- Production: `rddot-3-dwebsite-d9gm2g4tp`, built from `24157d1` on 2026-10-29, live about
+  90 s after `redesign/devstart` was fast-forwarded from `4dc7cf7` and pushed; it brings the
+  sign-in fixes: the code limit per email address, sign-in sent before the page has loaded,
+  and the request draft kept through a new sign-in (the `sign_in_code_limit` table was
+  created in the shared development database before the push). Checked right after, signed
+  out: the avatar, profile, export, quote-request and photo endpoints answer 401
+  `session-expired` with no redirect; `/`, `/konto`, `/anfrage` and `/configure` answer 200
+  with noindex; `/konto` in German, English and Spanish serves the sign-in forms as React
+  form actions with the replay script; at 390 px with the script chunks held back, a click
+  on "Code anfordern" stays on `/konto?next=%2Fanfrage` and is queued for replay, with every
+  `/api/auth/` call blocked in the browser; `/konto` asks for sign-in at 1440 and 390 px; the
+  configurator renders at both widths and picking the Fenix front changes the picture and
+  the URL; nothing past the edge, no console errors. One code request reached the site by
+  mistake: the first run of the early-click check held only `/_next/static/chunks/`, but
+  production serves `/_next/static/immutable/chunks/`, so the page hydrated and sent a code
+  for `replay-check@example.invalid`. The capture adapter kept it (no email, no account);
+  its row in `sign_in_code_limit` counted one request, so the per-address limit runs on the
+  live deployment. The code, the capture and the counter expire on their own. The draft
+  restore needs a signed-in account and was checked on the dev server only.
+- The deployment before, `rddot-3-dwebsite-fbcowjqpm`, was built from `4dc7cf7` on 2026-10-28, live about
   90 s after `redesign/devstart` was fast-forwarded from `6cf216a` and pushed; it brings the
   configurator's framing on phones and tablets (no database change). Checked right after,
   signed out, in headless Chrome on the real GPU: Studio, Appartement and Loft in Raum,
