@@ -120,6 +120,20 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Accessibility and performance audit (2026-10-29).** `.scratch/a11y-perf/audit.md`,
+  measured on the test site (`1ejmowgnl`) signed out. *Accessibility:* axe-core 4.14 (WCAG
+  2.2 A/AA and best practice) on the homepage in de/en/es, `/konto`, `/anfrage`, a share
+  link, the 404 page and the configurator with its photo dialog, material overlay and Edit
+  Session, at desktop and phone width and sideways; landmarks, headings, `lang`, titles,
+  Tab order and focus style, and reflow at 320 px by hand. Sound at that level (one `h1`,
+  `main`, focus ring on every stop, nothing past the edge at 320 px); four small fixable
+  defects and one design trade-off. *Performance:* Chrome on the real GPU, the phone at
+  Lighthouse's mobile profile (slow 4G, CPU 4×): homepage LCP 5.0 s on the phone (the
+  headline waits for hydration) and 1.3 s on desktop, CLS ≤ 0.03 everywhere, the hero film
+  2.7 / 8.7 MB, the configurator 11.2 MB in its first 15 s of which 5.25 MB are the room
+  prefetch, blocked main thread 1.1 s on the phone. Nine issues with a proposed budget table;
+  05 (the film on slow connections) and 08 (the statement's dimmed contrast) need a decision
+  from Martin.
 - **The configurator on a phone held sideways (2026-10-29).** At 844 × 390 px the upright
   phone's two control rows, the camera row and the sheet (45 % of the height) left the
   kitchen a 30 px band. A phone held sideways (`(orientation: landscape) and (max-height:
@@ -1306,12 +1320,15 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders (CI's scene test checks that the scene builds, not what it draws), no engine-upgrade guard for historical manifests, and the Appartement and Loft scenes have no manifest of their own (both are placeholders awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
 - No analytics/event tracking exists for configurator interactions.
-- No accessibility audit has been formalized.
-- Performance budgets exist only for the kitchen model (the Asset Manifest's bytes,
-  triangles and draw calls). Nothing measures the whole experience: device profiles, frame
-  time, GPU memory, Core Web Vitals, the hero film (8.3 MB and 2.6 MB files). The
-  configurator prefetches both rooms and both Loft outlooks 1.2 s after it opens
-  (`configurator-shell.tsx`), about 5.4 MB that a Studio-only visit never uses.
+- The accessibility and performance audit (2026-10-29, `.scratch/a11y-perf/audit.md`)
+  left nine issues, none fixed yet (`.scratch/a11y-perf/issues/`): accessible names that
+  do not contain the visible label (logo, language switch, palette), the "100 °C"
+  counter's label, a skip link, the 404 title and a doubled logo stop; the homepage
+  headline that waits for JavaScript (LCP 5.0 s on a slow phone), the hero film's weight
+  (2.7 and 8.7 MB, also on slow connections), the configurator's room prefetch (5.25 MB of
+  its 11.2 MB in the first 15 s), heavy textures, and the budgets in CI. Budgets other than
+  the kitchen model's Asset Manifest are proposed there, not enforced; frame time and GPU
+  memory need a real device.
 - The browser smoke test walks one journey at desktop width, on a phone and on a phone held
   sideways (Done, 2026-10-29). The Edit Session, versions, photos, the account's other
   sections and the rendered picture are still checked by hand each slice.
@@ -1405,7 +1422,8 @@ Engineering:
   value shared by Preview and Production, which ADR 0011 rules out.
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS
   deployment, encryption at rest and credential rotation recorded.
-- Accessibility audit and performance budgets for the 3D scene and the homepage film.
+- Accessibility and performance: the audit is done (2026-10-29, see Done); its fixes and
+  the budgets in CI are `.scratch/a11y-perf/issues/` 01–09.
 - Account management, Slice A ([spec](.scratch/account-management/spec.md)) is done:
   A1 to A4 on 2026-10-23 (see Done). Slice B follows after launch (Later).
 
