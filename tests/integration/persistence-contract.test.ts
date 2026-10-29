@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { sql } from "kysely";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
 import { createAuth } from "@/lib/server/auth/create-auth";
@@ -473,6 +474,62 @@ describe("PostgreSQL persistence contract", () => {
         supportedProductDefinitionVersions: ["signature-line@1"]
       })
     ).resolves.toEqual({ kind: "conflict", currentVersion: 3 });
+  });
+
+  it("pages past versions stamped within the same millisecond", async () => {
+    const identity = createPostgresIdentityAdapter(context.database);
+    const projects = createPostgresProjectModule(context.database);
+    const ownerId = await identity.resolveCustomerAccount({
+      provider: "better-auth",
+      providerSubject: `auth-user-${crypto.randomUUID()}`
+    });
+    const workspace = await projects.createProject({
+      ownerId,
+      idempotencyKey: `create-${crypto.randomUUID()}`,
+      name: "Mikrosekundenküche",
+      configuration: initialConfiguration,
+      productDefinitionVersion: "signature-line@1"
+    });
+    // Newest first, all three inside one millisecond: a cursor that only
+    // keeps milliseconds would end the list after the first.
+    const stamps = [
+      "2026-01-15T12:00:00.123900Z",
+      "2026-01-15T12:00:00.123500Z",
+      "2026-01-15T12:00:00.123100Z"
+    ];
+    const revisionIds = stamps.map(() => crypto.randomUUID());
+    for (const [index, id] of revisionIds.entries()) {
+      await context.database
+        .withSchema("app")
+        .insertInto("configurationRevision")
+        .values({
+          id,
+          projectId: workspace.id,
+          normalizedConfiguration: initialConfiguration,
+          configurationHash: String(index).repeat(64),
+          schemaVersion: 1,
+          productDefinitionVersion: "signature-line@1",
+          displaySnapshot: {},
+          trigger: "version-save",
+          label: `Stand ${index + 1}`,
+          createdAt: sql<Date>`${stamps[index]}::timestamptz`
+        })
+        .execute();
+    }
+
+    const seen: string[] = [];
+    let cursor: { createdAt: Date; id: string } | null = null;
+    do {
+      const page = await projects.listConfigurationRevisions({
+        ownerId,
+        projectId: workspace.id,
+        limit: 1,
+        cursor: cursor ?? undefined
+      });
+      seen.push(...page.items.map((revision) => revision.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+    expect(seen).toEqual(revisionIds);
   });
 
   it("restores the Product Definition identity even when selections match", async () => {

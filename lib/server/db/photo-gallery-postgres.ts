@@ -129,15 +129,25 @@ export function createPostgresPhotoGalleryModule(
     }
 
     if (cursor) {
-      query = query.where((expression) =>
-        expression.or([
-          expression("generatedPhoto.createdAt", "<", cursor.createdAt),
+      query = query.where((expression) => {
+        // The database stamps to the microsecond and the cursor's Date keeps
+        // milliseconds, so the page continues from the cursor photo's own
+        // stamp; the Date stands in only once that photo is gone.
+        const cursorCreatedAt = expression.fn.coalesce(
+          expression
+            .selectFrom("generatedPhoto as cursorPhoto")
+            .select("cursorPhoto.createdAt")
+            .where("cursorPhoto.id", "=", cursor.id),
+          expression.val(cursor.createdAt)
+        );
+        return expression.or([
+          expression("generatedPhoto.createdAt", "<", cursorCreatedAt),
           expression.and([
-            expression("generatedPhoto.createdAt", "=", cursor.createdAt),
+            expression("generatedPhoto.createdAt", "=", cursorCreatedAt),
             expression("generatedPhoto.id", "<", cursor.id)
           ])
-        ])
-      );
+        ]);
+      });
     }
 
     let countQuery = ownedPhotos(ownerId).select((expression) =>

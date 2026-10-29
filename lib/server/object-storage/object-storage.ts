@@ -29,14 +29,25 @@ export function readObjectStorageConfiguration(): S3ObjectStorageConfiguration {
   };
 }
 
-/**
- * Resolved lazily so that a deployment without storage configured fails when
- * storage is first used, not at module load of every route that imports a
- * neighbour. Matches the fail-closed posture of the email provider (ADR 0010).
- */
-export function getObjectStorage(): ObjectStorageModule {
+function configuredObjectStorage(): ObjectStorageModule {
   globalThis.__rddotObjectStorage ??= createS3ObjectStorage(
     readObjectStorageConfiguration()
   );
   return globalThis.__rddotObjectStorage;
+}
+
+/**
+ * Resolved lazily so that a deployment without storage configured fails when
+ * storage is first used, not when a module that may use it is built: the
+ * account page builds the avatar and gallery modules for accounts that often
+ * have no photo to read. Matches the fail-closed posture of the email provider
+ * (ADR 0010).
+ */
+export function getObjectStorage(): ObjectStorageModule {
+  return {
+    presignUpload: async (input) => configuredObjectStorage().presignUpload(input),
+    presignDownload: async (input) => configuredObjectStorage().presignDownload(input),
+    statObject: async (key) => configuredObjectStorage().statObject(key),
+    deleteObject: async (key) => configuredObjectStorage().deleteObject(key)
+  };
 }

@@ -385,19 +385,25 @@ export function createPostgresProjectModule(
         .where("project.lifecycle", "!=", "trashed");
 
       if (cursor) {
-        query = query.where((expression) =>
-          expression.or([
-            expression("configurationRevision.createdAt", "<", cursor.createdAt),
+        query = query.where((expression) => {
+          // The database stamps to the microsecond and the cursor's Date keeps
+          // milliseconds, so the page continues from the cursor revision's own
+          // stamp; the Date stands in only once that revision is gone.
+          const cursorCreatedAt = expression.fn.coalesce(
+            expression
+              .selectFrom("configurationRevision as cursorRevision")
+              .select("cursorRevision.createdAt")
+              .where("cursorRevision.id", "=", cursor.id),
+            expression.val(cursor.createdAt)
+          );
+          return expression.or([
+            expression("configurationRevision.createdAt", "<", cursorCreatedAt),
             expression.and([
-              expression(
-                "configurationRevision.createdAt",
-                "=",
-                cursor.createdAt
-              ),
+              expression("configurationRevision.createdAt", "=", cursorCreatedAt),
               expression("configurationRevision.id", "<", cursor.id)
             ])
-          ])
-        );
+          ]);
+        });
       }
 
       const [rows, countRow] = await Promise.all([

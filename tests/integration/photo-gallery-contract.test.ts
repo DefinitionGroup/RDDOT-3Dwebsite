@@ -1,5 +1,7 @@
+import { sql } from "kysely";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ObjectStorageModule } from "@/features/object-storage/object-storage-module";
+import type { GalleryPage } from "@/features/photo-gallery/photo-gallery-module";
 import { createPostgresPhotoGalleryModule } from "@/lib/server/db/photo-gallery-postgres";
 import { STORAGE_DELETION_TOPIC } from "@/lib/server/object-storage/storage-deletion-worker";
 import {
@@ -274,5 +276,33 @@ describe("photo gallery contract", () => {
     const seen = [...first.items, ...second.items, ...third.items].map((p) => p.id);
     expect(new Set(seen).size).toBe(5);
     expect(first.totalCount).toBe(5);
+  });
+
+  it("pages past photos stamped within the same millisecond", async () => {
+    const { accountId, projects } = await seedAccount(["A", "B", "C"]);
+    // Newest first, all three inside one millisecond: a cursor that only
+    // keeps milliseconds would end the gallery after the first.
+    const stamps = [
+      "2026-01-15T12:00:00.123900Z",
+      "2026-01-15T12:00:00.123500Z",
+      "2026-01-15T12:00:00.123100Z"
+    ];
+    for (const [index, project] of projects.entries()) {
+      await context.database
+        .withSchema("app")
+        .updateTable("generatedPhoto")
+        .set({ createdAt: sql<Date>`${stamps[index]}::timestamptz` })
+        .where("id", "=", project.photoId)
+        .execute();
+    }
+
+    const seen: string[] = [];
+    let cursor: GalleryPage["nextCursor"] = null;
+    do {
+      const page = await gallery().listForAccount({ ownerId: accountId, limit: 1, cursor });
+      seen.push(...page.items.map((photo) => photo.id));
+      cursor = page.nextCursor;
+    } while (cursor);
+    expect(seen).toEqual(projects.map((project) => project.photoId));
   });
 });

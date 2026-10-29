@@ -120,6 +120,26 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Paging past items made in the same millisecond; an account page without storage
+  (2026-10-29).** *Paging:* the photo gallery and the version list page newest first by
+  creation time and id, but the cursor's Date keeps milliseconds while the database stamps
+  to the microsecond, so an older item made in the same millisecond as a page's last one
+  fell between the pages (the gallery's paging test hit it in two of nine local runs). The
+  next page now starts from the cursor item's own stamp, read back by its id; the cursor's
+  Date stands in only once that item is gone, so the URL's cursor is unchanged and the
+  indexes still serve. The account's request list was never affected: a Quote Request's
+  time comes from the application's clock, in whole milliseconds. *Storage:*
+  `getObjectStorage()` read its configuration when a module took it rather than when one
+  used it, so a signed-in `/konto` without the `OBJECT_STORAGE_*` variables answered with a
+  server error even for an account without a photo, and the gallery logged "Gallery
+  unavailable" on every visit. It now reads them on first use, and CI's smoke job runs
+  without them, so a page that needs no photo cannot come to need storage unnoticed.
+  Checked: lint, types, 190/190 unit tests (new: storage read on first use, presigning once
+  configured), the database suite on a new database (93 passed, 1 skipped; new: three photos
+  and three versions within one millisecond page in order, failing on the old code), the
+  gallery suite ten times in a row, and the smoke journey against a production build without
+  any storage variable (sign-in, the signed-in account, save, share, request; no storage
+  error in the server log).
 - **CI on every push and a browser smoke test (2026-10-29).** `.github/workflows/ci.yml`
   runs three jobs on every push and pull request: lint, types and unit tests; the
   database contract tests, each file against its own Postgres 17 container; and the
@@ -146,8 +166,8 @@ built. Details for each line are under Done, Known Defects and Missing.
   (dbmate asks for TLS unless the URL says `sslmode=disable`), the pool test read
   `sslmode=disable` as a request for TLS, and three storage-sweep tests swept in the same
   millisecond as the deletion, before its intent was due (the database stamps to the
-  microsecond; a remote database's latency had hidden it). It also found a paging defect
-  (Known Defects). The first run on GitHub (d419e66) passed the database and smoke jobs
+  microsecond; a remote database's latency had hidden it). It also found a paging defect,
+  fixed the same day (see Done). The first run on GitHub (d419e66) passed the database and smoke jobs
   but failed the type check: `PageProps` and `LayoutProps` are generated into `.next`,
   which only the local checkout had, so the checks job now runs `next typegen` first.
   Green on GitHub since 5e17f5c (run 40918698942): checks 42 s, database 69 s (88 passed,
@@ -806,8 +826,8 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean; on a fresh clone run `pnpm exec next typegen` first
-pnpm test                                  # 188/188
-pnpm test:db                               # 91 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
+pnpm test                                  # 190/190
+pnpm test:db                               # 93 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 pnpm test:smoke                            # 2 passed; needs a build that runs on port 3100 (below)
 ```
@@ -1054,15 +1074,6 @@ configuration at sign-in, is fixed (Done, 2026-10-22).
   kitchen is drawn whole but small into the fifth of the height the framing always keeps,
   where before 2026-10-28 it showed cropped large. The landscape layout needs its own
   arrangement. The upright phone framing is fixed (Done, 2026-10-28).
-- **Paging can skip an item created in the same millisecond as the page's last one**
-  (found 2026-10-29 by the database tests on a local database). The photo gallery, the
-  version list and the account's request list page by creation time and id, but the
-  cursor carries the time to the millisecond while the database keeps microseconds, so an
-  older item stamped within the same millisecond as the last item shown falls between the
-  pages (`photo-gallery-postgres.ts`, `project-postgres.ts`,
-  `quote-requests-postgres.ts`). Rare in use, since photos, versions and requests come
-  seconds apart; the gallery's pagination test hit it in two of nine runs on new local
-  databases, so the CI database job can fail on it until it is fixed.
 - **The hero film has no pause control**; "Den Film ansehen" requests fullscreen on the same
   muted loop. Reduced motion is honoured, but that does not replace a control.
 - **The request consent has no privacy-policy link** (waits on the Datenschutz page).
@@ -1109,10 +1120,6 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 
 ## Known Warnings
 
-- The signed-in account page needs the `OBJECT_STORAGE_*` variables even for an account
-  without a photo: `getCustomerAvatars()` builds the storage client before it reads the
-  avatar row, and without them `/konto` answers with a server error. Every real deployment
-  sets them; the CI smoke job sets placeholders that nothing contacts (2026-10-29).
 - Better Auth 1.6.27 prunes its rate-limit rows older than its default window (60 s)
   whenever some row's window resets, custom rules included: a client address's
   ten-minute count of code requests and five-minute count of sign-ins can start over
@@ -1177,10 +1184,9 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   `features/configurator/adapters/sanity.ts` is imported nowhere and still waits to be
   removed (spec §4).
 - No real product catalog, SKU model, pricing engine, cart, order, CRM, or payment integration exists yet. Quote Requests are recorded and listed but nobody is notified: the `quote-request.submitted` outbox has no consumer until the email provider lands (ADR 0010). The "selected photo" named in CONTEXT.md is not yet captured on a Quote Request, and the account list shows the first ten without a load-more.
-- The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders or browser render smoke test in CI, no engine-upgrade guard for historical manifests, and the Appartement and Loft scenes have no manifest of their own (both are placeholders awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
+- The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders (CI's scene test checks that the scene builds, not what it draws), no engine-upgrade guard for historical manifests, and the Appartement and Loft scenes have no manifest of their own (both are placeholders awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
 - No analytics/event tracking exists for configurator interactions.
-- Project Archive/Trash/lifecycle restoration is not implemented yet. The sharing persistence boundary already treats archived links as available and trashed links as unavailable.
 - No accessibility audit has been formalized.
 - Performance budgets exist only for the kitchen model (the Asset Manifest's bytes,
   triangles and draw calls). Nothing measures the whole experience: device profiles, frame

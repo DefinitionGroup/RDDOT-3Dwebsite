@@ -83,13 +83,8 @@ jobs:
       # The sign-in code shows on screen; the build refuses this without the second flag.
       TRANSACTIONAL_EMAIL_PROVIDER: development-capture
       ALLOW_DEVELOPMENT_EMAIL_CAPTURE_IN_PRODUCTION: "true"
-      # The account page builds the photo modules, which read these, but the
-      # journey stores no photo, so nothing is ever sent to this address.
-      OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9
-      OBJECT_STORAGE_REGION: ci
-      OBJECT_STORAGE_BUCKET: ci-unused
-      OBJECT_STORAGE_ACCESS_KEY_ID: ci-unused
-      OBJECT_STORAGE_SECRET_ACCESS_KEY: ci-unused
+      # No OBJECT_STORAGE_* on purpose: the journey stores no photo, and a page
+      # without one must not need storage.
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
