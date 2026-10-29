@@ -86,7 +86,7 @@ The current direction is:
 - Without `NEXT_PUBLIC_SANITY_PROJECT_ID` the site runs in demo mode from `content/` (`sanity/env.ts`). Keep demo content working.
 - Each block is a self-contained folder in `blocks/`. Adding one: its folder, one line in `blocks/schemas.ts`, one in `blocks/registry.tsx`, a projection in `sanity/lib/queries.ts` if it resolves images or files, then `pnpm typegen`.
 - Block props are typed from TypeGen query results. `pnpm typegen` runs as `prebuild`; commit `schema.json` and `sanity.types.ts` with any schema or query change.
-- The GROQ queries are the adapter: they resolve references, images and locales into plain application models (ADR 0013, still to be written).
+- The GROQ queries are the adapter: they resolve references, images and locales into plain application models (ADR 0013). How the setup works: `SANITY.md`; how to write a block: `blocks/CONTRACT.md`.
 - `pnpm sanity:seed` writes `content/` into `development`. It keeps existing documents unless `--replace` is passed and refuses `production`.
 - Plan and phase status: `.scratch/sanity-pagebuilder/spec.md`.
 - When changing the Sanity setup, use the newest stable Sanity/next-sanity approach available at implementation time.

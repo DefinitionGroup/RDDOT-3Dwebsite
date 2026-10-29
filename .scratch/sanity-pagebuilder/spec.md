@@ -1,6 +1,6 @@
 # Sanity pagebuilder
 
-Status: in progress — Phases 1–7, 9a and the functional copy of 9b done; 8 (ADR 0013, SANITY.md, CONTRACT.md) and the rest of 9b (review, launch) open; the switch on the functional routes done 2026-10-23; Sanity project `06g3ozu4` created by Martin
+Status: in progress — Phases 1–8, 9a and the functional copy of 9b done; the rest of 9b (review, launch) open; the switch on the functional routes done 2026-10-23; Sanity project `06g3ozu4` created by Martin
 Branch: `cc/devstart-sanity` (from `cc/devstart-003` at `e4fd3e9`)
 Governing decisions: [ADR 0007](../../docs/adr/0007-use-sanity-only-for-scoped-editorial-content.md),
 [issue 11](../production-architecture/issues/11-define-sanity-editorial-contract.md),
@@ -378,8 +378,11 @@ STATUS.md), ADR 0013, update AGENTS.md ("Sanity is not wired yet") and STATUS.md
 
 *STATUS.md and AGENTS.md done 2026-10-15:* STATUS.md reconciled at `76558b3` (Done,
 Missing, gates, deployment facts, the reversed deferral); AGENTS.md describes the real Sanity
-setup, `blocks/`, `sanity/` and `lib/i18n.ts`. Still open: ADR 0013, `SANITY.md` and
-`blocks/CONTRACT.md` (`blocks/schemas.ts` already points to the latter).
+setup, `blocks/`, `sanity/` and `lib/i18n.ts`.
+
+*Done 2026-10-29:* ADR 0013 (`docs/adr/0013-let-the-groq-queries-be-the-sanity-adapter.md`),
+`SANITY.md` and `blocks/CONTRACT.md`; the stub `features/configurator/adapters/sanity.ts`
+(§4) is deleted.
 
 **Phase 9 — English and Spanish.** Two halves, owned by different systems:
 

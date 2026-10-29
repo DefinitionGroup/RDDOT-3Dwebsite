@@ -120,6 +120,19 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Sanity handoff docs (spec Phase 8, 2026-10-29).** `docs/adr/0013-let-the-groq-queries-be-the-sanity-adapter.md`
+  records the decision of 2026-10-01 that amends ADR 0007: the GROQ projections are the
+  Sanity adapter, their generated result types are the application models, the loaders are
+  the `EditorialContent` interface and the demo content its local adapter; preview markers,
+  image crops and block keys are the three Sanity traits that reach components on purpose,
+  and the Viewer token's trip to the browser in preview is written down there.
+  `blocks/CONTRACT.md` is how to write and register a Page Block (folder, shared fields,
+  rendering helpers, stega, headings, smart blocks against the catalog, failure, checks).
+  `SANITY.md` covers what lives in Sanity, project and datasets, the CLI instead of the MCP
+  account, environment, demo mode, how the site reads, the Studio and preview, schema
+  changes and content migrations, seeding, the webhook settings and agent rules. Every file,
+  function and claim in them was checked against the code. The pre-ADR 0007 stub
+  `features/configurator/adapters/sanity.ts`, imported nowhere, is deleted.
 - **Source Captures are retired after their Photo Job (2026-10-29).** ADR 0011 deletes a
   capture once its job has finished and a short grace window has passed, since it is an
   input and not a customer artifact; until now every capture kept its row and its object
@@ -1186,8 +1199,6 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   is not (`SANITY_REVALIDATE_SECRET` on Vercel plus the webhook in Sanity; the list is in the
   spec). Until then a deployed site shows published edits only after a rebuild; redirects
   take up to a minute per server instance.
-- Sanity, spec Phase 8: ADR 0013 (the queries are the adapter, amending ADR 0007),
-  `SANITY.md` and `blocks/CONTRACT.md`.
 - Locales, rest of spec Phase 9b: Martin or a native speaker reviews the English and
   Spanish copy (editorial and functional); then English and Spanish join
   `LAUNCHED_LOCALES` (the switch on the functional screens is done, 2026-10-23). Until then `/en` and `/es` are 404 in
@@ -1204,9 +1215,7 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - The `configuratorBlock` is a teaser with a deep link; the inline live-3D variant is a
   later slice.
 - The configurator's product data stays in code by design (ADR 0007); `catalog.ts` is the
-  seam a Release Bundle replaces later. The pre-ADR 0007 stub
-  `features/configurator/adapters/sanity.ts` is imported nowhere and still waits to be
-  removed (spec §4).
+  seam a Release Bundle replaces later.
 - No real product catalog, SKU model, pricing engine, cart, order, CRM, or payment integration exists yet. Quote Requests are recorded and listed but nobody is notified: the `quote-request.submitted` outbox has no consumer until the email provider lands (ADR 0010). The "selected photo" named in CONTEXT.md is not yet captured on a Quote Request, and the account list shows the first ten without a load-more.
 - The configurator's remaining ADR 0009 gaps: no measured Quality Profiles (fidelity still keys off viewport width), no deterministic reference renders (CI's scene test checks that the scene builds, not what it draws), no engine-upgrade guard for historical manifests, and the Appartement and Loft scenes have no manifest of their own (both are placeholders awaiting an owned source). The kitchen model itself is now manifest-validated and content-hashed.
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
@@ -1274,8 +1283,7 @@ The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
   variables and the on-screen login code (see Deployment). Still missing:
   `SANITY_REVALIDATE_SECRET` and its webhook (spec 7b). Changing Vercel settings needs
   Martin's go-ahead.
-- Spec Phase 8: ADR 0013, `SANITY.md`, `blocks/CONTRACT.md`; delete the unused
-  `features/configurator/adapters/sanity.ts` stub.
+- Spec Phase 8 is done (2026-10-29, see Done): ADR 0013, `SANITY.md`, `blocks/CONTRACT.md`.
 - Try the Presentation tool with a Studio login.
 - *Martin:* review the preview; review the English and Spanish copy.
 
@@ -1349,7 +1357,6 @@ form (P2); what sends newsletters (P5).
 
 - `README.md`: how to run, build, verify, and understand the project at a glance.
 - `ARCHITECTURE.md`: app architecture, route strategy, feature boundaries, Sanity/page-builder strategy, and commerce escape hatches.
-- `SANITY.md`: Studio setup, dataset strategy, schema ownership, preview/live editing, agentic workflow notes, and migration rules (spec Phase 8, with `blocks/CONTRACT.md`).
 - `CONTENT_MODEL.md`: page-builder block model, page fields, product definition fields, localization approach, and editor rules.
 - `LOCALIZATION.md`: supported locales, default locale behavior, slug rules, fallback rules, and copy workflow.
 - `CONFIGURATOR_CONTRACT.md`: product definition shape, URL state shape, pricing assumptions, validation rules, and future JSON export contract.
