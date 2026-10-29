@@ -32,7 +32,9 @@ export const de = {
     indicativePriceStandard: "Richtpreis der Grundausstattung, inkl. MwSt.",
     indicativePricePreset: "Richtpreis dieser Ausstattung, inkl. MwSt.",
     decisions: (count: number) => `Die ${["", "eine", "zwei", "drei", "vier", "fünf"][count] ?? count} Entscheidungen`,
-    configureNow: "Jetzt konfigurieren"
+    configureNow: "Jetzt konfigurieren",
+    pauseFilm: "Film anhalten",
+    playFilm: "Film abspielen"
   },
   common: {
     close: "Schließen",

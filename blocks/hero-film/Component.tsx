@@ -1,11 +1,13 @@
 import type { BlockProps } from "@/blocks/types";
+import { getMessages } from "@/lib/messages";
 import { imageUrl } from "@/sanity/lib/image";
 import { HeroFilmView } from "./hero-film-view";
 
 /** Resolves the film's files and poster on the server; the view only plays them. */
-export default function HeroFilmBlock({ block }: BlockProps<"heroFilmBlock">) {
+export default function HeroFilmBlock({ block, locale }: BlockProps<"heroFilmBlock">) {
   const desktop = block.film.desktop?.url;
   if (!desktop) return null;
+  const t = getMessages(locale).blocks;
 
   return (
     <HeroFilmView
@@ -19,6 +21,7 @@ export default function HeroFilmBlock({ block }: BlockProps<"heroFilmBlock">) {
       }}
       filmButtonLabel={block.filmButtonLabel}
       headline={block.headline}
+      playbackLabels={{ pause: t.pauseFilm, play: t.playFilm }}
       primaryCta={block.primaryCta}
       summary={block.summary}
     />

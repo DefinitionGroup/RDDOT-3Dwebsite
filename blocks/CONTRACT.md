@@ -76,8 +76,10 @@ needs a content migration, not just a schema edit.
   `AGENTS.md`: one job, one headline and one supporting sentence per section.
   Tailwind scans `blocks/`, and `lib/tailwind-content.test.ts` keeps it that way.
 - **Motion:** `motion/react` through the primitives. The site's `MotionProvider`
-  sets `reducedMotion="user"`; a block that drives motion from scroll or time itself
-  checks `useReducedMotion()`, as `ScrollWords` does.
+  sets `reducedMotion="user"`, which stills animations. A value driven by scroll or
+  time is not an animation: honour reduced motion for it in CSS, as `ScrollWords` does
+  with `.scroll-word` in `app/globals.css`. Branching on `useReducedMotion()` in render
+  differs between server and browser, and React keeps the server's version.
 
 ## Smart blocks: the configurator
 

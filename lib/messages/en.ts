@@ -19,7 +19,9 @@ export const en = {
     indicativePriceStandard: "Indicative price, standard specification, incl. VAT",
     indicativePricePreset: "Indicative price of this specification, incl. VAT",
     decisions: (count: number) => `The ${["", "one", "two", "three", "four", "five"][count] ?? count} decisions`,
-    configureNow: "Configure now"
+    configureNow: "Configure now",
+    pauseFilm: "Pause the film",
+    playFilm: "Play the film"
   },
   common: {
     close: "Close",

@@ -23,14 +23,30 @@ export type HeroFilmViewProps = {
     mobile?: string;
     poster?: string;
   };
+  /** Labels of the control that stops and restarts the loop. */
+  playbackLabels: { pause: string; play: string };
 };
+
+function PlayGlyph() {
+  return (
+    <svg aria-hidden="true" fill="currentColor" height="10" viewBox="0 0 10 10" width="10">
+      <path d="M2 1l7 4-7 4z" />
+    </svg>
+  );
+}
+
+function PauseGlyph() {
+  return (
+    <svg aria-hidden="true" fill="currentColor" height="10" viewBox="0 0 10 10" width="10">
+      <path d="M2 1h2v8H2zM6 1h2v8H6z" />
+    </svg>
+  );
+}
 
 function PlayCircle() {
   return (
     <span className="inline-flex size-8 items-center justify-center rounded-pill border border-ink">
-      <svg aria-hidden="true" fill="currentColor" height="10" viewBox="0 0 10 10" width="10">
-        <path d="M2 1l7 4-7 4z" />
-      </svg>
+      <PlayGlyph />
     </span>
   );
 }
@@ -38,7 +54,9 @@ function PlayCircle() {
 /**
  * The film and one sentence. The loop plays silently under a gradient;
  * the page fades in from black once the first frame is there. People who
- * asked for less motion get the still, and the film only on request.
+ * asked for less motion get the still, and the film only on request. A
+ * round control beside the film button stops and restarts the loop, as a
+ * moving picture that runs on its own must allow.
  */
 export function HeroFilmView({
   anchor,
@@ -47,12 +65,14 @@ export function HeroFilmView({
   film,
   filmButtonLabel,
   headline,
+  playbackLabels,
   primaryCta,
   summary
 }: HeroFilmViewProps) {
   const reduceMotion = useReducedMotion();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ready, setReady] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -61,9 +81,19 @@ export function HeroFilmView({
       return;
     }
     const timer = window.setTimeout(() => setReady(true), 1200);
-    video.play().catch(() => setReady(true));
+    video.play().catch(() => {
+      setReady(true);
+      setPlaying(false);
+    });
     return () => window.clearTimeout(timer);
   }, [reduceMotion]);
+
+  const togglePlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) void video.play().catch(() => setPlaying(false));
+    else video.pause();
+  }, []);
 
   const watchFilm = useCallback(() => {
     const video = videoRef.current as FullscreenVideo | null;
@@ -92,6 +122,8 @@ export function HeroFilmView({
         className="absolute inset-0 size-full object-cover object-[60%_center] md:object-center"
         loop
         muted
+        onPause={() => setPlaying(false)}
+        onPlay={() => setPlaying(true)}
         onPlaying={() => setReady(true)}
         playsInline
         poster={film.poster}
@@ -134,16 +166,16 @@ export function HeroFilmView({
               {summary}
             </motion.p>
           )}
-          {(primaryCta || filmButtonLabel) && (
-            <motion.div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" {...rise(2)}>
-              {primaryCta && (
-                <Pill className="w-full sm:w-auto" href={primaryCta.href}>
-                  {primaryCta.label}
-                </Pill>
-              )}
+          <motion.div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-3" {...rise(2)}>
+            {primaryCta && (
+              <Pill className="w-full sm:w-auto" href={primaryCta.href}>
+                {primaryCta.label}
+              </Pill>
+            )}
+            <div className="flex items-center gap-2.5 sm:gap-3">
               {filmButtonLabel && (
                 <Pill
-                  className="h-12 w-full border-ink/70 pl-2 pr-[22px] font-base text-caption uppercase tracking-film sm:w-auto"
+                  className="h-12 min-w-0 flex-1 border-ink/70 pl-2 pr-[22px] font-base text-caption uppercase tracking-film sm:flex-none"
                   leading={<PlayCircle />}
                   onClick={watchFilm}
                   variant="secondary"
@@ -151,8 +183,17 @@ export function HeroFilmView({
                   {filmButtonLabel}
                 </Pill>
               )}
-            </motion.div>
-          )}
+              <button
+                aria-label={playing ? playbackLabels.pause : playbackLabels.play}
+                className="inline-flex size-12 shrink-0 items-center justify-center rounded-pill border border-ink/70 text-ink transition-[background-color,transform] duration-state ease-signature hover:bg-ink/10 active:scale-[0.96]"
+                onClick={togglePlayback}
+                title={playing ? playbackLabels.pause : playbackLabels.play}
+                type="button"
+              >
+                {playing ? <PauseGlyph /> : <PlayGlyph />}
+              </button>
+            </div>
+          </motion.div>
         </div>
         {badge && (
           <motion.div className="hidden md:block" {...rise(3)}>

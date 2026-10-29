@@ -120,6 +120,30 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The hero film can be paused; the statement is lit under reduced motion (2026-10-29).**
+  *Pause:* the homepage film loops on its own, and
+  nothing could stop it: "Den Film ansehen" only plays it full screen. A round control now
+  sits beside that button, the same outline and height, in its row on phones too: "Film
+  anhalten" while the loop plays, "Film abspielen" while it stands (English "Pause the
+  film" / "Play the film", Spanish "Pausar el vídeo" / "Reproducir el vídeo",
+  `lib/messages`). It follows the film's real state, so it also stops the loop that keeps
+  running after full screen. Visitors who ask for less motion still get the still picture
+  first, and the control offers to play it. Checked in headless Chrome against the dev
+  server: at 1440 px a click pauses the film (its time stands still) and plays it again,
+  Enter and Space do the same from the keyboard with the site's focus ring, a tap does it
+  at 390 px; with reduced motion the film stays still until the control is pressed; `/en`
+  and `/es` carry their labels; no horizontal overflow, no console error from the hero.
+  *The statement under reduced motion:* that check found that visitors who ask for less
+  motion read the homepage statement at 16 % opacity, every word. `ScrollWords` lights its
+  words as the reader scrolls and branched on `useReducedMotion()` to show them lit; the
+  server renders them dim, the browser under reduced motion without a style, and React does
+  not patch an attribute that differs at hydration (it logged the mismatch). The words now
+  render the same everywhere, and `.scroll-word` in the reduced-motion block of
+  `app/globals.css` holds them lit, before any script runs too. `blocks/CONTRACT.md` says to
+  honour reduced motion this way for any value driven by scroll or time. Checked in
+  headless Chrome: with reduced motion all 13 words at full opacity at the top, in view and
+  past it, with scripts and without, no hydration error; without it they still start at
+  0.16 and light up as the statement scrolls through.
 - **Sanity handoff docs (spec Phase 8, 2026-10-29).** `docs/adr/0013-let-the-groq-queries-be-the-sanity-adapter.md`
   records the decision of 2026-10-01 that amends ADR 0007: the GROQ projections are the
   Sanity adapter, their generated result types are the application models, the loaders are
@@ -1111,8 +1135,6 @@ configuration at sign-in, is fixed (Done, 2026-10-22).
   kitchen is drawn whole but small into the fifth of the height the framing always keeps,
   where before 2026-10-28 it showed cropped large. The landscape layout needs its own
   arrangement. The upright phone framing is fixed (Done, 2026-10-28).
-- **The hero film has no pause control**; "Den Film ansehen" requests fullscreen on the same
-  muted loop. Reduced motion is honoured, but that does not replace a control.
 - **The request consent has no privacy-policy link** (waits on the Datenschutz page).
 - **Marketing promises more than the product does** (`content/home/de.ts`): "in Ihrem Raum
   gesehen" and "ein Foto in Ihrem Raum" suggest the customer's own room (the rooms and photo
@@ -1304,9 +1326,10 @@ Engineering:
   `20261029120000` to the database the deployment uses.
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
   output moderation gate; billed cost against the estimate; then switch generation on.
-- The customer-facing items under Known Defects not taken into M0: a pause control for
-  the hero film, the privacy link on the request consent, marketing copy that matches the
-  offer, the configurator on a phone held sideways.
+- The customer-facing items under Known Defects not taken into M0: the privacy link on the
+  request consent, marketing copy that matches the offer, the configurator on a phone held
+  sideways. The hero film's pause control and the dimmed statement under reduced motion are
+  done (2026-10-29).
 - CI on every push and the Playwright smoke path (homepage → configurator → change → save
   → share → request) are done (2026-10-29, see Done). Next for it: the same journey at
   phone width.

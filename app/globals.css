@@ -207,4 +207,9 @@ a {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* ScrollWords: the statement stands lit instead of lighting up word by word. */
+  .scroll-word {
+    opacity: 1 !important;
+  }
 }

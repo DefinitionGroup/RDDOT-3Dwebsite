@@ -19,7 +19,9 @@ export const es = {
     indicativePriceStandard: "Precio orientativo del equipamiento básico, IVA incluido",
     indicativePricePreset: "Precio orientativo de este equipamiento, IVA incluido",
     decisions: (count: number) => `Las ${["", "una", "dos", "tres", "cuatro", "cinco"][count] ?? count} decisiones`,
-    configureNow: "Configurar ahora"
+    configureNow: "Configurar ahora",
+    pauseFilm: "Pausar el vídeo",
+    playFilm: "Reproducir el vídeo"
   },
   common: {
     close: "Cerrar",
