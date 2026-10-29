@@ -999,7 +999,22 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-iv38lyxir`, built from `becd603` on 2026-10-29, live about
+- Production: `rddot-3-dwebsite-1ejmowgnl`, built from `1fe6086` on 2026-10-29, live about
+  70 s after `redesign/devstart` was fast-forwarded from `becd603` and pushed; it brings the
+  configurator's own layout on a phone held sideways, and the smoke test at phone width and
+  sideways (no effect on the site). Migration `20261029120000` is still not applied to the
+  shared development database; `/api/cron/storage-sweep` answers 404 there. Checked right
+  after, signed out: the avatar, export, photo, quote-request and revision endpoints answer
+  401 `session-expired`; `/`, `/configure`, `/konto`, `/anfrage`, `/en/configure` and
+  `/es/configure` answer 200 with noindex. In Chrome on the real GPU: at 844 × 390 and
+  667 × 375 the configurator loads the kitchen model and draws the scene without the poster,
+  the Datenblatt stands as a card down the right edge with "Anfragen" at its foot, tucks
+  away and comes back, the Fenix front recolours the kitchen and moves the URL, the Edit
+  Session's bar is 133 px tall at 844 and 163 px at 667 (the island options wrap there), and
+  turning the phone upright brings back the sheet; upright at 390 × 844 the sheet layout and
+  at 1440 × 900 the desktop card with "Konfiguration anfragen" are unchanged; no console
+  errors. Nothing was submitted and no code requested.
+- The deployment before, `rddot-3-dwebsite-iv38lyxir`, was built from `becd603` on 2026-10-29, live about
   2 min after `redesign/devstart` was fast-forwarded from `24157d1` and pushed; it brings CI
   and the smoke test (no effect on the site), paging past items made in the same
   millisecond, the account page reading storage settings only on use, the Source Capture
