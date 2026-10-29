@@ -7,9 +7,10 @@ import { watchErrors } from "./browser-errors";
  * Project through sign-in, shared as a link a stranger can open, and requested
  * from rotpunkt. Sign-in reads its code from the development email capture.
  * The browser runs without WebGL, so the configurator shows its poster;
- * `scene.smoke.ts` checks the 3D scene itself. It runs at desktop and at
- * phone width (`playwright.config.ts`), where the Datenblatt is the bottom
- * sheet and words its price and its request link more briefly.
+ * `scene.smoke.ts` checks the 3D scene itself. It runs at desktop width, on a
+ * phone and on a phone held sideways (`playwright.config.ts`), where the
+ * Datenblatt is a bottom sheet or a compact side card and words its price and
+ * its request link more briefly.
  */
 
 const FRONT = "Fenix Castoro Ottawa";

@@ -91,6 +91,11 @@ type SceneEditBarProps = {
   onSelect: (target: EditTarget) => void;
   quote: ConfiguratorQuote;
   selected: EditTarget;
+  /**
+   * A short screen, a phone held sideways: no hint, and the island, the price
+   * and the two actions share one row, so the scene keeps its height.
+   */
+  short?: boolean;
 };
 
 /**
@@ -107,7 +112,8 @@ export function SceneEditBar({
   onDiscard,
   onSelect,
   quote,
-  selected
+  selected,
+  short = false
 }: SceneEditBarProps) {
   const messages = useMessages();
   const t = messages.editor;
@@ -189,6 +195,43 @@ export function SceneEditBar({
     `inline-flex h-9 items-center justify-center rounded-pill border px-3 text-caption font-label leading-none transition-colors duration-state ease-signature disabled:cursor-not-allowed disabled:opacity-35 ${
       active ? "border-ink text-ink" : "border-hairline text-graphite hover:border-ink hover:text-ink"
     }`;
+
+  const island = (
+    <div className="flex flex-1 items-center gap-2">
+      <span className="font-label text-label uppercase tracking-label text-graphite">{t.island}</span>
+      <div className="flex flex-1 flex-wrap gap-1.5">
+        {ISLAND_OPTIONS.map((size) => (
+          <button
+            aria-pressed={draft.islandSize === size}
+            className={chip(draft.islandSize === size)}
+            key={size}
+            onClick={() => {
+              onChange({ ...draft, islandSize: size });
+              onSelect(size === 0 ? null : "island");
+            }}
+            type="button"
+          >
+            {messages.islandSizes[size]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+  const price = (
+    <span className="tnum text-lead font-display leading-none text-ink">
+      {formatCurrency(quote.totalCents, locale)}
+    </span>
+  );
+  const discard = (
+    <Pill leading={<X size={15} strokeWidth={1.5} />} onClick={onDiscard} variant="secondary">
+      {messages.common.discard}
+    </Pill>
+  );
+  const done = (
+    <Pill className="h-11" leading={<Check size={15} strokeWidth={1.5} />} onClick={onCommit}>
+      {t.done}
+    </Pill>
+  );
 
   return (
     <div className="chip-solid rounded-card p-2 text-ink">
@@ -303,50 +346,32 @@ export function SceneEditBar({
           </div>
         </div>
       ) : (
-        <p className="mt-2 border-t border-ink/10 px-1 pt-2.5 text-caption text-graphite">{t.hint}</p>
+        !short && (
+          <p className="mt-2 border-t border-ink/10 px-1 pt-2.5 text-caption text-graphite">{t.hint}</p>
+        )
       )}
 
-      <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-ink/10 px-1 pt-2">
-        <div className="flex flex-1 items-center gap-2">
-          <span className="font-label text-label uppercase tracking-label text-graphite">{t.island}</span>
-          <div className="flex flex-1 flex-wrap gap-1.5">
-            {ISLAND_OPTIONS.map((size) => (
-              <button
-                aria-pressed={draft.islandSize === size}
-                className={chip(draft.islandSize === size)}
-                key={size}
-                onClick={() => {
-                  onChange({ ...draft, islandSize: size });
-                  onSelect(size === 0 ? null : "island");
-                }}
-                type="button"
-              >
-                {messages.islandSizes[size]}
-              </button>
-            ))}
+      {short ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-ink/10 px-1 pb-1 pt-2">
+          {island}
+          {price}
+          <div className="flex gap-2">
+            {discard}
+            {done}
           </div>
         </div>
-        <span className="tnum text-lead font-display leading-none text-ink">
-          {formatCurrency(quote.totalCents, locale)}
-        </span>
-      </div>
-
-      <div className="mt-2 grid grid-cols-2 gap-2 border-t border-ink/10 px-1 pb-1 pt-2">
-        <Pill
-          leading={<X size={15} strokeWidth={1.5} />}
-          onClick={onDiscard}
-          variant="secondary"
-        >
-          {messages.common.discard}
-        </Pill>
-        <Pill
-          className="h-11"
-          leading={<Check size={15} strokeWidth={1.5} />}
-          onClick={onCommit}
-        >
-          {t.done}
-        </Pill>
-      </div>
+      ) : (
+        <>
+          <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-ink/10 px-1 pt-2">
+            {island}
+            {price}
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-ink/10 px-1 pb-1 pt-2">
+            {discard}
+            {done}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -29,8 +29,12 @@ export type DatasheetSection = "material" | "layout" | "pricing" | "project";
 type SummaryRow = { label: string; value: ReactNode };
 
 type DatasheetPanelProps = {
-  variant: "card" | "sheet";
-  /** Card only: the chevron that tucks the panel away. */
+  /**
+   * card: beside the scene on desktop. sheet: below it on phones. side: beside
+   * it on a phone held sideways, as compact as the sheet and framed as a card.
+   */
+  variant: "card" | "sheet" | "side";
+  /** Card and side: the chevron that tucks the panel away. */
   onCollapse?: () => void;
   /** Sheet only: the handle that grows the sheet. */
   sheetExpanded?: boolean;
@@ -186,9 +190,10 @@ function FinishTiles({
 }
 
 /**
- * The Datenblatt: a charcoal card one step above the void (desktop) or the
- * bottom sheet (phones). Configuration first — what is there — then the
- * accordions that change it, then the price and the one action.
+ * The Datenblatt: a charcoal card one step above the void (desktop), the
+ * bottom sheet (phones) or a compact card beside the scene (phones held
+ * sideways). Configuration first — what is there — then the accordions that
+ * change it, then the price and the one action.
  */
 export function DatasheetPanel({
   cabinetColor,
@@ -211,6 +216,8 @@ export function DatasheetPanel({
   const messages = useMessages();
   const t = messages.datasheet;
   const sheet = variant === "sheet";
+  // The sheet and the side card share the phone's sizes and its one-line foot.
+  const compact = variant !== "card";
   const worktop = quote.lineItems.find((item) => item.key === "island-worktop")?.quantity ?? 0;
   const rows: SummaryRow[] = [
     {
@@ -252,7 +259,7 @@ export function DatasheetPanel({
     ...extraRows
   ];
 
-  const padding = sheet ? "px-5" : "px-7";
+  const padding = compact ? "px-5" : "px-7";
 
   return (
     <div
@@ -272,9 +279,11 @@ export function DatasheetPanel({
         </button>
       )}
 
-      <div className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${padding} ${sheet ? "pt-1" : "pt-7"}`}>
+      <div
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${padding} ${sheet ? "pt-1" : compact ? "pt-5" : "pt-7"}`}
+      >
         <div className="flex items-center justify-between gap-4">
-          <h1 className={`m-0 ${sheet ? "text-[1.5rem]" : "text-panel"} font-display leading-none tracking-[-0.025em]`}>
+          <h1 className={`m-0 ${compact ? "text-[1.5rem]" : "text-panel"} font-display leading-none tracking-[-0.025em]`}>
             {title}
           </h1>
           {onCollapse && (
@@ -290,7 +299,7 @@ export function DatasheetPanel({
         </div>
         {description && <p className="m-0 mt-3 text-caption text-graphite">{description}</p>}
 
-        <dl className={`tnum m-0 flex flex-col text-[0.875rem] ${sheet ? "mt-3" : "mt-5"}`}>
+        <dl className={`tnum m-0 flex flex-col text-[0.875rem] ${compact ? "mt-3" : "mt-5"}`}>
           {rows.map((row, index) => (
             <div
               className={`grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3.5 py-2.5 ${
@@ -396,12 +405,14 @@ export function DatasheetPanel({
 
       <div
         className={`shrink-0 ${padding} ${
-          sheet
-            ? "flex items-center justify-between gap-4 border-t border-hairline pb-[max(1.375rem,env(safe-area-inset-bottom))] pt-3.5"
+          compact
+            ? `flex items-center justify-between gap-4 border-t border-hairline pt-3.5 ${
+                sheet ? "pb-[max(1.375rem,env(safe-area-inset-bottom))]" : "pb-4"
+              }`
             : "flex flex-col gap-3.5 pb-7 pt-5"
         }`}
       >
-        {sheet ? (
+        {compact ? (
           <div className="flex flex-col gap-0.5">
             <Label as="span">{messages.common.indicativePrice}</Label>
             <span className="tnum text-[1.5rem] font-display leading-[1.1] tracking-[-0.025em]">
@@ -414,8 +425,8 @@ export function DatasheetPanel({
             <span className="tnum text-title font-display leading-none">{priceText}</span>
           </div>
         )}
-        <Pill className={sheet ? "" : "w-full"} href={primary.href} variant={primary.tone}>
-          {sheet ? primary.shortLabel : primary.label}
+        <Pill className={compact ? "" : "w-full"} href={primary.href} variant={primary.tone}>
+          {compact ? primary.shortLabel : primary.label}
         </Pill>
       </div>
     </div>

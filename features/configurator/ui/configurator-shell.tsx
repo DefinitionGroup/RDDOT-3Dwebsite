@@ -86,7 +86,7 @@ import { screenLanguageLinks } from "@/lib/language-links";
 import { apiErrorMessage, getMessages, type Messages } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, OVERLAY_SLIDE, SIGNATURE_EASE } from "@/lib/motion";
-import { useIsDesktop } from "@/lib/use-media";
+import { useIsDesktop, useIsShortLandscape } from "@/lib/use-media";
 import { useCoveredEdges } from "@/features/configurator/ui/use-covered-edges";
 
 type ConfiguratorShellProps = {
@@ -204,13 +204,17 @@ export function ConfiguratorShell({
   const [autosaveStatus, setAutosaveStatus] = useState<ProjectAutosaveStatus | null>(null);
   const { captureRef, capturePhoto } = useSceneCapture();
   const isDesktop = useIsDesktop();
+  // A phone held sideways has no height for the sheet: the Datenblatt becomes
+  // a card beside the scene, as on desktop, with the phone's compact controls.
+  const isSideways = useIsShortLandscape() && !isDesktop;
   const mainRef = useRef<HTMLElement | null>(null);
   // What the HUD covers of the scene, which draws its framing into the rest:
-  // the open Datenblatt on desktop, the controls above and below on phones.
+  // the open Datenblatt on desktop, the controls above and below on phones,
+  // and the side card too on a phone held sideways.
   const phoneCovered = useCoveredEdges(
     mainRef,
     !isDesktop,
-    `${editSession ? "edit" : "nav"}|${sheetExpanded}|${sharedView ? "shared" : "own"}`
+    `${editSession ? "edit" : "nav"}|${sheetExpanded}|${sharedView ? "shared" : "own"}|${isSideways}|${isPanelOpen}`
   );
   const covered = isDesktop
     ? { top: 0, right: isPanelOpen ? DATASHEET_WIDTH_PX + DATASHEET_GAP_PX : 0, bottom: 0 }
@@ -752,6 +756,7 @@ export function ConfiguratorShell({
       }
       quote={quote}
       selected={editSession.selected}
+      short={isSideways}
     />
   );
 
@@ -856,20 +861,20 @@ export function ConfiguratorShell({
         project: projectSection
       };
 
-  const panel = (variant: "card" | "sheet") => (
+  const panel = (variant: "card" | "sheet" | "side") => (
     <DatasheetPanel
       cabinetColor={cabinetColor}
       description={sharedView ? t.sharedDescription : undefined}
       extraRows={sharedRows}
       footer={
         // Phones: the sheet's foot holds the language switch, the top bar has no room.
-        variant === "sheet" && languages.length > 1 ? (
+        variant !== "card" && languages.length > 1 ? (
           <LanguageSwitch links={languages} variant="sheet" />
         ) : undefined
       }
       frontColor={frontColor}
       locale={locale}
-      onCollapse={variant === "card" ? () => setPanelOpen(false) : undefined}
+      onCollapse={variant === "sheet" ? undefined : () => setPanelOpen(false)}
       onToggleSheet={() => setSheetExpanded((expanded) => !expanded)}
       priceText={priceText}
       primary={{ ...primary, tone: editing ? "secondary" : "primary" }}
@@ -885,6 +890,19 @@ export function ConfiguratorShell({
   const hudContext = sharedView
     ? t.sharedContext
     : project?.name ?? getLocalizedLabel(RDTD_KITCHEN_PRODUCT_V2.title, locale);
+
+  // Brings back a Datenblatt card that was tucked away (desktop, phones held sideways).
+  const reopenDatasheet = (
+    <button
+      aria-expanded={false}
+      className="chip-solid inline-flex h-11 items-center gap-2 rounded-pill px-5 text-[0.875rem] font-label leading-none text-ink transition-[background-color] duration-state ease-signature hover:bg-ink/[.14]"
+      onClick={() => setPanelOpen(true)}
+      type="button"
+    >
+      <span aria-hidden="true" className="size-1.5 rounded-pill bg-signature" />
+      {t.datasheet}
+    </button>
+  );
 
   return (
     <main className="relative h-svh overflow-hidden bg-canvas text-ink" ref={mainRef}>
@@ -904,7 +922,9 @@ export function ConfiguratorShell({
 
       {/* HUD · top; above the Datenblatt card so the language list can open over it */}
       <div
-        className="pointer-events-none absolute inset-x-5 top-5 z-30 flex items-center justify-between gap-4 lg:inset-x-10 lg:top-7"
+        className={`pointer-events-none absolute z-30 flex items-center justify-between gap-4 lg:inset-x-10 lg:top-7 ${
+          isSideways ? "inset-x-3 top-3" : "inset-x-5 top-5"
+        }`}
         data-covers="top"
       >
         <HudBrand context={hudContext} />
@@ -916,6 +936,13 @@ export function ConfiguratorShell({
         <div className="flex items-center gap-5">
           {isDesktop ? (
             <HudPrice>{priceText}</HudPrice>
+          ) : isSideways ? (
+            // Sideways the decisions stand above the card whose sections they open.
+            !sharedView && (
+              <div className="pointer-events-auto">
+                <StageSegments active={stage} onSelect={selectStage} size="compact" />
+              </div>
+            )
           ) : (
             <div className="pointer-events-auto">
               <ViewSegments active={visualization} onSelect={setVisualization} size="compact" />
@@ -945,15 +972,33 @@ export function ConfiguratorShell({
         </div>
       )}
 
+      {/* HUD · view (phones held sideways): a row below the brand, the Loft's outlook beneath
+          it. It steps aside during an Edit Session, which needs the height. */}
+      {isSideways && !editSession && (
+        <>
+          <div className="pointer-events-auto absolute left-3 top-[4.5rem] z-20" data-covers="top">
+            <ViewSegments active={visualization} onSelect={setVisualization} size="compact" />
+          </div>
+          <div className="pointer-events-none absolute left-3 top-[8.25rem] z-20">
+            <OutlookControl
+              active={outlook}
+              onSelect={setOutlook}
+              size="compact"
+              visible={visualization === "loft"}
+            />
+          </div>
+        </>
+      )}
+
       {/* HUD · decisions (phones) */}
-      {!sharedView && !isDesktop && (
+      {!sharedView && !isDesktop && !isSideways && (
         <div className="pointer-events-auto absolute left-5 top-[76px] z-20" data-covers="top">
           <StageSegments active={stage} onSelect={selectStage} size="compact" />
         </div>
       )}
 
       {/* HUD · the Loft's outlook (phones): under the view control, a row below the decisions */}
-      {!isDesktop && (
+      {!isDesktop && !isSideways && (
         <div className="pointer-events-none absolute right-5 top-[132px] z-20">
           <OutlookControl
             active={outlook}
@@ -1012,10 +1057,12 @@ export function ConfiguratorShell({
       </div>
       )}
 
-      {/* HUD · camera and actions above the sheet (phones) */}
-      {!isDesktop && !editSession && !sheetExpanded && (
+      {/* HUD · camera and actions above the sheet (phones), at the foot of the scene sideways */}
+      {!isDesktop && !editSession && (isSideways || !sheetExpanded) && (
         <div
-          className="pointer-events-none absolute inset-x-5 bottom-[calc(45svh+0.75rem)] z-20 flex items-center justify-between gap-2"
+          className={`pointer-events-none absolute z-20 flex items-center gap-2 ${
+            isSideways ? "bottom-3 left-3" : "inset-x-5 bottom-[calc(45svh+0.75rem)] justify-between"
+          }`}
           data-covers="bottom"
         >
           <div className="pointer-events-auto">
@@ -1090,21 +1137,32 @@ export function ConfiguratorShell({
       </AnimatePresence>
       )}
       {isDesktop && !isPanelOpen && (
-        <div className="pointer-events-auto absolute right-10 top-24 z-20">
-          <button
-            aria-expanded={false}
-            className="chip-solid inline-flex h-11 items-center gap-2 rounded-pill px-5 text-[0.875rem] font-label leading-none text-ink transition-[background-color] duration-state ease-signature hover:bg-ink/[.14]"
-            onClick={() => setPanelOpen(true)}
-            type="button"
-          >
-            <span aria-hidden="true" className="size-1.5 rounded-pill bg-signature" />
-            {t.datasheet}
-          </button>
-        </div>
+        <div className="pointer-events-auto absolute right-10 top-24 z-20">{reopenDatasheet}</div>
+      )}
+
+      {/* Datenblatt · side card (phones held sideways), below the top row */}
+      {isSideways && !editSession && (
+        <AnimatePresence initial={false}>
+          {isPanelOpen && (
+            <motion.div
+              animate={{ opacity: 1, x: 0 }}
+              className="pointer-events-auto absolute bottom-3 right-3 top-[4.5rem] z-20 w-[clamp(17.5rem,40vw,22.5rem)]"
+              data-covers="right"
+              exit={{ opacity: 0, x: OVERLAY_SLIDE }}
+              initial={{ opacity: 0, x: OVERLAY_SLIDE }}
+              transition={{ duration: DURATION.overlay, ease: SIGNATURE_EASE }}
+            >
+              {panel("side")}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+      {isSideways && !editSession && !isPanelOpen && (
+        <div className="pointer-events-auto absolute right-3 top-[4.5rem] z-20">{reopenDatasheet}</div>
       )}
 
       {/* Datenblatt · sheet (phones) */}
-      {!isDesktop && !editSession && (
+      {!isDesktop && !isSideways && !editSession && (
         <div
           className={`pointer-events-auto absolute inset-x-0 bottom-0 z-20 transition-[height] duration-accordion ease-signature ${
             sheetExpanded ? "h-[85svh]" : "h-[45svh]"

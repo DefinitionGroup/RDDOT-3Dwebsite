@@ -46,6 +46,12 @@ export default defineConfig({
       use: { ...phone, launchOptions: { args: ["--disable-3d-apis"] } }
     },
     {
+      // The phone held sideways, where the Datenblatt is a card beside the scene.
+      name: "journey-sideways",
+      testMatch: "journey.smoke.ts",
+      use: { ...phone, viewport: { width: 844, height: 390 }, launchOptions: { args: ["--disable-3d-apis"] } }
+    },
+    {
       // On a runner without a GPU, Chromium renders WebGL in software only with this switch.
       name: "scene",
       testMatch: "scene.smoke.ts",

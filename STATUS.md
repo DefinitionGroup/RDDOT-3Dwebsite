@@ -120,6 +120,29 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **The configurator on a phone held sideways (2026-10-29).** At 844 × 390 px the upright
+  phone's two control rows, the camera row and the sheet (45 % of the height) left the
+  kitchen a 30 px band. A phone held sideways (`(orientation: landscape) and (max-height:
+  500px)`, `useIsShortLandscape` in `lib/use-media.ts`, below the desktop breakpoint) now
+  has its own arrangement: the brand on the left of the top row with the decisions on its
+  right, above the Datenblatt; the view below the brand; the Datenblatt as a card down the
+  right edge (`DatasheetPanel` variant `side`: the sheet's compact sizes and one-line foot
+  with "Anfragen", framed as a card, tucked away with its chevron and brought back with
+  "Datenblatt", as on desktop; the language switch at its foot); camera row and scene
+  actions at the bottom left. `useCoveredEdges` now measures a card marked
+  `data-covers="right"` too, so the kitchen is framed into the band between the controls and
+  the card, and widens when the card is tucked away. In an Edit Session the view row steps
+  aside and the edit bar is short (`short` on `SceneEditBar`: no hint, island, price and the
+  two actions in one row): 133 px instead of 224, 186 with a module selected. Checked on
+  the real GPU against the dev server: at 844 × 390, 667 × 375 and 932 × 430 the kitchen
+  stands whole and large beside the card; collapsing and reopening the card, picking a
+  front in it (URL and scene follow), the decisions opening their section, the Loft with
+  its outlook, the Edit Session with a module selected, and turning the phone upright and
+  back all work, no console errors; upright phone (390 × 844), tablet (1024 × 768) and
+  desktop (1440 × 900) are pixel-identical to before (0, 2 and 0 pixels differ). The smoke
+  test walks the journey sideways too (`journey-sideways`); all four smoke projects passed
+  three runs in a row on a clean build. Not done: the photo dialog runs a little past the
+  bottom edge sideways (its button stays reachable), as before.
 - **The smoke journey at phone width (2026-10-29).** `journey.smoke.ts` now also runs as
   the Playwright project `journey-phone`: a Chromium phone (Pixel 7 descriptor, 390 × 844,
   touch, phone user agent), again without WebGL. It walks the same journey through the
@@ -308,8 +331,8 @@ built. Details for each line are under Done, Known Defects and Missing.
   and back; picking a front changes the picture at 1440 and 390 px; nothing past the edge,
   no console errors. The photo capture crops the same frame but was not taken in the
   browser (it needs a saved Project and photo generation). Live on the test site the same
-  day (`4dc7cf7`, see Deployment). A phone held sideways keeps only a 30 px band (Known
-  Defects).
+  day (`4dc7cf7`, see Deployment). A phone held sideways kept only a 30 px band; it has its
+  own arrangement since 2026-10-29 (see Done).
 - **First sign-in after a quiet period (2026-10-27).** Neon suspends the idle database and
   wakes it on the next connection. On 2026-10-22 the first code request after a quiet spell
   answered 500 (`Connection terminated due to connection timeout`): both pools gave a
@@ -902,7 +925,7 @@ pnpm exec tsc --noEmit                     # clean; on a fresh clone run `pnpm e
 pnpm test                                  # 190/190
 pnpm test:db                               # 97 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
-pnpm test:smoke                            # 3 passed; needs a build that runs on port 3100 (below)
+pnpm test:smoke                            # 4 passed; needs a build that runs on port 3100 (below)
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request, each
@@ -1161,11 +1184,6 @@ Found by the 2026-10-16 assessment. Items marked *rechecked* were confirmed agai
 2026-10-22. The first finding, a signed-out guest's "Als Projekt speichern" losing the
 configuration at sign-in, is fixed (Done, 2026-10-22).
 
-- **Held sideways, a phone has almost no room for the scene.** At 844 × 390 px the two
-  control rows, the camera row and the sheet (45 % of the height) leave a 30 px band; the
-  kitchen is drawn whole but small into the fifth of the height the framing always keeps,
-  where before 2026-10-28 it showed cropped large. The landscape layout needs its own
-  arrangement. The upright phone framing is fixed (Done, 2026-10-28).
 - **The request consent has no privacy-policy link** (waits on the Datenschutz page).
 - **Marketing promises more than the product does** (`content/home/de.ts`): "in Ihrem Raum
   gesehen" and "ein Foto in Ihrem Raum" suggest the customer's own room (the rooms and photo
@@ -1279,9 +1297,9 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   time, GPU memory, Core Web Vitals, the hero film (8.3 MB and 2.6 MB files). The
   configurator prefetches both rooms and both Loft outlooks 1.2 s after it opens
   (`configurator-shell.tsx`), about 5.4 MB that a Studio-only visit never uses.
-- The browser smoke test walks one journey at desktop and at phone width (Done,
-  2026-10-29). A phone held sideways, the Edit Session, versions, photos, the account's
-  other sections and the rendered picture are still checked by hand each slice.
+- The browser smoke test walks one journey at desktop width, on a phone and on a phone held
+  sideways (Done, 2026-10-29). The Edit Session, versions, photos, the account's other
+  sections and the rendered picture are still checked by hand each slice.
 
 ## Architecture Direction
 
@@ -1358,9 +1376,9 @@ Engineering:
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
   output moderation gate; billed cost against the estimate; then switch generation on.
 - The customer-facing items under Known Defects not taken into M0: the privacy link on the
-  request consent, marketing copy that matches the offer, the configurator on a phone held
-  sideways. The hero film's pause control and the dimmed statement under reduced motion are
-  done (2026-10-29).
+  request consent, marketing copy that matches the offer. The hero film's pause control,
+  the dimmed statement under reduced motion and the configurator on a phone held sideways
+  are done (2026-10-29).
 - CI on every push and the Playwright smoke path (homepage → configurator → change → save
   → share → request), at desktop and at phone width, are done (2026-10-29, see Done).
 - Production Vercel environment: it runs as a test environment until then (see
