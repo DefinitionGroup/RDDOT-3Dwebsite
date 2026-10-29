@@ -150,6 +150,9 @@ built. Details for each line are under Done, Known Defects and Missing.
   (Known Defects). The first run on GitHub (d419e66) passed the database and smoke jobs
   but failed the type check: `PageProps` and `LayoutProps` are generated into `.next`,
   which only the local checkout had, so the checks job now runs `next typegen` first.
+  Green on GitHub since 5e17f5c (run 40918698942): checks 42 s, database 69 s (88 passed,
+  4 skipped: the live object-storage and Replicate tests need credentials CI does not
+  have), build and smoke test 166 s (2 passed in 30 s).
 - **Sign-in for a shared address, an early click and an expired request (2026-10-28).**
   Three fixes on the way from sign-in to a Quote Request. *Code limit:* Better Auth counts
   code requests per client address, three in ten minutes, so the fourth person in a
