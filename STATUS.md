@@ -147,7 +147,9 @@ built. Details for each line are under Done, Known Defects and Missing.
   `sslmode=disable` as a request for TLS, and three storage-sweep tests swept in the same
   millisecond as the deletion, before its intent was due (the database stamps to the
   microsecond; a remote database's latency had hidden it). It also found a paging defect
-  (Known Defects). Not yet run on GitHub.
+  (Known Defects). The first run on GitHub (d419e66) passed the database and smoke jobs
+  but failed the type check: `PageProps` and `LayoutProps` are generated into `.next`,
+  which only the local checkout had, so the checks job now runs `next typegen` first.
 - **Sign-in for a shared address, an early click and an expired request (2026-10-28).**
   Three fixes on the way from sign-in to a Quote Request. *Code limit:* Better Auth counts
   code requests per client address, three in ten minutes, so the fourth person in a
@@ -800,7 +802,7 @@ How to reproduce the reconciliation results:
 
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
-pnpm exec tsc --noEmit                     # clean
+pnpm exec tsc --noEmit                     # clean; on a fresh clone run `pnpm exec next typegen` first
 pnpm test                                  # 188/188
 pnpm test:db                               # 91 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
