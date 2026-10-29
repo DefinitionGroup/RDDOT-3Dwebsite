@@ -278,7 +278,7 @@ CREATE TABLE app.photo_job (
     provider_duration_ms integer,
     CONSTRAINT photo_job_attempts_check CHECK ((attempts >= 0)),
     CONSTRAINT photo_job_check CHECK (((state = ANY (ARRAY['succeeded'::text, 'failed'::text, 'canceled'::text])) = (terminal_at IS NOT NULL))),
-    CONSTRAINT photo_job_check1 CHECK (((state = ANY (ARRAY['requested'::text, 'canceled'::text, 'failed'::text])) OR (source_capture_id IS NOT NULL))),
+    CONSTRAINT photo_job_check1 CHECK (((state = ANY (ARRAY['requested'::text, 'canceled'::text, 'failed'::text, 'succeeded'::text])) OR (source_capture_id IS NOT NULL))),
     CONSTRAINT photo_job_estimated_cost_cents_check CHECK ((estimated_cost_cents >= 0)),
     CONSTRAINT photo_job_provider_duration_ms_check CHECK ((provider_duration_ms >= 0)),
     CONSTRAINT photo_job_state_check CHECK ((state = ANY (ARRAY['requested'::text, 'capture-ready'::text, 'submitted'::text, 'running'::text, 'validating'::text, 'uncertain'::text, 'canceling'::text, 'succeeded'::text, 'failed'::text, 'canceled'::text])))
@@ -1063,6 +1063,13 @@ CREATE INDEX photo_job_revision_idx ON app.photo_job USING btree (configuration_
 
 
 --
+-- Name: photo_job_source_capture_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX photo_job_source_capture_idx ON app.photo_job USING btree (source_capture_id);
+
+
+--
 -- Name: photo_job_submitted_idx; Type: INDEX; Schema: app; Owner: -
 --
 
@@ -1342,4 +1349,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20261023090000'),
     ('20261023120000'),
     ('20261027090000'),
-    ('20261028120000');
+    ('20261028120000'),
+    ('20261029120000');

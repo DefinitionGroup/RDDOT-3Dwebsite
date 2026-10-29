@@ -120,6 +120,30 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Source Captures are retired after their Photo Job (2026-10-29).** ADR 0011 deletes a
+  capture once its job has finished and a short grace window has passed, since it is an
+  input and not a customer artifact; until now every capture kept its row and its object
+  for good. The daily clean-up (`/api/cron/storage-sweep`) now also runs
+  `retireSourceCaptures` (`lib/server/photo-jobs/source-capture-retention.ts`): a job
+  still waiting for its upload or its submission a day after it was requested is failed as
+  `abandoned`, and a capture whose jobs have all finished, the last more than a day ago,
+  loses its row. A succeeded job keeps its record without the capture; the row's deletion
+  trigger records the object's deletion intent, which the same daily run carries out 30
+  days later (`STORAGE_DELETION_HOLD_MS`), so a capture's object lives about 31 days after
+  its job. The run deletes what is already due first, so a failing retirement cannot hold
+  those up, and it answers `{ storage, captures }`. Migration `20261029120000` lets a
+  succeeded job lose its capture (a job still at work cannot, and the foreign key still
+  refuses to delete a capture any job points at) and indexes a job's capture; `db/schema.sql`
+  matches a `pg_dump` 18.6 of a freshly migrated database apart from the Neon-only parts.
+  Not applied to the shared development database yet; nothing needs it before `CRON_SECRET`
+  is set. Checked: lint, types, 190/190 unit tests, the database suite on a new database (97
+  passed, 1 skipped; four new tests: a finished job's capture stays 23 hours and goes at 25
+  with its deletion intent recorded, abandoned jobs before upload and before submission are
+  failed and their captures go a day later, a submitted job keeps its capture, and the
+  database refuses to take a capture from a job at work; three of them fail without the
+  migration), the build, and the route against a clean build on a throwaway database: 401
+  without or with a wrong secret; with it, a two-day-old finished job lost its capture and
+  an abandoned one was failed, and a second call found nothing to do.
 - **Paging past items made in the same millisecond; an account page without storage
   (2026-10-29).** *Paging:* the photo gallery and the version list page newest first by
   creation time and id, but the cursor's Date keeps milliseconds while the database stamps
@@ -827,7 +851,7 @@ How to reproduce the reconciliation results:
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean; on a fresh clone run `pnpm exec next typegen` first
 pnpm test                                  # 190/190
-pnpm test:db                               # 93 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
+pnpm test:db                               # 97 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
 pnpm test:smoke                            # 2 passed; needs a build that runs on port 3100 (below)
 ```
@@ -1097,8 +1121,8 @@ because the sweep removes the undo. With A3 and A4 in place it runs once a day
 or capture only 30 days after its row is gone (`STORAGE_DELETION_HOLD_MS`), a second safety
 net after the row's own deletion. The route exists only when `CRON_SECRET` is set; until
 Martin sets it on Vercel, deletion intents keep accumulating and account deletion still
-does not reach object storage. Abandoned and finished captures that never lose their row
-are a separate retention sweep, still open (Roadmap M2).
+does not reach object storage. The same run retires Source Captures a day after their
+Photo Job finished (Done, 2026-10-29), so their objects follow 30 days later.
 
 **Deleting Projects and accounts — decided 2026-10-23 (Martin).** A Project or a Customer
 Account with Quote Requests is not deleted by its owner; rotpunkt deletes it by hand. The
@@ -1267,8 +1291,9 @@ Engineering:
 - Licence or replace the Appartement and Loft rooms (see Release Blockers) and give them
   manifests; until then they cannot ship.
 - Data protection: the storage sweep is built and scheduled in `vercel.json` (A4); it runs
-  once `CRON_SECRET` is set on Vercel. Still open: the retention sweep for abandoned and
-  finished captures.
+  once `CRON_SECRET` is set on Vercel, and it retires Source Captures a day after their
+  Photo Job finished (2026-10-29). Before `CRON_SECRET` is set, apply migration
+  `20261029120000` to the database the deployment uses.
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
   output moderation gate; billed cost against the estimate; then switch generation on.
 - The customer-facing items under Known Defects not taken into M0: a pause control for

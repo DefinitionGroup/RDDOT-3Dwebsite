@@ -257,8 +257,9 @@ provider call yet.
 - [ ] Single-use, size- and content-type-bound upload URLs issued by the
       module; captures validated server-side (decode, dimensions, byte
       limit) before a job may proceed (G4).
-- [ ] Retention rule for captures documented and enforced (delete after job
-      terminal state + grace window).
+- [x] Retention rule for captures documented and enforced (delete after job
+      terminal state + grace window). *2026-10-29: a day after the job, by the
+      daily clean-up; `source-capture-retention.ts`.*
 
 *Exit:* captures live in EU storage; nothing is accepted inline anymore.
 
