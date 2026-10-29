@@ -964,7 +964,26 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-d9gm2g4tp`, built from `24157d1` on 2026-10-29, live about
+- Production: `rddot-3-dwebsite-iv38lyxir`, built from `becd603` on 2026-10-29, live about
+  2 min after `redesign/devstart` was fast-forwarded from `24157d1` and pushed; it brings CI
+  and the smoke test (no effect on the site), paging past items made in the same
+  millisecond, the account page reading storage settings only on use, the Source Capture
+  retention, the Sanity handoff docs, the hero film's pause control and the statement lit
+  under reduced motion. Migration `20261029120000` (capture retention) is **not** applied to
+  the shared development database; nothing on the site needs it until `CRON_SECRET` is set,
+  and `/api/cron/storage-sweep` answers 404 there. Checked right after, signed out: the
+  avatar, export, photo, quote-request (with a cursor too), revision and project-photo
+  endpoints answer 401 `session-expired`, a photo job 401 `signed-out`; `/`, `/configure`,
+  `/konto`, `/anfrage`, `/en` and `/es` answer 200 with noindex. In Chrome on the real GPU:
+  at 1440 px the film plays with "Film anhalten", a click stops it (its time stands still)
+  and the next plays it again; at 390 px a tap stops it and the control ends 20 px inside
+  the edge; with reduced motion the film stands still behind "Film abspielen" and all 13
+  statement words are at full opacity, no hydration error; `/en` and `/es` carry their
+  labels; `/konto` shows the sign-in form at both widths without calling `/api/auth/`; the
+  configurator loads the kitchen model, draws the scene without falling back to the poster at
+  both widths, and the Fenix front recolours the fronts, moves the URL and the Richtpreis
+  (10.103 € → 10.674 €); no console errors. Nothing was submitted and no code requested.
+- The deployment before, `rddot-3-dwebsite-d9gm2g4tp`, was built from `24157d1` on 2026-10-29, live about
   90 s after `redesign/devstart` was fast-forwarded from `4dc7cf7` and pushed; it brings the
   sign-in fixes: the code limit per email address, sign-in sent before the page has loaded,
   and the request draft kept through a new sign-in (the `sign_in_code_limit` table was
