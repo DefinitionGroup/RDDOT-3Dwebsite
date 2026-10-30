@@ -1,6 +1,6 @@
 # Dealer access: a customer shares a Project with a Dealer
 
-Status: accepted 2026-10-30 — implementation on `cc/feature/user-dealer`
+Status: accepted 2026-10-30 — implemented on `cc/feature/user-dealer` (not merged)
 Created: 2026-10-30
 Decision record: [ADR 0014](../../docs/adr/0014-give-dealers-grant-checked-access-to-customer-projects.md)
 
@@ -133,7 +133,7 @@ trade); the consent is the dealer's.
 | 04 | [Grant-checked modules and contract tests](issues/04-grant-checked-modules.md) | Done |
 | 05 | [Routes and pages](issues/05-routes-and-pages.md) | Done |
 | 06 | [Share dialog, map and Dealer Workspace](issues/06-share-dialog-map-dealer-workspace.md) | Done |
-| 07 | [Smoke test, STATUS, verification](issues/07-smoke-status-verification.md) | |
+| 07 | [Smoke test, STATUS, verification](issues/07-smoke-status-verification.md) | Done |
 
 ## Open for Martin
 

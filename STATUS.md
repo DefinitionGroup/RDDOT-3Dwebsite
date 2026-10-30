@@ -89,6 +89,16 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Archive, trash, restore and duplicate Projects from the account; delete for good from the Trash unless the Project has requests | Done (A3, A4, 2026-10-23); no automatic purge by decision |
 | Download my data (JSON); delete my account after a fresh sign-in unless it has requests | Done (A4, 2026-10-23) |
 
+**Dealers** ([spec](.scratch/dealer-access/spec.md), ADR 0014)
+
+| Feature | State |
+| --- | --- |
+| Dealer Directory, nearest first from the profile postcode, on a self-hosted OpenStreetMap map; a customer shares a Project with one dealer, switches or ends it from the account | Done on `cc/feature/user-dealer` (2026-10-30), not merged; synthetic demo dealers only |
+| Dealer Users provisioned by rotpunkt sign in with the email code; the Dealer Workspace lists the shared Projects with the customer's name, email and phone | Done on the branch; provisioning is a script (`pnpm dealers:provision`), no admin screen |
+| A dealer edits the Working Configuration, saves and restores versions, makes share links and sends Quote Requests with its own contact, each checked against the Dealer Grant in the database | Done on the branch |
+| Map tiles on a deployment | Gated: the tile archive has to go to EU object storage with `MAP_TILES_OBJECT_KEY`; without it the dialog shows the list alone |
+| Telling a dealer that a Project was shared | Open (waits on the email provider, ADR 0010) |
+
 **AI photos**
 
 | Feature | State |
@@ -120,6 +130,31 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Dealers (2026-10-30, branch `cc/feature/user-dealer`, not merged).** Martin's
+  decisions, the access model and the slices are in
+  [.scratch/dealer-access/spec.md](.scratch/dealer-access/spec.md), ADR 0014 and
+  CONTEXT.md (Dealer, Dealer User, Dealer Directory, Dealer Grant, Dealer Workspace).
+  rotpunkt provisions Dealers and Dealer Users (`pnpm dealers:provision`, synthetic
+  `db/seeds/demo-dealers.json`); a Dealer User signs in with the email code and is never a
+  Customer Account. A customer shares a Project from the account's project menu (or the
+  configurator's "Mit Händler teilen") with one dealer picked from the directory, nearest
+  first from the profile postcode on a self-hosted OpenStreetMap map (Protomaps extract of
+  Germany, MapLibre, glyphs and worker served by the site, postcodes from GeoNames). The
+  dialog shows the name, email and phone the dealer will see; the card then says "Geteilt
+  mit … · seit …", and the menu switches dealers or ends the share. Every active user of
+  the dealer finds the Project in `/haendler` with that contact, edits it, saves and
+  restores versions, makes share links and sends a Quote Request with its own contact;
+  the configurator drops rename, photos and "save as new" for them. Ownership never moves:
+  the Project, Sharing and Quote Request modules take a `ProjectActor`, reads carry the
+  open-grant predicate in their statement, writes lock the grant `FOR SHARE` first, and
+  Trash revokes the grant with the share links. Migration `20261030120000`. Verified on a
+  local throwaway Postgres: 10 new contract tests for grant, revoke, dealer read and edit,
+  strangers and a revocation waiting for a dealer write in flight, 4 for dealer identity;
+  the smoke test walks the dealer path at desktop and phone width (6 of 6 with the
+  journeys and the scene); in the browser at 1440 and 390 px the dialog, the map (headless
+  Chrome on the GPU), the workspace, a dealer's front change redrawing the kitchen, a
+  dealer's request, the 401s of owner-only routes and the 404s for another dealer. Not on
+  the test site and not on the shared development database.
 - **The audit's first fixes (2026-10-30).** Issues 01–04 and 06 of
   `.scratch/a11y-perf/issues/`. The logo link is named from its content ("rotpunkt
   Signature Startseite", the wordmark one image), the language switch "Sprache DE:
@@ -949,10 +984,10 @@ How to reproduce the reconciliation results:
 ```
 pnpm lint                                  # 0 errors, 1 warning (exit-preview.tsx)
 pnpm exec tsc --noEmit                     # clean; on a fresh clone run `pnpm exec next typegen` first
-pnpm test                                  # 190/190
-pnpm test:db                               # 97 passed, 1 skipped (TEST_DATABASE_URL, or Docker for a container per file)
+pnpm test                                  # 200/200 on cc/feature/user-dealer (190 before)
+pnpm test:db                               # 111 passed, 1 skipped on Postgres 17 (97 before; TEST_DATABASE_URL, or Docker for a container per file)
 TRANSACTIONAL_EMAIL_PROVIDER= pnpm build   # green; prebuild runs TypeGen, postbuild checks the server bundle
-pnpm test:smoke                            # 4 passed; needs a build that runs on port 3100 (below)
+pnpm test:smoke                            # 6 passed; needs a build that runs on port 3100 (below)
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of these on every push and pull request, each
@@ -962,7 +997,14 @@ development email capture (`TRANSACTIONAL_EMAIL_PROVIDER=development-capture` pl
 and a migrated database; it starts `next start` on port 3100 itself unless a server already
 answers there, and signs up a new `smoke-…@example.invalid` account in whatever database
 that server uses. The workflow's `smoke` job lists the whole environment. Run locally against
-`.env.local`, it would write into the shared development database.
+`.env.local`, it would write into the shared development database. The dealer test also
+writes dealers through `DATABASE_URL` and refuses a Neon host.
+
+Without Docker on this Mac, a local throwaway is Homebrew's `postgresql@17` (the CI
+version) in a scratch directory, started with `LC_ALL=C` and password authentication (the
+pool tests need it); migrate it once before `TEST_DATABASE_URL=… DBMATE_NO_DUMP_SCHEMA=true
+pnpm test:db`, since the files migrate in parallel. On Postgres 18 one test fails only
+because a RESTRICT violation reports `23001` there instead of `23503`.
 
 With the Sanity project in `.env.local`, the build reads `06g3ozu4/development` through the
 Viewer token (`SANITY_API_READ_TOKEN`); without `NEXT_PUBLIC_SANITY_PROJECT_ID` it builds in
@@ -1282,6 +1324,12 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   exposure is intended.
 - The "Appartement" environment is a development placeholder: since 2026-10-16 it is `public/models/apartment-room.glb`, prepared from `newroom.glb` in the defgrp-3d-configurator prototype. That file is a Sketchfab export (its root node is `Sketchfab_model`) whose author and licence are recorded nowhere; only its floor photo is identifiable (Pexels, and dropped anyway). Establish the licence or replace the room with an owned or licensed one before any production release. Recorded here so the Production Release Gate cannot miss it.
 - The "Loft" environment is a development placeholder too: `public/models/loft-room.glb` is prepared from "57-estancia_comedor_obj.zip" (a 3ds Max 2019 OBJ export, no author or licence inside). Establish its source and licence, or replace it, before any production release.
+- **Dealer access discloses customer data to another controller** (ADR 0014, on
+  `cc/feature/user-dealer`). Sharing a Project gives the dealer the customer's name, email
+  and phone; the dialog shows the values first, but its wording and the legal basis need
+  review together with the Datenschutz page before dealers go live. The demo dealers are
+  synthetic (`db/seeds/demo-dealers.json`); the real list, who provisions and disables
+  Dealer Users, and the dealers' own agreement are open.
 
 ## Known Warnings
 
@@ -1359,6 +1407,14 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   sideways (Done, 2026-10-29). The Edit Session, versions, photos, the account's other
   sections and the rendered picture are still checked by hand each slice.
 
+- Dealers (ADR 0014, `cc/feature/user-dealer`, not merged): migration `20261030120000`
+  is on no shared database and no demo dealers are provisioned there (both need Martin's
+  OK, `pnpm db:migrate` then `pnpm dealers:provision --allow-remote`); the tile archive is
+  not in object storage and `MAP_TILES_OBJECT_KEY` is not set on Vercel, so a deployment
+  shows the directory as a list; nobody is told that a Project was shared or changed
+  (email provider, ADR 0010); there is no admin screen for the directory; the dealer's
+  photo action, attribution of autosaves and an activity log are left out by decision.
+
 ## Architecture Direction
 
 - Keep the site single-channel for now.
@@ -1384,7 +1440,11 @@ in below; their history is in git and in the Done section.
 
 ### M0 — Next (from the 2026-10-22 reconciliation)
 
-The dependency upgrade (`a80ef42`) is done. Nothing is in flight.
+The dependency upgrade (`a80ef42`) is done. In flight: dealers on `cc/feature/user-dealer`
+(2026-10-30, see Done), waiting for Martin's review and a merge into `cc/devstart-sanity`.
+*Martin:* the OK to apply `20261029120000` and `20261030120000` to the shared development
+database and provision the demo dealers there; the tile archive in object storage with
+`MAP_TILES_OBJECT_KEY` on Vercel; the real dealer list.
 
 - The journey from a guest kitchen through sign-in to a Quote Request, with sessions
   expiring on the way, is fixed and browser-tested (2026-10-22, see Done); the Playwright
