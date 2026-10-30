@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { ownerActor } from "@/features/projects/project-module";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -89,7 +90,7 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
     content = <SaveFirst guestCode={guestCode} locale={locale} />;
   } else {
     const [workspace, profile] = await Promise.all([
-      projects.getWorkspace({ ownerId: session.customerAccountId, projectId }),
+      projects.getWorkspace({ actor: ownerActor(session.customerAccountId), projectId }),
       customerProfiles.getProfile({ ownerId: session.customerAccountId })
     ]);
     if (!workspace || workspace.lifecycle !== "active") {

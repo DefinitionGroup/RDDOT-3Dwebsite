@@ -3,6 +3,7 @@ import type {
   ConfigurationRevisionId,
   CustomerAccountId,
   JsonValue,
+  ProjectActor,
   ProjectId
 } from "@/features/projects/project-module";
 import type {
@@ -67,9 +68,12 @@ export type QuoteRequestModule = {
    * (ADR 0003). The contact, consent and server-computed Price Indication are
    * captured in the same transaction, together with an outbox intent for the
    * later business notification (ADR 0010). Idempotent on `idempotencyKey`.
+   * A dealer with the Dealer Grant submits with its own contact and consent;
+   * the request records the Dealer User and counts against its own daily
+   * limit (ADR 0014).
    */
   submit(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     expectedVersion: number;
     idempotencyKey: string;
@@ -84,8 +88,9 @@ export type QuoteRequestModule = {
     quoteRequestId: QuoteRequestId;
   }): Promise<QuoteRequest | null>;
 
+  /** The owner sees every request of the Project, a dealer its own Dealer's. */
   listForProject(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     limit?: number;
     cursor?: QuoteRequestCursor;

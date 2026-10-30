@@ -1,6 +1,6 @@
 # Grant-checked modules and contract tests
 
-Status: ready-for-agent
+Status: resolved
 Type: task
 Blocked by: 03
 
@@ -16,3 +16,10 @@ Blocked by: 03
 - Contract tests: grant, revoke, dealer read and edit, stranger refused.
 
 ## Comments
+- 2026-10-30: `tests/integration/dealer-access-contract.test.ts` (10 tests) passes on a local
+  Postgres 18.6, among them a revocation that waits for a dealer write holding the grant.
+  The whole database suite: 98 passed, 3 failed, 1 skipped. The three failures are
+  local-setup only and in files this slice does not touch: Postgres 18 reports a RESTRICT
+  violation as 23001 where CI's 17.6 says 23503 (`source-capture-retention`), and the pool
+  tests expect password authentication (`postgres-pool`, the throwaway trusts every login).
+  Lock order everywhere: Dealer Grant, then Project and Working Configuration.

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { sharing } from "@/lib/server/sharing/sharing";
@@ -23,7 +24,7 @@ export async function DELETE(
   }
 
   const result = await sharing.revokeLink({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     linkId
   });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import {
   createRevisionDisplaySnapshot,
@@ -50,7 +51,7 @@ export async function GET(
   }
 
   const links = await sharing.listLinks({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId
   });
   return NextResponse.json({ links: links.map(serializeLink) });
@@ -79,7 +80,7 @@ export async function POST(
   }
 
   const workspace = await projects.getWorkspace({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId
   });
   if (!workspace || workspace.lifecycle !== "active") {
@@ -104,7 +105,7 @@ export async function POST(
   }
 
   const result = await sharing.createLink({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     expectedVersion: body.data.expectedVersion,
     idempotencyKey: `share:${body.data.idempotencyKey}`,

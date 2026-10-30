@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import { RDTD_KITCHEN_PRODUCT_VERSION } from "@/features/configurator/product-definition";
 import { decodeConfiguration } from "@/features/configurator/state-codec";
@@ -35,7 +36,7 @@ export async function GET(
   }
 
   const workspace = await projects.getWorkspace({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId
   });
   if (!workspace || workspace.lifecycle === "trashed") {
@@ -95,7 +96,7 @@ export async function PUT(
   }
 
   const result = await projects.saveWorkingConfiguration({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     expectedVersion: body.data.expectedVersion,
     configuration,

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import {
   createRevisionDisplaySnapshot,
@@ -65,7 +66,7 @@ export async function GET(
   }
 
   const page = await projects.listConfigurationRevisions({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     limit: 20,
     cursor: cursor?.data
@@ -113,7 +114,7 @@ export async function POST(
   }
 
   const workspace = await projects.getWorkspace({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId
   });
   if (!workspace || workspace.lifecycle !== "active") {
@@ -148,7 +149,7 @@ export async function POST(
     );
   }
   const result = await projects.checkpointRevision({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     expectedVersion: body.data.expectedVersion,
     trigger: "version-save",

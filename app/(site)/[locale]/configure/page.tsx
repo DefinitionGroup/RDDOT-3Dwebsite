@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ownerActor } from "@/features/projects/project-module";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -52,16 +53,16 @@ export default async function ConfigurePage({ params: routeParams, searchParams 
 
     const [workspace, revisionPage, shareLinks, gallery] = await Promise.all([
       projects.getWorkspace({
-        ownerId: session.customerAccountId,
+        actor: ownerActor(session.customerAccountId),
         projectId
       }),
       projects.listConfigurationRevisions({
-        ownerId: session.customerAccountId,
+        actor: ownerActor(session.customerAccountId),
         projectId,
         limit: 20
       }),
       sharing.listLinks({
-        ownerId: session.customerAccountId,
+        actor: ownerActor(session.customerAccountId),
         projectId
       }),
       loadInitialGallery({ ownerId: session.customerAccountId, projectId })

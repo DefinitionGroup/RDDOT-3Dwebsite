@@ -130,7 +130,7 @@ trade); the consent is the dealer's.
 | 01 | [Docs: spec, ADR 0014, CONTEXT](issues/01-docs.md) | Done |
 | 02 | [Schema and provisioning](issues/02-schema-and-provisioning.md) | Done |
 | 03 | [Dealer identity](issues/03-dealer-identity.md) | Done |
-| 04 | [Grant-checked modules and contract tests](issues/04-grant-checked-modules.md) | |
+| 04 | [Grant-checked modules and contract tests](issues/04-grant-checked-modules.md) | Done |
 | 05 | [Routes and pages](issues/05-routes-and-pages.md) | |
 | 06 | [Share dialog, map and Dealer Workspace](issues/06-share-dialog-map-dealer-workspace.md) | |
 | 07 | [Smoke test, STATUS, verification](issues/07-smoke-status-verification.md) | |

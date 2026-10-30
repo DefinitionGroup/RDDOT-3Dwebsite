@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ownerActor } from "@/features/projects/project-module";
 import { EMPTY_CUSTOMER_PROFILE } from "@/features/customer-accounts/customer-profile";
 import type { ObjectStorageModule } from "@/features/object-storage/object-storage-module";
 import { createPostgresAccountDeletion } from "@/lib/server/db/account-deletion-postgres";
@@ -68,7 +69,7 @@ describe("account data: delete for good, delete the account, export, storage hol
 
   async function request(ownerId: string, projectId: string) {
     const result = await createPostgresQuoteRequestModule(context.database, { describeConfiguration: describing }).submit({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId,
       expectedVersion: 1,
       idempotencyKey: crypto.randomUUID(),
@@ -93,8 +94,8 @@ describe("account data: delete for good, delete the account, export, storage hol
     await expect(projects.deleteProject({ ownerId, projectId: requested })).resolves.toEqual({ kind: "has-requests" });
     await expect(projects.deleteProject({ ownerId, projectId: plain })).resolves.toEqual({ kind: "deleted" });
 
-    await expect(projects.getWorkspace({ ownerId, projectId: plain })).resolves.toBeNull();
-    await expect(projects.getWorkspace({ ownerId, projectId: requested })).resolves.not.toBeNull();
+    await expect(projects.getWorkspace({ actor: ownerActor(ownerId), projectId: plain })).resolves.toBeNull();
+    await expect(projects.getWorkspace({ actor: ownerActor(ownerId), projectId: requested })).resolves.not.toBeNull();
     const stranger = await newOwner();
     await expect(projects.deleteProject({ ownerId: stranger.ownerId, projectId: requested })).resolves.toEqual({
       kind: "unavailable"
@@ -128,7 +129,7 @@ describe("account data: delete for good, delete the account, export, storage hol
     const { ownerId } = await newOwner();
     const projectId = await newProject(ownerId);
     await createPostgresSharingModule(context.database).createLink({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId,
       expectedVersion: 1,
       idempotencyKey: `share-${crypto.randomUUID()}`,
@@ -147,7 +148,7 @@ describe("account data: delete for good, delete the account, export, storage hol
     expect(data.projects).toHaveLength(1);
     expect(data.projects[0].workingConfiguration.configuration).toMatchObject({ cabinetColorKey: "graphite" });
     expect(data.projects[0].shareLinks).toHaveLength(1);
-    expect(data.projects[0].quoteRequests[0].contact.email).toBe("mara@example.com");
+    expect(data.projects[0].quoteRequests[0].contact?.email).toBe("mara@example.com");
     expect(data.projects[0].quoteRequests[0].planning).toEqual({
       projectKind: "",
       timeframe: "",

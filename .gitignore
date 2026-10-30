@@ -19,3 +19,6 @@ pnpm-debug.log*
 tmp/
 tsconfig.tsbuildinfo
 .vercel
+
+# Local data files too large for git: the map tile archive (ADR 0014)
+/.data/

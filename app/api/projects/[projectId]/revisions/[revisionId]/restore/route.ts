@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import { SUPPORTED_PRODUCT_DEFINITION_VERSIONS } from "@/features/configurator/product-definition";
 import {
@@ -47,7 +48,7 @@ export async function POST(
   }
 
   const workspace = await projects.getWorkspace({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId
   });
   if (!workspace || workspace.lifecycle !== "active") {
@@ -74,7 +75,7 @@ export async function POST(
   }
 
   const result = await projects.restoreRevision({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     revisionId,
     expectedVersion: body.data.expectedVersion,

@@ -14,6 +14,10 @@ export type ProjectActor =
   | { kind: "owner"; customerAccountId: CustomerAccountId }
   | { kind: "dealer"; dealerUserId: string };
 
+export function ownerActor(customerAccountId: CustomerAccountId): ProjectActor {
+  return { kind: "owner", customerAccountId };
+}
+
 export type JsonValue =
   | null
   | boolean
@@ -135,8 +139,9 @@ export type ProjectModule = {
     productDefinitionVersion: string;
   }): Promise<ProjectWorkspace>;
 
+  /** The owner's Project, or one open to the dealer through its Dealer Grant. */
   getWorkspace(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
   }): Promise<ProjectWorkspace | null>;
 
@@ -169,14 +174,14 @@ export type ProjectModule = {
   }): Promise<DeleteProjectResult>;
 
   listConfigurationRevisions(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     limit?: number;
     cursor?: { createdAt: Date; id: ConfigurationRevisionId };
   }): Promise<ConfigurationRevisionPage>;
 
   saveWorkingConfiguration(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     expectedVersion: number;
     configuration: unknown;
@@ -184,7 +189,7 @@ export type ProjectModule = {
   }): Promise<SaveWorkingConfigurationResult>;
 
   checkpointRevision(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     expectedVersion: number;
     trigger: "version-save" | "share" | "photo" | "quote";
@@ -198,7 +203,7 @@ export type ProjectModule = {
   }): Promise<CheckpointRevisionResult>;
 
   restoreRevision(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     revisionId: ConfigurationRevisionId;
     expectedVersion: number;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import {
   QUOTE_REQUEST_CONSENT_VERSION,
@@ -43,7 +44,7 @@ export async function POST(
   }
 
   const result = await quoteRequests.submit({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     expectedVersion: body.data.expectedVersion,
     idempotencyKey: body.data.idempotencyKey,
@@ -114,7 +115,7 @@ export async function GET(
   }
 
   const page = await quoteRequests.listForProject({
-    ownerId: session.customerAccountId,
+    actor: ownerActor(session.customerAccountId),
     projectId,
     cursor: cursor.cursor
   });
