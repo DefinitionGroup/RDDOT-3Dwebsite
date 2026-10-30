@@ -1443,7 +1443,9 @@ in below; their history is in git and in the Done section.
 The dependency upgrade (`a80ef42`) is done. In flight: dealers on `cc/feature/user-dealer`
 (2026-10-30, see Done), waiting for Martin's review and a merge into `cc/devstart-sanity`.
 *Martin:* the OK to apply `20261029120000` and `20261030120000` to the shared development
-database and provision the demo dealers there; the tile archive in object storage with
+database and provision the demo dealers there. Both must be applied before the branch
+reaches `redesign/devstart`: every signed-in request now looks up the dealer tables, so
+without them sign-in and the account fail; the tile archive in object storage with
 `MAP_TILES_OBJECT_KEY` on Vercel; the real dealer list.
 
 - The journey from a guest kitchen through sign-in to a Quote Request, with sessions
