@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import { SUPPORTED_PRODUCT_DEFINITION_VERSIONS } from "@/features/configurator/product-definition";
 import {
@@ -7,7 +6,7 @@ import {
   type RevisionDisplaySnapshot,
   UnsupportedProductDefinitionVersionError
 } from "@/features/projects/revision-display";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { projectActors } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
 
 export const runtime = "nodejs";
@@ -20,8 +19,9 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ projectId: string; revisionId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  // The owner, or a Dealer User whose grant the module checks (ADR 0014).
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -48,7 +48,7 @@ export async function POST(
   }
 
   const workspace = await projects.getWorkspace({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId
   });
   if (!workspace || workspace.lifecycle !== "active") {
@@ -75,7 +75,7 @@ export async function POST(
   }
 
   const result = await projects.restoreRevision({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId,
     revisionId,
     expectedVersion: body.data.expectedVersion,

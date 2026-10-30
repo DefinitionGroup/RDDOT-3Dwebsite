@@ -1,6 +1,6 @@
 # Routes and pages
 
-Status: ready-for-agent
+Status: resolved
 Type: task
 Blocked by: 04
 
@@ -13,3 +13,7 @@ Blocked by: 04
 - `haendler` reserved and private; API error codes in all three dictionaries.
 
 ## Comments
+- 2026-10-30: the six Project routes a dealer may use resolve a `ProjectActor`; projects
+  POST, rename, delete, lifecycle, duplicate, photos and the account stay owner-only and
+  answer 401 to a dealer (checked in the browser). `/konto` sends a dealer to `/haendler`;
+  a dealer of another Dealer gets 404 on the configurator page and the Project's APIs.

@@ -180,6 +180,7 @@ export function ConfiguratorShell({
   // A Project created or renamed in this session, ahead of the server's props.
   const [projectOverride, setProjectOverride] = useState<EditableProject | null>(null);
   const project = projectOverride ?? projectProp;
+  const isDealer = project?.access === "dealer";
   const [cameraView, setCameraView] = useState<CameraView>("signature");
   const [copied, setCopied] = useState(false);
   const [isPanelOpen, setPanelOpen] = useState(true);
@@ -299,10 +300,11 @@ export function ConfiguratorShell({
 
   // A Photo Job survives the browser (PLAN.md Phase 5): if this Project has one
   // in flight when the page loads, pick it up again instead of leaving the
-  // customer to guess whether anything is still happening.
+  // customer to guess whether anything is still happening. Photos are the
+  // owner's; a dealer has none to resume.
   const projectId = project?.id ?? null;
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || isDealer) return;
     const abort = new AbortController();
 
     async function resume() {
@@ -329,7 +331,7 @@ export function ConfiguratorShell({
     // watchPhotoJob is stable for the life of the shell; re-running on every
     // render would restart the watch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [isDealer, projectId]);
 
   function enterEditSession() {
     if (sharedView || editSession) return;
@@ -619,6 +621,7 @@ export function ConfiguratorShell({
         return;
       }
       const created: EditableProject = {
+        access: "owner",
         id: payload.project.id,
         name: payload.project.name,
         updatedAt: payload.project.updatedAt,
@@ -804,7 +807,12 @@ export function ConfiguratorShell({
         content: (
           <div className="flex flex-col gap-5">
             <div aria-live="polite" className="flex items-center justify-between gap-4">
-              <ProjectNameField name={project.name} onRenamed={renameProject} projectId={project.id} />
+              {project.access === "dealer" ? (
+                // The name is the owner's Project Metadata; a dealer reads it.
+                <p className="m-0 min-w-0 truncate text-body text-ink">{project.name}</p>
+              ) : (
+                <ProjectNameField name={project.name} onRenamed={renameProject} projectId={project.id} />
+              )}
               <p className="m-0 shrink-0 text-caption text-graphite">
                 {describeAutosave(autosaveStatus, locale) ?? "…"}
               </p>
@@ -821,15 +829,26 @@ export function ConfiguratorShell({
               projectId={project.id}
               savedVersion={savedVersion}
             />
-            <PhotoGallery
-              density="compact"
-              emptyMessage={t.projectGalleryEmpty}
-              initialNextCursor={project.gallery.nextCursor}
-              initialPhotos={project.gallery.photos}
-              initialTotalCount={project.gallery.totalCount}
-              key={galleryPageKey(project.id, project.gallery)}
-              scope={{ kind: "project", projectId: project.id }}
-            />
+            {project.access === "owner" && (
+              <>
+                <Pill
+                  className="self-start"
+                  href={localizePath(locale, `/konto?share=${project.id}`)}
+                  variant="ghost"
+                >
+                  {messages.dealers.shareWithDealer}
+                </Pill>
+                <PhotoGallery
+                  density="compact"
+                  emptyMessage={t.projectGalleryEmpty}
+                  initialNextCursor={project.gallery.nextCursor}
+                  initialPhotos={project.gallery.photos}
+                  initialTotalCount={project.gallery.totalCount}
+                  key={galleryPageKey(project.id, project.gallery)}
+                  scope={{ kind: "project", projectId: project.id }}
+                />
+              </>
+            )}
           </div>
         )
       }
@@ -965,7 +984,7 @@ export function ConfiguratorShell({
               <LanguageSwitch links={languages} />
             </div>
           )}
-          {!sharedView && isDesktop && <HudAccountLink />}
+          {!sharedView && isDesktop && <HudAccountLink dealer={isDealer} />}
         </div>
       </div>
 
@@ -1027,7 +1046,7 @@ export function ConfiguratorShell({
           <ProjectAutosave
             configurationCode={encodedConfig}
             onRestore={restoreProjectDraft}
-            onSaveAsNew={saveConfigurationAsProject}
+            onSaveAsNew={isDealer ? undefined : saveConfigurationAsProject}
             onStatus={setAutosaveStatus}
             project={project}
           />
@@ -1060,7 +1079,11 @@ export function ConfiguratorShell({
             >
               <CameraSegments active={cameraView} onSelect={setCameraView} size="hud" />
               {!sharedView && (
-                <SceneActions compact={false} onEdit={enterEditSession} onPhoto={openPhoto} />
+                <SceneActions
+                  compact={false}
+                  onEdit={enterEditSession}
+                  onPhoto={isDealer ? undefined : openPhoto}
+                />
               )}
               <SaveState text={project ? describeAutosave(autosaveStatus, locale) : null} />
             </motion.div>
@@ -1081,7 +1104,7 @@ export function ConfiguratorShell({
             <CameraSegments active={cameraView} onSelect={setCameraView} size="compact" />
           </div>
           {!sharedView && (
-            <SceneActions compact onEdit={enterEditSession} onPhoto={openPhoto} />
+            <SceneActions compact onEdit={enterEditSession} onPhoto={isDealer ? undefined : openPhoto} />
           )}
         </div>
       )}
@@ -1093,7 +1116,7 @@ export function ConfiguratorShell({
         </div>
       )}
 
-      {!sharedView && (
+      {!sharedView && !isDealer && (
         <PhotoPopover
           locale={locale}
           onClose={() => setPhotoOpen(false)}

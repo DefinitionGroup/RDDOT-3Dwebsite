@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import {
   QUOTE_REQUEST_CONSENT_VERSION,
@@ -10,7 +9,7 @@ import {
   serializeQuoteRequest,
   serializeQuoteRequestPage
 } from "@/features/quote-requests/serialize-quote-request";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { projectActors } from "@/lib/server/auth/customer-session";
 import { quoteRequests } from "@/lib/server/quote-requests/quote-requests";
 
 export const runtime = "nodejs";
@@ -23,8 +22,9 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  // The owner, or a Dealer User whose grant the module checks (ADR 0014).
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json({ code: SESSION_EXPIRED }, { status: 401 });
   }
 
@@ -44,7 +44,7 @@ export async function POST(
   }
 
   const result = await quoteRequests.submit({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId,
     expectedVersion: body.data.expectedVersion,
     idempotencyKey: body.data.idempotencyKey,
@@ -99,8 +99,8 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json({ code: SESSION_EXPIRED }, { status: 401 });
   }
 
@@ -115,7 +115,7 @@ export async function GET(
   }
 
   const page = await quoteRequests.listForProject({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId,
     cursor: cursor.cursor
   });

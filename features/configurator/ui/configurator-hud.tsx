@@ -46,13 +46,15 @@ export function HudBrand({ context }: { context: string }) {
   );
 }
 
-export function HudAccountLink() {
+/** The account, or for a Dealer User the Dealer Workspace. */
+export function HudAccountLink({ dealer = false }: { dealer?: boolean }) {
   const locale = useLocale();
+  const messages = useMessages();
   return (
     <Link
-      aria-label={useMessages().common.account}
+      aria-label={dealer ? messages.dealers.area : messages.common.account}
       className="chip-solid pointer-events-auto inline-flex size-11 shrink-0 items-center justify-center rounded-pill text-ink transition-colors duration-state ease-signature hover:bg-ink/[.14]"
-      href={localizePath(locale, "/konto")}
+      href={localizePath(locale, dealer ? "/haendler" : "/konto")}
     >
       <AccountIcon />
     </Link>
@@ -192,7 +194,8 @@ export function SceneActions({
 }: {
   compact: boolean;
   onEdit: () => void;
-  onPhoto: () => void;
+  /** Without it there is no photo action, as for a Dealer User. */
+  onPhoto?: () => void;
 }) {
   const shape = compact ? "size-[46px]" : "h-12 px-5";
   const t = useMessages().configurator;
@@ -207,15 +210,17 @@ export function SceneActions({
         <Pencil aria-hidden="true" size={15} strokeWidth={1.5} />
         {!compact && t.edit}
       </button>
-      <button
-        aria-label={t.createPhoto}
-        className={`${glassAction} ${shape}`}
-        onClick={onPhoto}
-        type="button"
-      >
-        <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
-        {!compact && t.photo}
-      </button>
+      {onPhoto && (
+        <button
+          aria-label={t.createPhoto}
+          className={`${glassAction} ${shape}`}
+          onClick={onPhoto}
+          type="button"
+        >
+          <Camera aria-hidden="true" size={15} strokeWidth={1.5} />
+          {!compact && t.photo}
+        </button>
+      )}
     </div>
   );
 }

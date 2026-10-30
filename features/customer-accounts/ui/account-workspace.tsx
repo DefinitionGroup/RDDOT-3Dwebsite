@@ -11,6 +11,7 @@ import type { AccountProject } from "@/features/customer-accounts/account-projec
 import { profileInitials, type CustomerProfile } from "@/features/customer-accounts/customer-profile";
 import { AccountData } from "@/features/customer-accounts/ui/account-data";
 import { AccountAvatar, AvatarEditor } from "@/features/customer-accounts/ui/account-avatar";
+import { DealerShareDialog } from "@/features/dealers/ui/dealer-share-dialog";
 import { ProfileForm } from "@/features/customer-accounts/ui/profile-form";
 import {
   ProjectMenu,
@@ -79,9 +80,28 @@ function formatDay(iso: string, locale: keyof typeof INTL_LOCALE) {
   }).format(new Date(iso));
 }
 
-function ProjectCard({ actions, project }: { actions: ProjectActions; project: AccountProject }) {
+/** An open Dealer Grant as the owner's card shows it (ADR 0014). */
+export type AccountDealerGrant = {
+  projectId: string;
+  dealerId: string;
+  dealerName: string;
+  grantedAt: string;
+};
+
+function ProjectCard({
+  actions,
+  grant,
+  onShareWithDealer,
+  project
+}: {
+  actions: ProjectActions;
+  grant: AccountDealerGrant | null;
+  onShareWithDealer: () => void;
+  project: AccountProject;
+}) {
   const locale = useLocale();
-  const t = useMessages().account;
+  const messages = useMessages();
+  const t = messages.account;
   const updated = formatDay(project.updatedAt, locale);
 
   return (
@@ -101,6 +121,11 @@ function ProjectCard({ actions, project }: { actions: ProjectActions; project: A
               </span>
             </>
           )}
+          {grant && (
+            <span className="mt-3 block truncate text-caption text-ink">
+              {messages.dealers.sharedWith(grant.dealerName, formatDay(grant.grantedAt, locale))}
+            </span>
+          )}
           <span className="mt-auto flex items-end justify-between gap-4 pt-5">
             <span className="min-w-0">
               {project.summary && (
@@ -117,23 +142,31 @@ function ProjectCard({ actions, project }: { actions: ProjectActions; project: A
           </span>
         </span>
       </Link>
-      <ProjectMenu actions={actions} project={project} />
+      <ProjectMenu
+        actions={actions}
+        onShareWithDealer={onShareWithDealer}
+        project={project}
+        sharedWithDealer={grant !== null}
+      />
     </div>
   );
 }
 
 export function AccountWorkspace({
   avatarId: initialAvatarId,
+  dealerGrants,
   email,
   expiresAt,
   gallery,
   pendingImport,
   profile: initialProfile,
   projects,
-  quoteRequests
+  quoteRequests,
+  shareProjectId
 }: {
   /** The profile photo's id, or null for the initials (P3). */
   avatarId: string | null;
+  dealerGrants: AccountDealerGrant[];
   email: string;
   expiresAt: string;
   gallery: SerializedGalleryPage;
@@ -144,6 +177,8 @@ export function AccountWorkspace({
   profile: CustomerProfile;
   projects: AccountProject[];
   quoteRequests: SerializedQuoteRequestPage;
+  /** Opens the dealer dialog for this Project, as the configurator's link asks (`?share=`). */
+  shareProjectId: string | null;
 }) {
   const locale = useLocale();
   const messages = useMessages();
@@ -160,6 +195,21 @@ export function AccountWorkspace({
   const active = projects.filter((project) => project.lifecycle === "active");
   const archived = projects.filter((project) => project.lifecycle === "archived");
   const trashed = projects.filter((project) => project.lifecycle === "trashed");
+  const grantOf = (projectId: string) => dealerGrants.find((grant) => grant.projectId === projectId) ?? null;
+  // The dialog stays mounted after closing, so it can leave the way it came.
+  const [share, setShare] = useState<{ projectId: string; open: boolean } | null>(() =>
+    shareProjectId && active.some((project) => project.id === shareProjectId)
+      ? { projectId: shareProjectId, open: true }
+      : null
+  );
+  const shareTarget = active.find((project) => project.id === share?.projectId) ?? null;
+  const [notice, setNotice] = useState<string | null>(null);
+
+  function closeShareDialog() {
+    setShare((current) => (current ? { ...current, open: false } : null));
+    // The configurator's link opened it; closing it leaves a plain account address.
+    if (shareProjectId) router.replace(localizePath(locale, "/konto"), { scroll: false });
+  }
 
   useEffect(() => {
     if (!pendingImport) return;
@@ -287,7 +337,7 @@ export function AccountWorkspace({
               )}
             </div>
             <p aria-live="polite" className="m-0 text-caption text-ink empty:hidden">
-              {actions.error}
+              {actions.error ?? notice}
             </p>
             {active.length === 0 ? (
               <div className="py-8">
@@ -300,7 +350,15 @@ export function AccountWorkspace({
               <ul className="m-0 mt-6 grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
                 {active.map((project) => (
                   <li key={project.id}>
-                    <ProjectCard actions={actions} project={project} />
+                    <ProjectCard
+                      actions={actions}
+                      grant={grantOf(project.id)}
+                      onShareWithDealer={() => {
+                        setNotice(null);
+                        setShare({ projectId: project.id, open: true });
+                      }}
+                      project={project}
+                    />
                   </li>
                 ))}
               </ul>
@@ -399,6 +457,22 @@ export function AccountWorkspace({
           </p>
         </div>
       </div>
+
+      {shareTarget && (
+        <DealerShareDialog
+          contact={{ name: profile.name, email, phone: profile.phone }}
+          currentDealerId={grantOf(shareTarget.id)?.dealerId ?? null}
+          key={shareTarget.id}
+          onClose={closeShareDialog}
+          onShared={(dealerName) => {
+            closeShareDialog();
+            setNotice(messages.dealers.shared(dealerName));
+            startTransition(() => router.refresh());
+          }}
+          open={share?.open ?? false}
+          project={{ id: shareTarget.id, name: shareTarget.name }}
+        />
+      )}
     </motion.div>
   );
 }

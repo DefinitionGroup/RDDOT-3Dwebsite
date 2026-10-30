@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/design-system/app-header";
 import { BrandLogo } from "@/components/design-system/brand-logo";
 import { describeAccountProject } from "@/features/customer-accounts/account-projects";
@@ -10,8 +10,9 @@ import { readSaveIntent, saveIntentPath } from "@/features/customer-accounts/sav
 import { AccountWorkspace } from "@/features/customer-accounts/ui/account-workspace";
 import { CONFIG_QUERY_PARAM } from "@/features/configurator/state-codec";
 import { isDevelopmentEmailCaptureActive } from "@/features/transactional-email/adapters/development-capture";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { sessionPrincipals } from "@/lib/server/auth/customer-session";
 import { getCustomerAvatars } from "@/lib/server/customer-accounts/avatars";
+import { dealers } from "@/lib/server/dealers/dealers";
 import { customerProfiles } from "@/lib/server/customer-accounts/profiles";
 import { serializeQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
@@ -45,6 +46,7 @@ type AccountPageProps = {
     import?: string | string[];
     intent?: string | string[];
     next?: string | string[];
+    share?: string | string[];
   }>;
 };
 
@@ -62,7 +64,10 @@ export default async function AccountPage({ params: routeParams, searchParams }:
     if (returnTo === accountPath) return localizePath(target, "/konto");
     return localizePath(target, `/konto?next=${encodeURIComponent(localizePath(target, unlocalizePath(returnTo)))}`);
   });
-  const session = await customerSessions.resolve(await headers());
+  const principal = await sessionPrincipals.resolve(await headers());
+  // A Dealer User has no account here; their Projects are the Dealer Workspace (ADR 0014).
+  if (principal?.kind === "dealer") redirect(localizePath(locale, "/haendler"));
+  const session = principal?.session ?? null;
   const header = (className?: string) => (
     <AppHeader
       action={{
@@ -84,12 +89,13 @@ export default async function AccountPage({ params: routeParams, searchParams }:
 
   // Signed in, the account is a workspace: the whole width, no picture beside it.
   if (session) {
-    const [accountProjects, gallery, requests, profile, avatar] = await Promise.all([
+    const [accountProjects, gallery, requests, profile, avatar, grants] = await Promise.all([
       projects.listProjects({ ownerId: session.customerAccountId, includeArchived: true, includeTrashed: true }),
       loadInitialGallery({ ownerId: session.customerAccountId }),
       quoteRequests.listForAccount({ ownerId: session.customerAccountId, limit: 10 }),
       customerProfiles.getProfile({ ownerId: session.customerAccountId }),
-      getCustomerAvatars().getAvatar({ ownerId: session.customerAccountId })
+      getCustomerAvatars().getAvatar({ ownerId: session.customerAccountId }),
+      dealers.listGrantsForOwner({ ownerId: session.customerAccountId })
     ]);
     return (
       <main className="min-h-svh bg-canvas px-5 py-6 text-ink sm:px-10 lg:px-[clamp(3rem,7vw,7rem)] lg:py-8">
@@ -97,6 +103,12 @@ export default async function AccountPage({ params: routeParams, searchParams }:
         <div className="mx-auto mt-12 max-w-6xl pb-16 lg:mt-16">
           <AccountWorkspace
             avatarId={avatar?.id ?? null}
+            dealerGrants={grants.map((grant) => ({
+              projectId: grant.projectId,
+              dealerId: grant.dealer.id,
+              dealerName: grant.dealer.name,
+              grantedAt: grant.grantedAt.toISOString()
+            }))}
             email={session.email}
             expiresAt={session.expiresAt.toISOString()}
             gallery={gallery}
@@ -104,6 +116,7 @@ export default async function AccountPage({ params: routeParams, searchParams }:
             profile={profile}
             projects={accountProjects.map((project) => describeAccountProject(project, locale))}
             quoteRequests={serializeQuoteRequestPage(requests)}
+            shareProjectId={typeof params.share === "string" ? params.share : null}
           />
         </div>
       </main>

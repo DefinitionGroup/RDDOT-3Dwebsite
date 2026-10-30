@@ -79,7 +79,8 @@ export const RESERVED_SEGMENTS = [
   "konto",
   "anfrage",
   "share",
-  "checkout"
+  "checkout",
+  "haendler"
 ] as const;
 
 export function isLocale(value: string): value is Locale {

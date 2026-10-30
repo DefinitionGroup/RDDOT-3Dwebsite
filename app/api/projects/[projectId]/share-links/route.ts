@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import {
   createRevisionDisplaySnapshot,
   type RevisionDisplaySnapshot,
   UnsupportedProductDefinitionVersionError
 } from "@/features/projects/revision-display";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { projectActors } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
 import { sharing } from "@/lib/server/sharing/sharing";
 
@@ -37,8 +36,9 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  // The owner, or a Dealer User whose grant the module checks (ADR 0014).
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -51,7 +51,7 @@ export async function GET(
   }
 
   const links = await sharing.listLinks({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId
   });
   return NextResponse.json({ links: links.map(serializeLink) });
@@ -61,8 +61,8 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -80,7 +80,7 @@ export async function POST(
   }
 
   const workspace = await projects.getWorkspace({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId
   });
   if (!workspace || workspace.lifecycle !== "active") {
@@ -105,7 +105,7 @@ export async function POST(
   }
 
   const result = await sharing.createLink({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId,
     expectedVersion: body.data.expectedVersion,
     idempotencyKey: `share:${body.data.idempotencyKey}`,

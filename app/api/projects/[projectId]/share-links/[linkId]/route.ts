@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { projectActors } from "@/lib/server/auth/customer-session";
 import { sharing } from "@/lib/server/sharing/sharing";
 
 export const runtime = "nodejs";
@@ -10,8 +9,9 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ projectId: string; linkId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  // The owner, or a Dealer User whose grant the module checks (ADR 0014).
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -24,7 +24,7 @@ export async function DELETE(
   }
 
   const result = await sharing.revokeLink({
-    actor: ownerActor(session.customerAccountId),
+    actor,
     projectId,
     linkId
   });

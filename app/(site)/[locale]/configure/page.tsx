@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { ownerActor } from "@/features/projects/project-module";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { ConfiguratorShell } from "@/features/configurator/ui/configurator-shell";
 import { CONFIG_QUERY_PARAM, getInitialConfiguratorState } from "@/features/configurator/state-codec";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { projectActorOf } from "@/features/customer-accounts/customer-session";
+import { customerSessions, sessionPrincipals } from "@/lib/server/auth/customer-session";
 import { loadInitialGallery } from "@/lib/server/photo-gallery/initial-gallery";
 import { projects } from "@/lib/server/projects/projects";
 import { normalizeConfiguratorState } from "@/features/configurator/product-definition";
@@ -45,32 +45,31 @@ export default async function ConfigurePage({ params: routeParams, searchParams 
   if (projectId) {
     if (!z.uuid().safeParse(projectId).success) notFound();
 
-    const session = await customerSessions.resolve(await headers());
-    if (!session) {
+    const principal = await sessionPrincipals.resolve(await headers());
+    if (!principal) {
       const next = localizePath(locale, `/configure?project=${projectId}`);
       redirect(localizePath(locale, `/konto?next=${encodeURIComponent(next)}`));
     }
+    // The owner, or a Dealer User through the Project's Dealer Grant (ADR 0014):
+    // every read below checks the grant; without one the Project does not exist.
+    const actor = projectActorOf(principal);
 
     const [workspace, revisionPage, shareLinks, gallery] = await Promise.all([
-      projects.getWorkspace({
-        actor: ownerActor(session.customerAccountId),
-        projectId
-      }),
-      projects.listConfigurationRevisions({
-        actor: ownerActor(session.customerAccountId),
-        projectId,
-        limit: 20
-      }),
-      sharing.listLinks({
-        actor: ownerActor(session.customerAccountId),
-        projectId
-      }),
-      loadInitialGallery({ ownerId: session.customerAccountId, projectId })
+      projects.getWorkspace({ actor, projectId }),
+      projects.listConfigurationRevisions({ actor, projectId, limit: 20 }),
+      sharing.listLinks({ actor, projectId }),
+      principal.kind === "customer"
+        ? loadInitialGallery({ ownerId: principal.session.customerAccountId, projectId })
+        : { photos: [], totalCount: 0, nextCursor: null }
     ]);
     if (!workspace) notFound();
     // An archived Project rests and a trashed one is blocked (CONTEXT.md); the account offers to restore it.
     if (workspace.lifecycle !== "active") {
-      redirect(localizePath(locale, `/konto#${workspace.lifecycle === "trashed" ? "trash" : "archive"}`));
+      redirect(
+        principal.kind === "dealer"
+          ? localizePath(locale, "/haendler")
+          : localizePath(locale, `/konto#${workspace.lifecycle === "trashed" ? "trash" : "archive"}`)
+      );
     }
 
     return (
@@ -80,6 +79,7 @@ export default async function ConfigurePage({ params: routeParams, searchParams 
         locale={locale}
         locales={await visibleLocales()}
         project={{
+          access: principal.kind === "dealer" ? "dealer" : "owner",
           id: workspace.id,
           name: workspace.name,
           updatedAt: workspace.workingConfiguration.updatedAt.toISOString(),

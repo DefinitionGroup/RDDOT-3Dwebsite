@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { ownerActor } from "@/features/projects/project-module";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -13,6 +12,8 @@ import {
   getConfiguratorQuote,
   getLocalizedLabel
 } from "@/features/configurator/product-definition";
+import { EMPTY_CUSTOMER_PROFILE } from "@/features/customer-accounts/customer-profile";
+import { projectActorOf } from "@/features/customer-accounts/customer-session";
 import { AccountAccess } from "@/features/customer-accounts/ui/account-access";
 import { isDevelopmentEmailCaptureActive } from "@/features/transactional-email/adapters/development-capture";
 import {
@@ -24,7 +25,7 @@ import {
   type ConfigurationSummaryData
 } from "@/features/quote-requests/ui/configuration-summary";
 import { QuoteRequestForm } from "@/features/quote-requests/ui/quote-request-form";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { sessionPrincipals } from "@/lib/server/auth/customer-session";
 import { customerProfiles } from "@/lib/server/customer-accounts/profiles";
 import { projects } from "@/lib/server/projects/projects";
 import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n";
@@ -64,7 +65,7 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
       ? params.project
       : null;
   const guestCode = typeof params.c === "string" ? params.c : null;
-  const session = await customerSessions.resolve(await headers());
+  const principal = await sessionPrincipals.resolve(await headers());
 
   const backHref = localizePath(locale, projectId ? `/configure?project=${projectId}` : "/configure");
   // This request in any language: where a sign-in returns, and where the language switch leads.
@@ -79,7 +80,7 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
     );
 
   let content: React.ReactNode;
-  if (!session) {
+  if (!principal) {
     content = (
       <AccountAccess
         developmentCaptureEnabled={isDevelopmentEmailCaptureActive()}
@@ -87,11 +88,25 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
       />
     );
   } else if (!projectId) {
-    content = <SaveFirst guestCode={guestCode} locale={locale} />;
+    content =
+      principal.kind === "dealer" ? <Unavailable locale={locale} /> : <SaveFirst guestCode={guestCode} locale={locale} />;
   } else {
-    const [workspace, profile] = await Promise.all([
-      projects.getWorkspace({ actor: ownerActor(session.customerAccountId), projectId }),
-      customerProfiles.getProfile({ ownerId: session.customerAccountId })
+    // A Dealer User requests through the Dealer Grant with their own contact (ADR 0014).
+    const [workspace, initialContact] = await Promise.all([
+      projects.getWorkspace({ actor: projectActorOf(principal), projectId }),
+      principal.kind === "customer"
+        ? customerProfiles
+            .getProfile({ ownerId: principal.session.customerAccountId })
+            .then((profile) => ({ ...profile, email: principal.session.email }))
+        : {
+            ...EMPTY_CUSTOMER_PROFILE,
+            name: principal.session.name,
+            phone: principal.session.phone,
+            email: principal.session.email,
+            customerType: "professional" as const,
+            company: principal.session.dealerName,
+            professionalRole: "trade" as const
+          }
     ]);
     if (!workspace || workspace.lifecycle !== "active") {
       content = <Unavailable locale={locale} />;
@@ -101,9 +116,10 @@ export default async function QuoteRequestPage({ params: routeParams, searchPara
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-16">
           <QuoteRequestForm
             expectedVersion={workspace.workingConfiguration.version}
-            initialContact={{ ...profile, email: session.email }}
+            initialContact={initialContact}
             projectId={workspace.id}
             projectName={workspace.name}
+            requester={principal.kind === "dealer" ? "dealer" : "owner"}
           />
           <aside className="lg:pt-[6.5rem]">
             <ConfigurationSummary locale={locale} summary={summary} />
