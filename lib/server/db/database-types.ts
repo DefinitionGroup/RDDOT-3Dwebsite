@@ -111,6 +111,8 @@ export type SharedRevisionLinkTable = {
   expiresAt: Timestamp;
   revokedAt: Timestamp | null;
   createdAt: Timestamp;
+  /** Set when a Dealer User made the link (ADR 0014); null for the owner. */
+  createdByDealerUserId: Generated<string | null>;
 };
 
 export type SourceCaptureTable = {
@@ -237,6 +239,8 @@ export type QuoteRequestTable = {
   customerType: Generated<ContactDetails["customerType"]>;
   company: Generated<string>;
   professionalRole: Generated<ContactDetails["professionalRole"]>;
+  /** Set when a Dealer User submitted the request (ADR 0014); null for the owner. */
+  submittedByDealerUserId: Generated<string | null>;
   projectKind: Generated<QuoteRequestPlanning["projectKind"]>;
   timeframe: Generated<QuoteRequestPlanning["timeframe"]>;
   budgetBand: Generated<QuoteRequestPlanning["budgetBand"]>;
@@ -262,6 +266,54 @@ export type SignInCodeLimitTable = {
   requests: number;
 };
 
+export type DealerTable = {
+  id: string;
+  name: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: Generated<string>;
+  phone: Generated<string>;
+  email: Generated<string>;
+  website: Generated<string>;
+  latitude: number;
+  longitude: number;
+  status: Generated<"active" | "inactive">;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
+
+export type DealerUserTable = {
+  id: string;
+  dealerId: string;
+  email: string;
+  name: Generated<string>;
+  phone: Generated<string>;
+  status: Generated<"active" | "disabled">;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+};
+
+export type DealerUserIdentityTable = {
+  id: string;
+  dealerUserId: string;
+  provider: string;
+  providerSubject: string;
+  createdAt: Timestamp;
+};
+
+export type ProjectDealerGrantTable = {
+  id: string;
+  projectId: string;
+  dealerId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  creationIdempotencyKey: string;
+  grantedAt: Timestamp;
+  revokedAt: Timestamp | null;
+};
+
 export type Database = {
   customerAccount: CustomerAccountTable;
   customerProfile: CustomerProfileTable;
@@ -281,4 +333,8 @@ export type Database = {
   quoteRequest: QuoteRequestTable;
   developmentEmailCapture: DevelopmentEmailCaptureTable;
   signInCodeLimit: SignInCodeLimitTable;
+  dealer: DealerTable;
+  dealerUser: DealerUserTable;
+  dealerUserIdentity: DealerUserIdentityTable;
+  projectDealerGrant: ProjectDealerGrantTable;
 };

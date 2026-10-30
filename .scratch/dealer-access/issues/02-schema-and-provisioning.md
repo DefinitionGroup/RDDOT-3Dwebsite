@@ -1,6 +1,6 @@
 # Schema and provisioning
 
-Status: ready-for-agent
+Status: resolved
 Type: task
 Blocked by: 01
 
@@ -18,3 +18,7 @@ Blocked by: 01
 - Applying the migration or the seed to the shared development database (Martin's OK).
 
 ## Comments
+- 2026-10-30: migration applied, rolled back and reapplied on a throwaway Postgres 18.6;
+  `db/schema.sql` patched with the before/after dump diff only (the local dump otherwise
+  differs in its header and Neon's `playing_with_neon` table). Provisioning twice leaves 14
+  dealers and 14 users; a Neon host is refused.

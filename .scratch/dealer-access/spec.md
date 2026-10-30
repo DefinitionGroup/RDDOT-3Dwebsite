@@ -128,7 +128,7 @@ trade); the consent is the dealer's.
 | # | Issue | State |
 | --- | --- | --- |
 | 01 | [Docs: spec, ADR 0014, CONTEXT](issues/01-docs.md) | Done |
-| 02 | [Schema and provisioning](issues/02-schema-and-provisioning.md) | |
+| 02 | [Schema and provisioning](issues/02-schema-and-provisioning.md) | Done |
 | 03 | [Dealer identity](issues/03-dealer-identity.md) | |
 | 04 | [Grant-checked modules and contract tests](issues/04-grant-checked-modules.md) | |
 | 05 | [Routes and pages](issues/05-routes-and-pages.md) | |
