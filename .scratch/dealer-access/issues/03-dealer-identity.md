@@ -1,6 +1,6 @@
 # Dealer identity
 
-Status: ready-for-agent
+Status: resolved
 Type: task
 Blocked by: 02
 
@@ -15,3 +15,5 @@ Blocked by: 02
   unaffected.
 
 ## Comments
+- 2026-10-30: `tests/integration/dealer-identity-contract.test.ts` (4 tests) passes on the
+  local throwaway Postgres, with the existing persistence contract unchanged.

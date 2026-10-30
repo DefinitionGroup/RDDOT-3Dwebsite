@@ -5,6 +5,15 @@ export type CustomerAccountId = string;
 export type ProjectId = string;
 export type ConfigurationRevisionId = string;
 
+/**
+ * Who acts on a Project: its owner, or a Dealer User whose Dealer holds the
+ * Project's open Dealer Grant (ADR 0014). The adapters check the grant inside
+ * every read and write; a dealer never acts as the owner.
+ */
+export type ProjectActor =
+  | { kind: "owner"; customerAccountId: CustomerAccountId }
+  | { kind: "dealer"; dealerUserId: string };
+
 export type JsonValue =
   | null
   | boolean
