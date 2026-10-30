@@ -125,11 +125,11 @@ A shareable Kitchen Configuration that is not owned by a Customer Account and ma
 _Avoid_: Anonymous account, guest order, claimed configuration
 
 **Customer Account**:
-The application-owned identity and private workspace of a person planning their own kitchen. Authentication Identities grant access, while Sanity editors and future internal sales or planning staff remain separate identities. It may hold a profile photo, which the application re-encodes without metadata and only its owner sees. Its owner can download everything it holds and, after a recent sign-in, delete it with all it owns; an account with Quote Requests is deleted by rotpunkt by hand. Stored files of deleted rows leave object storage 30 days later.
+The application-owned identity and private workspace of a person planning their own kitchen. Authentication Identities grant access, while Sanity editors, Dealer Users and future internal sales or planning staff remain separate identities. It may hold a profile photo, which the application re-encodes without metadata and only its owner sees. Its owner can download everything it holds and, after a recent sign-in, delete it with all it owns; an account with Quote Requests is deleted by rotpunkt by hand. Stored files of deleted rows leave object storage 30 days later.
 _Avoid_: User account, editor account, Shopify customer
 
 **Authentication Identity**:
-A provider-issued identity linked to one Customer Account for sign-in; it never owns Projects or commercial data.
+A provider-issued identity linked to one Customer Account or one Dealer User for sign-in, never both; it never owns Projects or commercial data.
 _Avoid_: Customer, account owner, provider user
 
 **Identity Adapter**:
@@ -141,8 +141,28 @@ The idempotent creation of a new Project from a Guest Configuration after verifi
 _Avoid_: Claim, account merge
 
 **Project**:
-A Customer Account's durable planning workspace containing named Configuration Revisions, generated photos, notes, and Quote Requests.
+A Customer Account's durable planning workspace containing named Configuration Revisions, generated photos, notes, and Quote Requests. Its owner may open it to one Dealer at a time through a Dealer Grant; ownership never moves.
 _Avoid_: Saved configuration, cart
+
+**Dealer**:
+A kitchen retailer selling rotpunkt kitchens, recorded by rotpunkt with its name, address, contact and location. A Dealer acts only through its Dealer Users and owns no Projects.
+_Avoid_: Partner, reseller account, showroom user
+
+**Dealer User**:
+A person working for one Dealer whom rotpunkt has provisioned by email. They sign in with the same email code as customers but are a separate identity from any Customer Account; disabled rather than deleted, because the share links and Quote Requests they made refer to them.
+_Avoid_: Customer Account, staff, admin
+
+**Dealer Directory**:
+rotpunkt's list of active Dealers from which a customer picks one, nearest first from the postcode in their profile, on a self-hosted map.
+_Avoid_: Store locator, dealer search API
+
+**Dealer Grant**:
+The owner's revocable permission for every active Dealer User of one Dealer to view and edit one Project: its Working Configuration, versions, share links and Quote Requests, never its lifecycle, name, photos, or the owner's other data. It carries a copy of the owner's name, email and phone for the Dealer. A Project has at most one open grant; sharing with another Dealer replaces it, entering Trash revokes it for good, and an archived Project stays closed to the Dealer until restored. Every read and write a Dealer User makes is checked against the open grant on the server.
+_Avoid_: Shared project, transfer, collaboration link, shared session
+
+**Dealer Workspace**:
+The Dealer User's own area listing the Projects shared with their Dealer, with each owner's contact copy. It shows no other customer data.
+_Avoid_: Dealer portal, CRM, customer list
 
 **Project Metadata**:
 The mutable private name and notes used to organize a Project. Project Metadata is not part of the Kitchen Configuration, its revision hash, or a Shared Revision Link.
@@ -213,7 +233,7 @@ An immutable approved description of the exact image-generation model or deploym
 _Avoid_: Latest model, provider model name, Prompt Template Release
 
 **Quote Request**:
-A person's immutable, idempotently submitted request for commercial review of one Configuration Revision, including the contact, consent, note, selected photo, and nonbinding price context captured at submission. The contact is a copy of how to address and reach the person (salutation, title, postcode, channel and time, private or professional with company and field), so a later profile edit never changes it; the planning facts (project, timeframe, budget band, wall length) belong to this request alone. It is neither an authoritative price nor an Order.
+A person's immutable, idempotently submitted request for commercial review of one Configuration Revision, including the contact, consent, note, selected photo, and nonbinding price context captured at submission. The contact is a copy of how to address and reach the person (salutation, title, postcode, channel and time, private or professional with company and field), so a later profile edit never changes it; the planning facts (project, timeframe, budget band, wall length) belong to this request alone. A Dealer User with a Dealer Grant may submit one for the Project with their own contact and consent; it still belongs to the owner's Project. It is neither an authoritative price nor an Order.
 _Avoid_: Checkout, order, purchase
 
 **Sales Mode**:
