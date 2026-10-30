@@ -56,7 +56,7 @@ const FRONT_COLORS: FinishOption[] = [
       es: "Fenix Castoro Ottawa"
     },
     hex: "#77694f",
-    textureUrl: "/images/material-fenix-castoro-ottawa-0717.png",
+    textureUrl: "/images/material-fenix-castoro-ottawa-0717.jpg",
     material: "matte",
     priceDeltaCents: 48000,
     externalId: "front-fenix-castoro-ottawa-0717"
@@ -69,7 +69,7 @@ const FRONT_COLORS: FinishOption[] = [
       es: "Fenix Verde Kitami"
     },
     hex: "#a3ab99",
-    textureUrl: "/images/material-fenix-verde-kitami-0794.png",
+    textureUrl: "/images/material-fenix-verde-kitami-0794.jpg",
     material: "matte",
     priceDeltaCents: 52000,
     externalId: "front-fenix-verde-kitami-0794"
@@ -78,7 +78,7 @@ const FRONT_COLORS: FinishOption[] = [
     key: "walnut-memory",
     label: { de: "Nussbaum Memory", en: "Walnut Memory", es: "Nogal Memory" },
     hex: "#5d3f2e",
-    textureUrl: "/images/material-walnut-memory-wn832.png",
+    textureUrl: "/images/material-walnut-memory-wn832.jpg",
     normalMapUrl: "/images/material-walnut-memory-wn832-normal.png",
     roughnessMapUrl: "/images/material-walnut-memory-wn832-rough.png",
     material: "structured",

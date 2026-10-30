@@ -120,6 +120,18 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 ## Done
 
+- **Lighter configurator textures (2026-10-30).** Issue 07 of `.scratch/a11y-perf/issues/`.
+  The three finish scans the 3D fronts and the swatches use are JPEG instead of PNG (the
+  walnut 684 → 28 KB, Verde Kitami 260 → 10 KB; the PNGs stay for the homepage's demo
+  content); the wood floor's diffuse and normal maps are 1024 px instead of 2048 (1.63 MB →
+  0.25 MB); the studio HDRI is 512 × 256 instead of 1024 × 512, box-filtered so its light
+  keeps its strength (2.1 → 0.41 MB, about 0.3 MB compressed). Before/after renders on the
+  real GPU against the same build: the floor and the walnut front stay within 46–50 dB PSNR
+  of the originals (two runs of one build differ by 62 dB or more), nothing a viewer can tell
+  apart; 1536 px floors came out further from the originals, because their mip levels do not
+  line up with the GPU's. The configurator's first 15 s on a phone come to about 2.5 MB at
+  Vercel's compression (5.9 MB). Path-traced photos read the same HDR file and were not
+  rendered for comparison.
 - **The audit's first fixes (2026-10-30).** Issues 01–04 and 06 of
   `.scratch/a11y-perf/issues/`. The logo link is named from its content ("rotpunkt
   Signature Startseite", the wordmark one image), the language switch "Sprache DE:
@@ -1349,10 +1361,9 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - The AI photo feature is application-owned and asynchronous (Photo Job Module, EU object storage, owner scoping, kill switch, webhook inbox, reconciliation), but no webhook has yet been received from the real provider — that needs a public HTTPS URL, which only a deployment has — and the sweep is not scheduled. The browser's submit-and-poll flow has been exercised only against the module tests, not with generation enabled in a live pane. PLAN.md Phases 4–6 remain, plus the output moderation gate and cost evidence from Phase 3.
 - No analytics/event tracking exists for configurator interactions.
 - The accessibility and performance audit (2026-10-29, `.scratch/a11y-perf/audit.md`)
-  left nine issues (`.scratch/a11y-perf/issues/`); 01–04 and 06 are fixed (2026-10-30, see
-  Done). Open: the hero film's weight (2.7 and 8.7 MB, also on slow connections, 05), heavy
-  textures (the configurator's ~6 MB first 15 s are mostly the HDR, floor textures and a
-  PNG swatch, 07), the statement's dimmed contrast (08) and the budgets in CI (09). Budgets
+  left nine issues (`.scratch/a11y-perf/issues/`); 01–04, 06 and 07 are fixed (2026-10-30,
+  see Done). Open: the hero film's weight (2.7 and 8.7 MB, also on slow connections, 05),
+  the statement's dimmed contrast (08) and the budgets in CI (09). Budgets
   other than the kitchen model's Asset Manifest are proposed there, not enforced; frame time
   and GPU memory need a real device.
 - The browser smoke test walks one journey at desktop width, on a phone and on a phone held
@@ -1448,8 +1459,8 @@ Engineering:
   value shared by Preview and Production, which ADR 0011 rules out.
 - Storage operations from ADR 0011: backup path and a restore drill for the RustFS
   deployment, encryption at rest and credential rotation recorded.
-- Accessibility and performance: the audit is done (2026-10-29) and issues 01–04 and 06
-  fixed (2026-10-30, see Done); 05, 07, 08 and the budgets in CI (09) remain in
+- Accessibility and performance: the audit is done (2026-10-29) and issues 01–04, 06 and
+  07 fixed (2026-10-30, see Done); 05, 08 and the budgets in CI (09) remain in
   `.scratch/a11y-perf/issues/`.
 - Account management, Slice A ([spec](.scratch/account-management/spec.md)) is done:
   A1 to A4 on 2026-10-23 (see Done). Slice B follows after launch (Later).
