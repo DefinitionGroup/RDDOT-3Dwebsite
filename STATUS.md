@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-28 to `4dc7cf7`. `cc/devstart-003` and the earlier
+2026-10-30 to `dd2044f`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -113,7 +113,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; the daily storage sweep (30-day hold) waits for `CRON_SECRET` on Vercel |
 | Gates: lint, types, 149 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
-| Vercel project | Production builds `redesign/devstart` from Git, at `4dc7cf7` since 2026-10-28, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
+| Vercel project | Production builds `redesign/devstart` from Git, at `dd2044f` since 2026-10-30, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
@@ -131,8 +131,8 @@ built. Details for each line are under Done, Known Defects and Missing.
   ahead of time only on a fast connection without Save-Data. On a local production build:
   homepage LCP on the phone profile 1.1 s (5.0 s in the audit), no room or outlook fetched
   while staying in the Studio, the configurator's first 15 s about 6.0 MB at Vercel's
-  compression (11.2 MB), axe clean everywhere but the statement's dimmed words (08). Not yet
-  on the test site.
+  compression (11.2 MB), axe clean everywhere but the statement's dimmed words (08). Live
+  since `1ubz7vglv` (see Deployment): phone LCP 1.86 s, the configurator 5.9 MB.
 - **Accessibility and performance audit (2026-10-29).** `.scratch/a11y-perf/audit.md`,
   measured on the test site (`1ejmowgnl`) signed out. *Accessibility:* axe-core 4.14 (WCAG
   2.2 A/AA and best practice) on the homepage in de/en/es, `/konto`, `/anfrage`, a share
@@ -1026,7 +1026,22 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-1ejmowgnl`, built from `1fe6086` on 2026-10-29, live about
+- Production: `rddot-3-dwebsite-1ubz7vglv`, built from `dd2044f` on 2026-10-30, live about
+  2 min after `redesign/devstart` was fast-forwarded from `1fe6086` and pushed; it brings the
+  audit's fixes 01–04 and 06 (see Done). Migration `20261029120000` is still not applied to
+  the shared development database. Checked right after, signed out, in Chrome on the real
+  GPU: the homepage's first Tab stop is "Zum Inhalt springen" ("Skip to content", "Saltar al
+  contenido"), which moves focus to `main`; the logo, the language switch, the counter and
+  the palette carry their new names in all three languages; the hero rises in, and stands
+  at once under reduced motion; an unknown path is titled "Seite nicht gefunden | rotpunkt
+  Signature"; `/konto` has one logo stop. axe on every page and configurator state of the
+  audit: clean but the statement's dimmed words (08). Phone profile (slow 4G, CPU 4×):
+  homepage LCP 1.86 s (5.0 s before), the configurator 5.9 MB in its first 15 s with no room
+  or outlook fetched (11.2 MB). On the real desktop line (Chrome reports 10 Mbit/s) both
+  rooms and the Loft's street outlook load ahead at 1.5 s; pointing at a room's segment
+  fetches it. No console errors, nothing past the edge at 320 px. Nothing was submitted and
+  no code requested.
+- The deployment before, `rddot-3-dwebsite-1ejmowgnl`, was built from `1fe6086` on 2026-10-29, live about
   70 s after `redesign/devstart` was fast-forwarded from `becd603` and pushed; it brings the
   configurator's own layout on a phone held sideways, and the smoke test at phone width and
   sideways (no effect on the site). Migration `20261029120000` is still not applied to the
