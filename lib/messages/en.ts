@@ -49,7 +49,9 @@ export const en = {
     requestTitle: "Request | rotpunkt Signature",
     requestDescription: "Send a saved kitchen plan for review, without obligation.",
     sharedTitle: "Shared kitchen state | rotpunkt Signature",
-    sharedDescription: "Read-only view of a shared kitchen state."
+    sharedDescription: "Read-only view of a shared kitchen state.",
+    dealerTitle: "Dealer area | rotpunkt Signature",
+    dealerDescription: "Continue planning the kitchen projects shared with you."
   },
   notFound: {
     pageTitle: "Page not found",
@@ -345,6 +347,8 @@ export const en = {
     title: "Request your *plan*.",
     intro: (project: string) =>
       `You send “${project}” to rotpunkt in exactly this state. The request is non-binding and not yet a quote.`,
+    dealerIntro: (project: string) =>
+      `As a dealer, you are sending “${project}” to rotpunkt exactly as it is now. The request belongs to your customer's project and is non-binding.`,
     name: "Name",
     email: "Email address",
     phone: "Phone",
@@ -372,6 +376,8 @@ export const en = {
     received: "Received",
     keptNote:
       "The request stays in your account with exactly this planning state. You can keep changing your project without touching the request.",
+    dealerKeptNote:
+      "The request belongs to your customer's project with exactly this planning state. The project can keep changing without touching the request.",
     toRequests: "To my requests",
     toProject: "To the project",
     saveFirstTitle: "Save as a *project* first.",
@@ -525,7 +531,7 @@ export const en = {
     duplicate: "Duplicate",
     archive: "Archive",
     moveToTrash: "Move to trash",
-    trashWarning: "This permanently revokes the project's share links.",
+    trashWarning: "This permanently ends the project's share links and its dealer's access.",
     confirmTrash: "Yes, move to trash",
     cancel: "Cancel",
     restore: "Restore",
@@ -555,6 +561,56 @@ export const en = {
     accountDeleteFailed: "The account could not be deleted. Please try again.",
     copyName: (name: string) => `${name} (copy)`,
     actionFailed: "That did not work. Please try again."
+  },
+  dealers: {
+    area: "Dealer area",
+    shareWithDealer: "Share with a dealer",
+    switchDealer: "Change dealer",
+    endShare: "Stop sharing",
+    endShareNote: "The dealer can no longer open the project or see your contact details.",
+    confirmEndShare: "Yes, stop sharing",
+    sharedWith: (dealer: string, date: string) => `Shared with ${dealer} · since ${date}`,
+    dialogLabel: "Share with a dealer",
+    dialogTitle: "Share with a *dealer*.",
+    dialogBody: "Your dealer sees this project, plans it further with you and can send a request for you. It stays your project.",
+    search: "Find a dealer",
+    searchPlaceholder: "Name, town or postcode",
+    nearest: (postcode: string) => `Nearest first from ${postcode}`,
+    noPostcode: "With a postcode in your profile, the nearest dealers come first.",
+    distance: (km: number) => `${km} km`,
+    count: (count: number) => (count === 1 ? "1 dealer" : `${count} dealers`),
+    noMatches: "No dealer matches this search.",
+    loading: "Loading dealers …",
+    loadFailed: "The dealers could not be loaded.",
+    current: "Current",
+    disclosureTitle: "What the dealer sees",
+    disclosure: "This project with all its versions, and your contact details:",
+    noName: "no name in your profile",
+    noPhone: "no phone number in your profile",
+    disclosureNote: "You can stop sharing at any time. Moving the project to the trash stops it too.",
+    choose: "Choose a dealer",
+    share: (dealer: string) => `Share with ${dealer}`,
+    sharing: "Sharing …",
+    shared: (dealer: string) => `Shared with ${dealer}.`,
+    ended: "Sharing stopped.",
+    failed: "That did not work. Please try again.",
+    map: "Map of dealers",
+    mapUnavailable: "The map is not available right now. The list contains every dealer.",
+    mapAttribution: "© OpenStreetMap contributors",
+    postcodeSource: "Postcodes: GeoNames",
+    signInTitle: "For *dealers*.",
+    signInBody: "Sign in with the email address rotpunkt set up for you. You will receive a one-time code.",
+    customerOnlyTitle: "For rotpunkt *dealers*.",
+    customerOnlyBody: "You are signed in with your customer account. Your own projects are in your area.",
+    toAccount: "Go to my area",
+    title: "Shared *projects*.",
+    body: (dealer: string) => `Kitchen projects that customers have shared with ${dealer}.`,
+    projects: "Projects",
+    noProjects: "Nobody has shared a project with you yet. As soon as a customer chooses you, it appears here.",
+    sharedSince: (date: string) => `Shared since ${date}`,
+    customer: "Contact",
+    archived: "Archived by the customer",
+    archivedBody: "These projects rest until the customer restores them."
   },
   apiErrors: {
     "session-expired": "Your session has expired. Please sign in again.",
@@ -612,7 +668,10 @@ export const en = {
     "scene-not-offered": "This scene is not available.",
     "capture-rejected": "The capture was rejected.",
     "job-not-ready": "The job is not ready to start.",
-    "generation-not-started": "Generation could not be started."
+    "generation-not-started": "Generation could not be started.",
+    "invalid-dealer-grant": "Please choose a dealer.",
+    "dealer-unavailable": "This dealer is no longer available. Please choose another one.",
+    "dealer-grant-key-reused": "This share was already sent for another dealer."
   },
   authenticationEmail: {
     subjects: {

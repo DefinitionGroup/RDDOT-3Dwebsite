@@ -49,7 +49,9 @@ export const es = {
     requestTitle: "Solicitud | rotpunkt Signature",
     requestDescription: "Solicite sin compromiso la revisión de una planificación de cocina guardada.",
     sharedTitle: "Estado de cocina compartido | rotpunkt Signature",
-    sharedDescription: "Vista de solo lectura de un estado de cocina compartido."
+    sharedDescription: "Vista de solo lectura de un estado de cocina compartido.",
+    dealerTitle: "Área de distribuidores | rotpunkt Signature",
+    dealerDescription: "Siga planificando los proyectos de cocina compartidos con usted."
   },
   notFound: {
     pageTitle: "Página no encontrada",
@@ -345,6 +347,8 @@ export const es = {
     title: "Solicitar su *planificación*.",
     intro: (project: string) =>
       `Envía «${project}» a rotpunkt exactamente en este estado. La solicitud es sin compromiso y todavía no es una oferta.`,
+    dealerIntro: (project: string) =>
+      `Como distribuidor, envía «${project}» a rotpunkt exactamente en este estado. La solicitud pertenece al proyecto de su cliente y no es vinculante.`,
     name: "Nombre",
     email: "Correo electrónico",
     phone: "Teléfono",
@@ -372,6 +376,8 @@ export const es = {
     received: "Recibida",
     keptNote:
       "La solicitud queda guardada en su cuenta con exactamente este estado de planificación. Puede seguir modificando su proyecto sin afectar a la solicitud.",
+    dealerKeptNote:
+      "La solicitud pertenece al proyecto de su cliente con exactamente este estado de planificación. El proyecto puede seguir cambiando sin afectar a la solicitud.",
     toRequests: "A mis solicitudes",
     toProject: "Al proyecto",
     saveFirstTitle: "Primero, guárdelo como *proyecto*.",
@@ -526,7 +532,7 @@ export const es = {
     duplicate: "Duplicar",
     archive: "Archivar",
     moveToTrash: "Mover a la papelera",
-    trashWarning: "Los enlaces compartidos de este proyecto se revocarán de forma permanente.",
+    trashWarning: "Los enlaces compartidos de este proyecto y el acceso de su distribuidor terminarán de forma permanente.",
     confirmTrash: "Sí, mover a la papelera",
     cancel: "Cancelar",
     restore: "Restaurar",
@@ -556,6 +562,56 @@ export const es = {
     accountDeleteFailed: "No se ha podido eliminar la cuenta. Inténtelo de nuevo.",
     copyName: (name: string) => `${name} (copia)`,
     actionFailed: "No ha funcionado. Inténtelo de nuevo."
+  },
+  dealers: {
+    area: "Área de distribuidores",
+    shareWithDealer: "Compartir con un distribuidor",
+    switchDealer: "Cambiar de distribuidor",
+    endShare: "Dejar de compartir",
+    endShareNote: "El distribuidor ya no podrá abrir el proyecto ni ver sus datos de contacto.",
+    confirmEndShare: "Sí, dejar de compartir",
+    sharedWith: (dealer: string, date: string) => `Compartido con ${dealer} · desde el ${date}`,
+    dialogLabel: "Compartir con un distribuidor",
+    dialogTitle: "Compartir con un *distribuidor*.",
+    dialogBody: "Su distribuidor ve este proyecto, lo sigue planificando con usted y puede enviar una solicitud por usted. El proyecto sigue siendo suyo.",
+    search: "Buscar distribuidor",
+    searchPlaceholder: "Nombre, localidad o código postal",
+    nearest: (postcode: string) => `Primero los más cercanos a ${postcode}`,
+    noPostcode: "Con un código postal en su perfil, los distribuidores más cercanos aparecen primero.",
+    distance: (km: number) => `${km} km`,
+    count: (count: number) => (count === 1 ? "1 distribuidor" : `${count} distribuidores`),
+    noMatches: "Ningún distribuidor coincide con esta búsqueda.",
+    loading: "Cargando distribuidores …",
+    loadFailed: "No se pudieron cargar los distribuidores.",
+    current: "Actual",
+    disclosureTitle: "Lo que ve el distribuidor",
+    disclosure: "Este proyecto con todas sus versiones y sus datos de contacto:",
+    noName: "sin nombre en su perfil",
+    noPhone: "sin teléfono en su perfil",
+    disclosureNote: "Puede dejar de compartir en cualquier momento. Al mover el proyecto a la papelera también se deja de compartir.",
+    choose: "Elegir distribuidor",
+    share: (dealer: string) => `Compartir con ${dealer}`,
+    sharing: "Compartiendo …",
+    shared: (dealer: string) => `Compartido con ${dealer}.`,
+    ended: "Ya no se comparte.",
+    failed: "No ha funcionado. Inténtelo de nuevo.",
+    map: "Mapa de distribuidores",
+    mapUnavailable: "El mapa no está disponible ahora. La lista contiene todos los distribuidores.",
+    mapAttribution: "© colaboradores de OpenStreetMap",
+    postcodeSource: "Códigos postales: GeoNames",
+    signInTitle: "Para *distribuidores*.",
+    signInBody: "Inicie sesión con la dirección de correo que rotpunkt configuró para usted. Recibirá un código de un solo uso.",
+    customerOnlyTitle: "Para *distribuidores* de rotpunkt.",
+    customerOnlyBody: "Ha iniciado sesión con su cuenta de cliente. Sus propios proyectos están en su área.",
+    toAccount: "Ir a mi área",
+    title: "Proyectos *compartidos*.",
+    body: (dealer: string) => `Proyectos de cocina que los clientes han compartido con ${dealer}.`,
+    projects: "Proyectos",
+    noProjects: "Nadie ha compartido todavía un proyecto con usted. En cuanto un cliente le elija, aparecerá aquí.",
+    sharedSince: (date: string) => `Compartido desde el ${date}`,
+    customer: "Contacto",
+    archived: "Archivado por el cliente",
+    archivedBody: "Estos proyectos quedan en reposo hasta que el cliente los restaure."
   },
   apiErrors: {
     "session-expired": "Su sesión ha caducado. Vuelva a iniciar sesión.",
@@ -613,7 +669,10 @@ export const es = {
     "scene-not-offered": "Esta escena no está disponible.",
     "capture-rejected": "La captura ha sido rechazada.",
     "job-not-ready": "El encargo no está listo para iniciarse.",
-    "generation-not-started": "No se ha podido iniciar la generación."
+    "generation-not-started": "No se ha podido iniciar la generación.",
+    "invalid-dealer-grant": "Elija un distribuidor.",
+    "dealer-unavailable": "Este distribuidor ya no está disponible. Elija otro.",
+    "dealer-grant-key-reused": "Esta forma de compartir ya se envió para otro distribuidor."
   },
   authenticationEmail: {
     subjects: {
