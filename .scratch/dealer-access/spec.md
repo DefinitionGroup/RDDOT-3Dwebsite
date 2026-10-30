@@ -137,7 +137,8 @@ trade); the consent is the dealer's.
 
 ## Open for Martin
 
-- Apply `20261029120000` and `20261030120000` to the shared development database and
-  provision the demo dealers there.
+- ~~Apply `20261029120000` and `20261030120000` to the shared development database and
+  provision the demo dealers there.~~ Done 2026-10-30 with Martin's OK: 15 migrations
+  applied, 14 active demo dealers with one user each, no grants yet.
 - Upload the tile archive to EU object storage and set `MAP_TILES_OBJECT_KEY` on Vercel.
 - The real dealer list, and who at rotpunkt provisions and disables Dealer Users.

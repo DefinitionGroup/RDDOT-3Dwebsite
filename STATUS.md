@@ -154,7 +154,9 @@ built. Details for each line are under Done, Known Defects and Missing.
   journeys and the scene); in the browser at 1440 and 390 px the dialog, the map (headless
   Chrome on the GPU), the workspace, a dealer's front change redrawing the kitchen, a
   dealer's request, the 401s of owner-only routes and the 404s for another dealer. Not on
-  the test site and not on the shared development database.
+  the test site. The shared development database has the migration and the 14 demo dealers
+  since 2026-10-30 (Martin's OK); a `pg_dump` of it matches `db/schema.sql` apart from
+  Neon's build hash.
 - **The audit's first fixes (2026-10-30).** Issues 01–04 and 06 of
   `.scratch/a11y-perf/issues/`. The logo link is named from its content ("rotpunkt
   Signature Startseite", the wordmark one image), the language switch "Sprache DE:
@@ -269,8 +271,8 @@ built. Details for each line are under Done, Known Defects and Missing.
   succeeded job lose its capture (a job still at work cannot, and the foreign key still
   refuses to delete a capture any job points at) and indexes a job's capture; `db/schema.sql`
   matches a `pg_dump` 18.6 of a freshly migrated database apart from the Neon-only parts.
-  Not applied to the shared development database yet; nothing needs it before `CRON_SECRET`
-  is set. Checked: lint, types, 190/190 unit tests, the database suite on a new database (97
+  Applied to the shared development database on 2026-10-30, with the dealer migration.
+  Checked: lint, types, 190/190 unit tests, the database suite on a new database (97
   passed, 1 skipped; four new tests: a finished job's capture stays 23 hours and goes at 25
   with its deletion intent recorded, abandoned jobs before upload and before submission are
   failed and their captures go a day later, a submitted job keeps its capture, and the
@@ -1407,10 +1409,10 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   sideways (Done, 2026-10-29). The Edit Session, versions, photos, the account's other
   sections and the rendered picture are still checked by hand each slice.
 
-- Dealers (ADR 0014, `cc/feature/user-dealer`, not merged): migration `20261030120000`
-  is on no shared database and no demo dealers are provisioned there (both need Martin's
-  OK, `pnpm db:migrate` then `pnpm dealers:provision --allow-remote`); the tile archive is
-  not in object storage and `MAP_TILES_OBJECT_KEY` is not set on Vercel, so a deployment
+- Dealers (ADR 0014, `cc/feature/user-dealer`, not merged): the shared development
+  database has migration `20261030120000` and the 14 demo dealers (2026-10-30); while the
+  capture sign-in is on, anyone holding a deployment's URL can sign in as a demo dealer,
+  as with any other address; the tile archive is not in object storage and `MAP_TILES_OBJECT_KEY` is not set on Vercel, so a deployment
   shows the directory as a list; nobody is told that a Project was shared or changed
   (email provider, ADR 0010); there is no admin screen for the directory; the dealer's
   photo action, attribution of autosaves and an activity log are left out by decision.
@@ -1442,11 +1444,12 @@ in below; their history is in git and in the Done section.
 
 The dependency upgrade (`a80ef42`) is done. In flight: dealers on `cc/feature/user-dealer`
 (2026-10-30, see Done), waiting for Martin's review and a merge into `cc/devstart-sanity`.
-*Martin:* the OK to apply `20261029120000` and `20261030120000` to the shared development
-database and provision the demo dealers there. Both must be applied before the branch
-reaches `redesign/devstart`: every signed-in request now looks up the dealer tables, so
-without them sign-in and the account fail; the tile archive in object storage with
-`MAP_TILES_OBJECT_KEY` on Vercel; the real dealer list.
+*Martin:* the tile archive in object storage with `MAP_TILES_OBJECT_KEY` on Vercel; the
+real dealer list. Migrations `20261029120000` and `20261030120000` and the demo dealers
+are in the shared development database, which the test site and previews use, since
+2026-10-30. Any other database needs both before the branch runs against it: every
+signed-in request now looks up the dealer tables, so without them sign-in and the account
+fail.
 
 - The journey from a guest kitchen through sign-in to a Quote Request, with sessions
   expiring on the way, is fixed and browser-tested (2026-10-22, see Done); the Playwright
@@ -1491,8 +1494,8 @@ Engineering:
   manifests; until then they cannot ship.
 - Data protection: the storage sweep is built and scheduled in `vercel.json` (A4); it runs
   once `CRON_SECRET` is set on Vercel, and it retires Source Captures a day after their
-  Photo Job finished (2026-10-29). Before `CRON_SECRET` is set, apply migration
-  `20261029120000` to the database the deployment uses.
+  Photo Job finished (2026-10-29). Migration `20261029120000`, which it needs, is in the
+  shared development database the test site uses (2026-10-30).
 - Photos, if they launch: webhook URL, signing secret and a scheduled sweep on Vercel; the
   output moderation gate; billed cost against the estimate; then switch generation on.
 - The customer-facing items under Known Defects not taken into M0: the privacy link on the
