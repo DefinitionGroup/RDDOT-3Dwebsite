@@ -9,7 +9,7 @@ import { Pill } from "@/components/design-system/pill";
 import type { AccountProject } from "@/features/customer-accounts/account-projects";
 import type { SharedCustomerContact } from "@/features/dealers/dealer-module";
 import { authClient } from "@/lib/auth-client";
-import { INTL_LOCALE, localizePath, type Locale } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, localizePath, type Locale } from "@/lib/i18n";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
 
@@ -21,6 +21,7 @@ export type DealerWorkspaceProject = AccountProject & {
 
 function formatDay(iso: string, locale: Locale) {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: SITE_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     year: "numeric"

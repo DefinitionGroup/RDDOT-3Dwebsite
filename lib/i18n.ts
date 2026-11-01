@@ -28,6 +28,14 @@ export const INTL_LOCALE: Record<Locale, string> = {
 };
 
 /**
+ * The time zone every date and time on the site is shown in: rotpunkt's own.
+ * The server renders in UTC on Vercel and the browser in its visitor's zone;
+ * without one fixed zone their text differs and React throws away the
+ * server's HTML (error 418).
+ */
+export const SITE_TIME_ZONE = "Europe/Berlin";
+
+/**
  * The header a browser request names its page's locale in, where the server
  * has to write in that language but sees no locale in the URL: the sign-in
  * code email.

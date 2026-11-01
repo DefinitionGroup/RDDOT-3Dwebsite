@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { EditableSharedRevisionLink } from "@/features/projects/ui/project-editor-types";
-import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, localizePath } from "@/lib/i18n";
 import { apiErrorMessage } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
@@ -238,6 +238,7 @@ export function ProjectShareLinks({
                       <p className="m-0 mt-1 text-caption text-graphite">
                         {t.until(
                           new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+                            timeZone: SITE_TIME_ZONE,
                             dateStyle: "medium"
                           }).format(new Date(link.expiresAt))
                         )}

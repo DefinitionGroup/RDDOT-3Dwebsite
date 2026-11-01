@@ -7,7 +7,7 @@ import { Emphasized } from "@/components/design-system/emphasized";
 import { ChoiceField, FieldLabel, TextArea, TextField } from "@/components/design-system/field";
 import { Label } from "@/components/design-system/label";
 import { Pill } from "@/components/design-system/pill";
-import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, localizePath } from "@/lib/i18n";
 import { apiErrorMessage } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
@@ -222,6 +222,7 @@ export function QuoteRequestForm({
             <dd className="m-0 text-ink">
               {messages.common.clockTime(
                 new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+                  timeZone: SITE_TIME_ZONE,
                   day: "2-digit",
                   month: "2-digit",
                   year: "numeric",

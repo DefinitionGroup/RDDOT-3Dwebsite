@@ -1,4 +1,4 @@
-import { INTL_LOCALE, type Locale } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, type Locale } from "@/lib/i18n";
 
 /** The wire shape of `GalleryPhoto`, with dates as ISO strings. */
 export type SerializedGalleryPhoto = {
@@ -30,6 +30,7 @@ export type GalleryResponse = {
 
 export function formatGalleryDate(value: string, locale: Locale) {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: SITE_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     year: "numeric"

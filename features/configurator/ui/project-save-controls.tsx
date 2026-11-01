@@ -5,7 +5,7 @@ import { Pill } from "@/components/design-system/pill";
 import type { ProjectAutosaveStatus } from "@/features/projects/ui/use-project-autosave";
 import { useProjectAutosave } from "@/features/projects/ui/use-project-autosave";
 import type { EditableProject } from "@/features/projects/ui/project-editor-types";
-import { INTL_LOCALE, type Locale } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, type Locale } from "@/lib/i18n";
 import { getMessages } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
@@ -19,9 +19,11 @@ type ProjectAutosaveProps = {
 };
 
 function formatTime(iso: string, locale: Locale) {
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { hour: "2-digit", minute: "2-digit" }).format(
-    new Date(iso)
-  );
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: SITE_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(iso));
 }
 
 /** One line for the HUD: what the autosave is doing right now. */

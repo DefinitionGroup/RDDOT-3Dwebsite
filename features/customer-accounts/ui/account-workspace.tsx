@@ -27,7 +27,7 @@ import { PhotoGallery } from "@/features/photo-gallery/ui/photo-gallery";
 import type { SerializedQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
 import { QuoteRequestList } from "@/features/quote-requests/ui/quote-request-list";
 import { authClient } from "@/lib/auth-client";
-import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, localizePath } from "@/lib/i18n";
 import { apiErrorMessage } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 import { DURATION, REVEAL_RISE, SIGNATURE_EASE } from "@/lib/motion";
@@ -74,6 +74,7 @@ function MaterialPlate({ summary }: { summary: NonNullable<AccountProject["summa
 
 function formatDay(iso: string, locale: keyof typeof INTL_LOCALE) {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: SITE_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     year: "numeric"
@@ -448,6 +449,7 @@ export function AccountWorkspace({
           <p className="m-0 text-caption text-ash">
             {t.sessionUntil(
               new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+                timeZone: SITE_TIME_ZONE,
                 day: "2-digit",
                 month: "2-digit",
                 hour: "2-digit",

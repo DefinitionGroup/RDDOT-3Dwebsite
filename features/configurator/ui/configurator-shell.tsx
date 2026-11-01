@@ -81,7 +81,7 @@ import { ProjectNameField } from "@/features/projects/ui/project-name-field";
 import { ProjectVersions } from "@/features/projects/ui/project-versions";
 import type { ProjectAutosaveStatus } from "@/features/projects/ui/use-project-autosave";
 import { ProjectShareLinks } from "@/features/sharing/ui/project-share-links";
-import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, localizePath } from "@/lib/i18n";
 import { screenLanguageLinks } from "@/lib/language-links";
 import { apiErrorMessage, getMessages, type Messages } from "@/lib/messages";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
@@ -788,6 +788,7 @@ export function ConfiguratorShell({
         {
           label: t.validUntil,
           value: new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+            timeZone: SITE_TIME_ZONE,
             day: "numeric",
             month: "long",
             year: "numeric"

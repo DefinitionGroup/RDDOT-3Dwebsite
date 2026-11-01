@@ -6,7 +6,7 @@ import { formatCurrency } from "@/features/configurator/product-definition";
 import { readPriceIndicationTotal } from "@/features/quote-requests/price-indication";
 import { formatQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
 import type { SerializedQuoteRequestPage } from "@/features/quote-requests/serialize-quote-request";
-import { INTL_LOCALE, localizePath } from "@/lib/i18n";
+import { INTL_LOCALE, SITE_TIME_ZONE, localizePath } from "@/lib/i18n";
 import { useLocale, useMessages } from "@/lib/messages/locale-context";
 
 /** The account's Quote Requests, newest first, as hairline rows. */
@@ -47,6 +47,7 @@ export function QuoteRequestList({ page }: { page: SerializedQuoteRequestPage })
                     </span>
                     {" · "}
                     {new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+                      timeZone: SITE_TIME_ZONE,
                       day: "2-digit",
                       month: "2-digit",
                       year: "numeric"
