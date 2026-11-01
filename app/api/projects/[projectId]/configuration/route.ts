@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { RDTD_KITCHEN_PRODUCT_VERSION } from "@/features/configurator/product-definition";
 import { decodeConfiguration } from "@/features/configurator/state-codec";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { projectActors } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
 
 export const runtime = "nodejs";
@@ -21,8 +21,9 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  // The owner, or a Dealer User whose grant the module checks (ADR 0014).
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -35,7 +36,7 @@ export async function GET(
   }
 
   const workspace = await projects.getWorkspace({
-    ownerId: session.customerAccountId,
+    actor,
     projectId
   });
   if (!workspace || workspace.lifecycle === "trashed") {
@@ -55,8 +56,8 @@ export async function PUT(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -95,7 +96,7 @@ export async function PUT(
   }
 
   const result = await projects.saveWorkingConfiguration({
-    ownerId: session.customerAccountId,
+    actor,
     projectId,
     expectedVersion: body.data.expectedVersion,
     configuration,

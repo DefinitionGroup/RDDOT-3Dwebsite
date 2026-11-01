@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { ownerActor } from "@/features/projects/project-module";
 import { sql } from "kysely";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
@@ -241,7 +242,7 @@ describe("PostgreSQL persistence contract", () => {
 
     const results = await Promise.all([
       projects.saveWorkingConfiguration({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         expectedVersion: 1,
         configuration: {
@@ -251,7 +252,7 @@ describe("PostgreSQL persistence contract", () => {
         productDefinitionVersion: "signature-line@1"
       }),
       projects.saveWorkingConfiguration({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         expectedVersion: 1,
         configuration: {
@@ -310,7 +311,7 @@ describe("PostgreSQL persistence contract", () => {
       name: "  Küche Altbau  "
     });
     expect(renamed).toMatchObject({ kind: "renamed", name: "Küche Altbau" });
-    const reloaded = await projects.getWorkspace({ ownerId, projectId: workspace.id });
+    const reloaded = await projects.getWorkspace({ actor: ownerActor(ownerId), projectId: workspace.id });
     expect(reloaded?.name).toBe("Küche Altbau");
 
     const foreign = await projects.renameProject({
@@ -340,7 +341,7 @@ describe("PostgreSQL persistence contract", () => {
     });
     const idempotencyKey = `photo-${crypto.randomUUID()}`;
     const command = {
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       expectedVersion: 1,
       trigger: "photo" as const,
@@ -382,7 +383,7 @@ describe("PostgreSQL persistence contract", () => {
       productDefinitionVersion: "signature-line@1"
     });
     const checkpoint = await projects.checkpointRevision({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       expectedVersion: 1,
       trigger: "version-save",
@@ -397,7 +398,7 @@ describe("PostgreSQL persistence contract", () => {
     if (checkpoint.kind !== "checkpointed") return;
 
     const changed = await projects.saveWorkingConfiguration({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       expectedVersion: 1,
       configuration: { ...initialConfiguration, cabinetColorKey: "oak" },
@@ -406,7 +407,7 @@ describe("PostgreSQL persistence contract", () => {
     expect(changed).toMatchObject({ kind: "saved", version: 2 });
 
     const restored = await projects.restoreRevision({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       revisionId: checkpoint.revisionId,
       expectedVersion: 2,
@@ -423,7 +424,7 @@ describe("PostgreSQL persistence contract", () => {
     });
 
     const revisions = await projects.listConfigurationRevisions({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id
     });
     expect(revisions.totalCount).toBe(2);
@@ -436,7 +437,7 @@ describe("PostgreSQL persistence contract", () => {
     );
 
     const firstPage = await projects.listConfigurationRevisions({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       limit: 1
     });
@@ -444,7 +445,7 @@ describe("PostgreSQL persistence contract", () => {
     expect(firstPage.items).toHaveLength(1);
     expect(firstPage.nextCursor).not.toBeNull();
     const secondPage = await projects.listConfigurationRevisions({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       limit: 1,
       cursor: firstPage.nextCursor!
@@ -455,7 +456,7 @@ describe("PostgreSQL persistence contract", () => {
 
     await expect(
       projects.restoreRevision({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         revisionId: checkpoint.revisionId,
         expectedVersion: 3,
@@ -466,7 +467,7 @@ describe("PostgreSQL persistence contract", () => {
 
     await expect(
       projects.restoreRevision({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         revisionId: checkpoint.revisionId,
         expectedVersion: 2,
@@ -521,7 +522,7 @@ describe("PostgreSQL persistence contract", () => {
     let cursor: { createdAt: Date; id: string } | null = null;
     do {
       const page = await projects.listConfigurationRevisions({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         limit: 1,
         cursor: cursor ?? undefined
@@ -547,7 +548,7 @@ describe("PostgreSQL persistence contract", () => {
       productDefinitionVersion: "signature-line@1"
     });
     const checkpoint = await projects.checkpointRevision({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       expectedVersion: 1,
       trigger: "version-save",
@@ -563,7 +564,7 @@ describe("PostgreSQL persistence contract", () => {
 
     await expect(
       projects.saveWorkingConfiguration({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         expectedVersion: 1,
         configuration: initialConfiguration,
@@ -573,7 +574,7 @@ describe("PostgreSQL persistence contract", () => {
 
     await expect(
       projects.restoreRevision({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         revisionId: checkpoint.revisionId,
         expectedVersion: 2,
@@ -587,7 +588,7 @@ describe("PostgreSQL persistence contract", () => {
 
     await expect(
       projects.restoreRevision({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         revisionId: checkpoint.revisionId,
         expectedVersion: 2,
@@ -597,7 +598,7 @@ describe("PostgreSQL persistence contract", () => {
     ).resolves.toMatchObject({ kind: "restored", version: 3 });
 
     await expect(
-      projects.getWorkspace({ ownerId, projectId: workspace.id })
+      projects.getWorkspace({ actor: ownerActor(ownerId), projectId: workspace.id })
     ).resolves.toMatchObject({
       workingConfiguration: { productDefinitionVersion: "signature-line@1" }
     });
@@ -626,7 +627,7 @@ describe("PostgreSQL persistence contract", () => {
     const token = randomShareToken();
     const differentToken = randomShareToken();
     const input = {
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       expectedVersion: 1,
       idempotencyKey: `share-${crypto.randomUUID()}`,
@@ -646,7 +647,7 @@ describe("PostgreSQL persistence contract", () => {
 
     await expect(
       projects.saveWorkingConfiguration({
-        ownerId,
+        actor: ownerActor(ownerId),
         projectId: workspace.id,
         expectedVersion: 1,
         configuration: { ...initialConfiguration, cabinetColorKey: "oak" },
@@ -665,18 +666,18 @@ describe("PostgreSQL persistence contract", () => {
     ).resolves.toMatchObject({ configuration: initialConfiguration });
 
     await expect(
-      sharing.listLinks({ ownerId: otherOwnerId, projectId: workspace.id })
+      sharing.listLinks({ actor: ownerActor(otherOwnerId), projectId: workspace.id })
     ).resolves.toEqual([]);
     await expect(
       sharing.revokeLink({
-        ownerId: otherOwnerId,
+        actor: ownerActor(otherOwnerId),
         projectId: workspace.id,
         linkId: created.link.id
       })
     ).resolves.toEqual({ kind: "unavailable" });
 
     const revoked = await sharing.revokeLink({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId: workspace.id,
       linkId: created.link.id
     });
@@ -685,7 +686,7 @@ describe("PostgreSQL persistence contract", () => {
       sharing.resolveLink({ linkId: created.link.id, token: input.token })
     ).resolves.toBeNull();
     await expect(
-      sharing.revokeLink({ ownerId, projectId: workspace.id, linkId: created.link.id })
+      sharing.revokeLink({ actor: ownerActor(ownerId), projectId: workspace.id, linkId: created.link.id })
     ).resolves.toMatchObject({ kind: "unchanged", revokedAt: now });
 
     const expiringInput = {

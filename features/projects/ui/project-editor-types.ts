@@ -18,6 +18,8 @@ export type EditableSharedRevisionLink = {
 };
 
 export type EditableProject = {
+  /** A Dealer User edits through the Dealer Grant: no rename, photos or copies (ADR 0014). */
+  access: "owner" | "dealer";
   id: string;
   name: string;
   updatedAt: string;

@@ -64,7 +64,9 @@ export const de = {
     requestTitle: "Anfrage | rotpunkt Signature",
     requestDescription: "Eine gespeicherte Küchenplanung unverbindlich zur Prüfung anfragen.",
     sharedTitle: "Geteilter Küchenstand | rotpunkt Signature",
-    sharedDescription: "Read-only Ansicht eines freigegebenen Küchenstands."
+    sharedDescription: "Read-only Ansicht eines freigegebenen Küchenstands.",
+    dealerTitle: "Händlerbereich | rotpunkt Signature",
+    dealerDescription: "Mit Ihnen geteilte Küchenprojekte weiterplanen."
   },
   notFound: {
     pageTitle: "Seite nicht gefunden",
@@ -364,6 +366,8 @@ export const de = {
     title: "Planung *anfragen*.",
     intro: (project: string) =>
       `Sie senden „${project}“ in genau diesem Stand an rotpunkt. Die Anfrage ist unverbindlich und noch kein Angebot.`,
+    dealerIntro: (project: string) =>
+      `Sie senden „${project}“ als Händler in genau diesem Stand an rotpunkt. Die Anfrage gehört zum Projekt Ihrer Kundin oder Ihres Kunden und ist unverbindlich.`,
     name: "Name",
     email: "E-Mail-Adresse",
     phone: "Telefon",
@@ -392,6 +396,8 @@ export const de = {
     received: "Eingegangen",
     keptNote:
       "Die Anfrage bleibt mit genau diesem Planungsstand in Ihrem Bereich hinterlegt. Sie können Ihr Projekt weiter verändern, ohne die Anfrage zu berühren.",
+    dealerKeptNote:
+      "Die Anfrage gehört mit genau diesem Planungsstand zum Projekt Ihrer Kundin oder Ihres Kunden. Das Projekt lässt sich weiter verändern, ohne die Anfrage zu berühren.",
     toRequests: "Zu meinen Anfragen",
     toProject: "Zum Projekt",
     saveFirstTitle: "Zuerst als *Projekt* speichern.",
@@ -561,7 +567,7 @@ export const de = {
     duplicate: "Duplizieren",
     archive: "Archivieren",
     moveToTrash: "In den Papierkorb",
-    trashWarning: "Freigabelinks dieses Projekts werden dabei dauerhaft widerrufen.",
+    trashWarning: "Freigabelinks und die Händlerfreigabe dieses Projekts enden dabei dauerhaft.",
     confirmTrash: "Ja, in den Papierkorb",
     cancel: "Abbrechen",
     restore: "Wiederherstellen",
@@ -591,6 +597,56 @@ export const de = {
     accountDeleteFailed: "Das Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     copyName: (name: string) => `${name} (Kopie)`,
     actionFailed: "Das hat nicht funktioniert. Bitte versuchen Sie es erneut."
+  },
+  dealers: {
+    area: "Händlerbereich",
+    shareWithDealer: "Mit Händler teilen",
+    switchDealer: "Händler wechseln",
+    endShare: "Freigabe beenden",
+    endShareNote: "Der Händler kann das Projekt danach nicht mehr öffnen und sieht Ihre Kontaktdaten nicht mehr.",
+    confirmEndShare: "Ja, Freigabe beenden",
+    sharedWith: (dealer: string, date: string) => `Geteilt mit ${dealer} · seit ${date}`,
+    dialogLabel: "Mit Händler teilen",
+    dialogTitle: "Mit einem *Händler* teilen.",
+    dialogBody: "Ihr Händler sieht dieses Projekt, plant es mit Ihnen weiter und kann es für Sie anfragen. Es bleibt Ihr Projekt.",
+    search: "Händler suchen",
+    searchPlaceholder: "Name, Ort oder Postleitzahl",
+    nearest: (postcode: string) => `Nächste zuerst ab ${postcode}`,
+    noPostcode: "Mit einer Postleitzahl in Ihrem Profil stehen die nächsten Händler oben.",
+    distance: (km: number) => `${km} km`,
+    count: (count: number) => (count === 1 ? "1 Händler" : `${count} Händler`),
+    noMatches: "Kein Händler passt zu dieser Suche.",
+    loading: "Händler werden geladen …",
+    loadFailed: "Die Händler konnten nicht geladen werden.",
+    current: "Aktuell",
+    disclosureTitle: "Das sieht der Händler",
+    disclosure: "Dieses Projekt mit allen Versionen, dazu Ihre Kontaktdaten:",
+    noName: "kein Name im Profil",
+    noPhone: "keine Telefonnummer im Profil",
+    disclosureNote: "Sie können die Freigabe jederzeit beenden. Im Papierkorb endet sie von selbst.",
+    choose: "Händler wählen",
+    share: (dealer: string) => `Mit ${dealer} teilen`,
+    sharing: "Wird geteilt …",
+    shared: (dealer: string) => `Geteilt mit ${dealer}.`,
+    ended: "Freigabe beendet.",
+    failed: "Das hat nicht funktioniert. Bitte versuchen Sie es erneut.",
+    map: "Karte der Händler",
+    mapUnavailable: "Die Karte ist gerade nicht verfügbar. Die Liste enthält alle Händler.",
+    mapAttribution: "© OpenStreetMap-Mitwirkende",
+    postcodeSource: "Postleitzahlen: GeoNames",
+    signInTitle: "Für *Händler*.",
+    signInBody: "Melden Sie sich mit der E-Mail-Adresse an, die rotpunkt für Sie eingerichtet hat. Sie erhalten einen einmaligen Code.",
+    customerOnlyTitle: "Für rotpunkt-*Händler*.",
+    customerOnlyBody: "Sie sind mit Ihrem Kundenkonto angemeldet. Ihre eigenen Projekte finden Sie in Ihrem Bereich.",
+    toAccount: "Zu meinem Bereich",
+    title: "Geteilte *Projekte*.",
+    body: (dealer: string) => `Küchenprojekte, die Kundinnen und Kunden mit ${dealer} geteilt haben.`,
+    projects: "Projekte",
+    noProjects: "Noch hat niemand ein Projekt mit Ihnen geteilt. Sobald eine Kundin oder ein Kunde Sie wählt, erscheint es hier.",
+    sharedSince: (date: string) => `Geteilt seit ${date}`,
+    customer: "Kontakt",
+    archived: "Vom Kunden archiviert",
+    archivedBody: "Diese Projekte ruhen, bis die Kundin oder der Kunde sie wiederherstellt."
   },
   apiErrors: {
     "session-expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
@@ -650,7 +706,10 @@ export const de = {
     "scene-not-offered": "Diese Szene steht nicht zur Auswahl.",
     "capture-rejected": "Die Aufnahme wurde abgelehnt.",
     "job-not-ready": "Der Auftrag ist nicht startbereit.",
-    "generation-not-started": "Die Erzeugung konnte nicht gestartet werden."
+    "generation-not-started": "Die Erzeugung konnte nicht gestartet werden.",
+    "invalid-dealer-grant": "Bitte wählen Sie einen Händler.",
+    "dealer-unavailable": "Dieser Händler ist nicht mehr verfügbar. Bitte wählen Sie einen anderen.",
+    "dealer-grant-key-reused": "Diese Freigabe wurde bereits mit einem anderen Händler gesendet."
   } satisfies Record<ApiErrorCode, string>,
   /** The sign-in code email, in the language of the page it was asked for on. */
   authenticationEmail: {

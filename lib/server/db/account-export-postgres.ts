@@ -57,7 +57,7 @@ export async function exportCustomerAccount(
   const projectIds = projects.map((project) => project.id);
   const ofProjects = projectIds.length > 0 ? projectIds : ["00000000-0000-0000-0000-000000000000"];
 
-  const [revisions, links, requests, jobs, photos] = await Promise.all([
+  const [revisions, links, requests, jobs, photos, grants] = await Promise.all([
     app
       .selectFrom("configurationRevision")
       .select(["id", "projectId", "label", "trigger", "productDefinitionVersion", "normalizedConfiguration", "displaySnapshot", "createdAt"])
@@ -96,6 +96,7 @@ export async function exportCustomerAccount(
         "consentVersion",
         "consentAcceptedAt",
         "priceIndication",
+        "submittedByDealerUserId",
         "createdAt"
       ])
       .where("projectId", "in", ofProjects)
@@ -112,6 +113,22 @@ export async function exportCustomerAccount(
       .select(["id", "projectId", "photoJobId", "contentType", "width", "height", "byteSize", "createdAt"])
       .where("projectId", "in", ofProjects)
       .orderBy("createdAt")
+      .execute(),
+    app
+      .selectFrom("projectDealerGrant")
+      .innerJoin("dealer", "dealer.id", "projectDealerGrant.dealerId")
+      .select([
+        "projectDealerGrant.projectId",
+        "dealer.name as dealerName",
+        "dealer.city as dealerCity",
+        "projectDealerGrant.customerName",
+        "projectDealerGrant.customerEmail",
+        "projectDealerGrant.customerPhone",
+        "projectDealerGrant.grantedAt",
+        "projectDealerGrant.revokedAt"
+      ])
+      .where("projectDealerGrant.projectId", "in", ofProjects)
+      .orderBy("projectDealerGrant.grantedAt")
       .execute()
   ]);
 
@@ -160,7 +177,10 @@ export async function exportCustomerAccount(
           reference: request.reference,
           versionId: request.configurationRevisionId,
           state: request.state,
-          contact: {
+          // A dealer's request carries the dealer's contact, which is not the
+          // account holder's to take along (ADR 0014).
+          submittedByDealer: request.submittedByDealerUserId !== null,
+          contact: request.submittedByDealerUserId !== null ? null : {
             name: request.contactName,
             email: request.contactEmail,
             phone: request.contactPhone,
@@ -183,6 +203,18 @@ export async function exportCustomerAccount(
           consent: { version: request.consentVersion, acceptedAt: iso(request.consentAcceptedAt) },
           priceIndication: request.priceIndication,
           createdAt: iso(request.createdAt)
+        })),
+      dealerGrants: grants
+        .filter((grant) => grant.projectId === project.id)
+        .map((grant) => ({
+          dealer: { name: grant.dealerName, city: grant.dealerCity },
+          sharedContact: {
+            name: grant.customerName,
+            email: grant.customerEmail,
+            phone: grant.customerPhone
+          },
+          grantedAt: iso(grant.grantedAt),
+          revokedAt: iso(grant.revokedAt)
         })),
       photoJobs: jobs
         .filter((job) => job.projectId === project.id)

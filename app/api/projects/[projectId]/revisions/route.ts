@@ -6,7 +6,7 @@ import {
   type RevisionDisplaySnapshot,
   UnsupportedProductDefinitionVersionError
 } from "@/features/projects/revision-display";
-import { customerSessions } from "@/lib/server/auth/customer-session";
+import { projectActors } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
 
 export const runtime = "nodejs";
@@ -39,8 +39,9 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  // The owner, or a Dealer User whose grant the module checks (ADR 0014).
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -65,7 +66,7 @@ export async function GET(
   }
 
   const page = await projects.listConfigurationRevisions({
-    ownerId: session.customerAccountId,
+    actor,
     projectId,
     limit: 20,
     cursor: cursor?.data
@@ -87,8 +88,8 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
-  const session = await customerSessions.resolve(request.headers);
-  if (!session) {
+  const actor = await projectActors.resolve(request.headers);
+  if (!actor) {
     return NextResponse.json(
       { code: "session-expired" },
       { status: 401 }
@@ -113,7 +114,7 @@ export async function POST(
   }
 
   const workspace = await projects.getWorkspace({
-    ownerId: session.customerAccountId,
+    actor,
     projectId
   });
   if (!workspace || workspace.lifecycle !== "active") {
@@ -148,7 +149,7 @@ export async function POST(
     );
   }
   const result = await projects.checkpointRevision({
-    ownerId: session.customerAccountId,
+    actor,
     projectId,
     expectedVersion: body.data.expectedVersion,
     trigger: "version-save",

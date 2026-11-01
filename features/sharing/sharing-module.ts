@@ -1,8 +1,8 @@
 import type { AnyConfiguratorState } from "@/features/configurator/types";
 import type {
   ConfigurationRevisionId,
-  CustomerAccountId,
   JsonValue,
+  ProjectActor,
   ProjectId
 } from "@/features/projects/project-module";
 
@@ -38,9 +38,14 @@ export type ResolvedSharedRevision = {
   expiresAt: Date;
 };
 
+/**
+ * Shared Revision Links. The owner creates, lists and revokes all of a
+ * Project's links; a dealer with the Dealer Grant only those its own Dealer
+ * made (ADR 0014).
+ */
 export type SharingModule = {
   createLink(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     expectedVersion: number;
     idempotencyKey: string;
@@ -49,12 +54,12 @@ export type SharingModule = {
   }): Promise<CreateSharedRevisionLinkResult>;
 
   listLinks(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
   }): Promise<SharedRevisionLinkSummary[]>;
 
   revokeLink(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     linkId: SharedRevisionLinkId;
   }): Promise<RevokeSharedRevisionLinkResult>;

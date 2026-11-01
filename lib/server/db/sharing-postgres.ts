@@ -11,6 +11,12 @@ import type {
 } from "@/features/sharing/sharing-module";
 import type { Database } from "@/lib/server/db/database-types";
 import { isPostgresErrorWithCode } from "@/lib/server/db/postgres-errors";
+import {
+  accessibleProjectIds,
+  dealerUsersOfSameDealer,
+  holdsProjectAccess,
+  parseProjectActor
+} from "@/lib/server/db/project-access-postgres";
 
 const uuidSchema = z.uuid();
 const idempotencyKeySchema = z.string().trim().min(8).max(200);
@@ -43,7 +49,7 @@ export function createPostgresSharingModule(
 ): SharingModule {
   return {
     async createLink(input): Promise<CreateSharedRevisionLinkResult> {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
       const projectId = uuidSchema.parse(input.projectId);
       const expectedVersion = z.number().int().positive().parse(input.expectedVersion);
       const idempotencyKey = idempotencyKeySchema.parse(input.idempotencyKey);
@@ -65,7 +71,7 @@ export function createPostgresSharingModule(
               "sharedRevisionLink.requestHash"
             ])
             .where("project.id", "=", projectId)
-            .where("project.ownerId", "=", ownerId)
+            .where("project.id", "in", accessibleProjectIds(transaction, actor))
             .where("sharedRevisionLink.creationIdempotencyKey", "=", idempotencyKey)
             .executeTakeFirst();
 
@@ -73,6 +79,10 @@ export function createPostgresSharingModule(
             return replay.requestHash === requestHash
               ? { kind: "replayed", link: mapLink(replay) }
               : { kind: "idempotency-conflict" };
+          }
+
+          if (!(await holdsProjectAccess(transaction, actor, projectId))) {
+            return { kind: "unavailable" };
           }
 
           const working = await transaction
@@ -87,7 +97,7 @@ export function createPostgresSharingModule(
               "workingConfiguration.version"
             ])
             .where("project.id", "=", projectId)
-            .where("project.ownerId", "=", ownerId)
+            .where("project.id", "in", accessibleProjectIds(transaction, actor))
             .where("project.lifecycle", "=", "active")
             .forUpdate()
             .executeTakeFirst();
@@ -149,7 +159,8 @@ export function createPostgresSharingModule(
               requestHash,
               createdAt: now,
               expiresAt: new Date(now.getTime() + linkLifetimeMs),
-              revokedAt: null
+              revokedAt: null,
+              createdByDealerUserId: actor.kind === "dealer" ? actor.dealerUserId : null
             })
             .returning([
               "id",
@@ -177,7 +188,7 @@ export function createPostgresSharingModule(
               "sharedRevisionLink.requestHash"
             ])
             .where("project.id", "=", projectId)
-            .where("project.ownerId", "=", ownerId)
+            .where("project.id", "in", accessibleProjectIds(database, actor))
             .where("sharedRevisionLink.creationIdempotencyKey", "=", idempotencyKey)
             .executeTakeFirst();
           if (replay) {
@@ -192,7 +203,8 @@ export function createPostgresSharingModule(
     },
 
     async listLinks(input) {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
+      const dealerUserId = actor.kind === "dealer" ? actor.dealerUserId : null;
       const projectId = uuidSchema.parse(input.projectId);
       const rows = await database
         .withSchema("app")
@@ -206,8 +218,16 @@ export function createPostgresSharingModule(
           "sharedRevisionLink.revokedAt"
         ])
         .where("project.id", "=", projectId)
-        .where("project.ownerId", "=", ownerId)
+        .where("project.id", "in", accessibleProjectIds(database, actor))
         .where("project.lifecycle", "!=", "trashed")
+        // A dealer sees only the links its own Dealer made (ADR 0014).
+        .$if(dealerUserId !== null, (query) =>
+          query.where(
+            "sharedRevisionLink.createdByDealerUserId",
+            "in",
+            dealerUsersOfSameDealer(database, dealerUserId ?? "")
+          )
+        )
         .orderBy("sharedRevisionLink.createdAt", "desc")
         .execute();
 
@@ -215,45 +235,55 @@ export function createPostgresSharingModule(
     },
 
     async revokeLink(input) {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
+      const dealerUserId = actor.kind === "dealer" ? actor.dealerUserId : null;
       const projectId = uuidSchema.parse(input.projectId);
       const linkId = uuidSchema.parse(input.linkId);
       const revokedAt = clock();
-      const revoked = await database
-        .withSchema("app")
-        .updateTable("sharedRevisionLink")
-        .set({ revokedAt })
-        .where("id", "=", linkId)
-        .where("projectId", "=", projectId)
-        .where("revokedAt", "is", null)
-        .where("projectId", "in", (query) =>
-          query
-            .selectFrom("project")
-            .select("id")
-            .where("ownerId", "=", ownerId)
-            .where("lifecycle", "!=", "trashed")
-        )
-        .returning("revokedAt")
-        .executeTakeFirst();
 
-      if (revoked?.revokedAt) {
-        return { kind: "revoked", revokedAt: new Date(revoked.revokedAt) };
-      }
+      return database.transaction().execute(async (transaction) => {
+        if (!(await holdsProjectAccess(transaction, actor, projectId))) {
+          return { kind: "unavailable" as const };
+        }
 
-      const existing = await database
-        .withSchema("app")
-        .selectFrom("sharedRevisionLink")
-        .innerJoin("project", "project.id", "sharedRevisionLink.projectId")
-        .select("sharedRevisionLink.revokedAt")
-        .where("sharedRevisionLink.id", "=", linkId)
-        .where("project.id", "=", projectId)
-        .where("project.ownerId", "=", ownerId)
-        .where("project.lifecycle", "!=", "trashed")
-        .executeTakeFirst();
+        // The links the actor may revoke: all of the owner's, a dealer's own.
+        const revocable = transaction
+          .withSchema("app")
+          .selectFrom("sharedRevisionLink")
+          .innerJoin("project", "project.id", "sharedRevisionLink.projectId")
+          .where("sharedRevisionLink.id", "=", linkId)
+          .where("project.id", "=", projectId)
+          .where("project.id", "in", accessibleProjectIds(transaction, actor))
+          .where("project.lifecycle", "!=", "trashed")
+          .$if(dealerUserId !== null, (query) =>
+            query.where(
+              "sharedRevisionLink.createdByDealerUserId",
+              "in",
+              dealerUsersOfSameDealer(transaction, dealerUserId ?? "")
+            )
+          );
 
-      return existing?.revokedAt
-        ? { kind: "unchanged", revokedAt: new Date(existing.revokedAt) }
-        : { kind: "unavailable" };
+        const revoked = await transaction
+          .withSchema("app")
+          .updateTable("sharedRevisionLink")
+          .set({ revokedAt })
+          .where("id", "in", revocable.select("sharedRevisionLink.id"))
+          .where("revokedAt", "is", null)
+          .returning("revokedAt")
+          .executeTakeFirst();
+
+        if (revoked?.revokedAt) {
+          return { kind: "revoked" as const, revokedAt: new Date(revoked.revokedAt) };
+        }
+
+        const existing = await revocable
+          .select("sharedRevisionLink.revokedAt")
+          .executeTakeFirst();
+
+        return existing?.revokedAt
+          ? { kind: "unchanged" as const, revokedAt: new Date(existing.revokedAt) }
+          : { kind: "unavailable" as const };
+      });
     },
 
     async resolveLink(input) {

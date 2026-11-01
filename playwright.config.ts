@@ -7,7 +7,8 @@ import { defineConfig, devices } from "@playwright/test";
  * both against a throwaway Postgres (`.github/workflows/ci.yml`). Locally it
  * starts `next start` on port 3100 unless one is running there already, so
  * BETTER_AUTH_URL has to be http://localhost:3100. It signs up a new
- * `smoke-…@example.invalid` account in whichever database the server uses.
+ * `smoke-…@example.invalid` account in whichever database the server uses;
+ * the dealer test also provisions dealers there through `DATABASE_URL`.
  */
 const PORT = 3100;
 const baseURL = process.env.SMOKE_BASE_URL ?? `http://localhost:${PORT}`;
@@ -50,6 +51,17 @@ export default defineConfig({
       name: "journey-sideways",
       testMatch: "journey.smoke.ts",
       use: { ...phone, viewport: { width: 844, height: 390 }, launchOptions: { args: ["--disable-3d-apis"] } }
+    },
+    {
+      // A customer shares a Project with a dealer, who edits and requests it (ADR 0014).
+      name: "dealer",
+      testMatch: "dealer.smoke.ts",
+      use: { ...desktop, launchOptions: { args: ["--disable-3d-apis"] } }
+    },
+    {
+      name: "dealer-phone",
+      testMatch: "dealer.smoke.ts",
+      use: { ...phone, launchOptions: { args: ["--disable-3d-apis"] } }
     },
     {
       // On a runner without a GPU, Chromium renders WebGL in software only with this switch.

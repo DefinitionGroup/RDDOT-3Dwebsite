@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { Kysely, Transaction } from "kysely";
 import { z } from "zod";
 import { hashJson } from "@/features/projects/configuration-contract";
-import type { JsonValue } from "@/features/projects/project-module";
+import type { JsonValue, ProjectActor } from "@/features/projects/project-module";
 import {
   quoteRequestContactSchema,
   quoteRequestNoteSchema,
@@ -22,12 +22,18 @@ import type {
 import { createQuoteRequestReference } from "@/features/quote-requests/quote-request-reference";
 import type { Database } from "@/lib/server/db/database-types";
 import { isPostgresErrorWithCode } from "@/lib/server/db/postgres-errors";
+import {
+  accessibleProjectIds,
+  dealerUsersOfSameDealer,
+  holdsProjectAccess,
+  parseProjectActor
+} from "@/lib/server/db/project-access-postgres";
 
 const uuidSchema = z.uuid();
 const idempotencyKeySchema = z.string().trim().min(8).max(200);
 const consentVersionSchema = z.string().trim().min(1).max(64);
 
-/** Cheap abuse ceiling; a person planning one kitchen does not need more. */
+/** Cheap abuse ceiling per owner and per Dealer User; one kitchen does not need more. */
 const MAX_REQUESTS_PER_DAY = 10;
 /** Unique-violation retries: a reference collision or a concurrent identical submit. */
 const SUBMIT_ATTEMPTS = 3;
@@ -148,14 +154,33 @@ export function createPostgresQuoteRequestModule(
 ): QuoteRequestModule {
   const { describeConfiguration } = dependencies;
 
-  /** Single owner predicate for every read in this module. */
-  function owned(ownerId: string, executor: Kysely<Database> | Transaction<Database> = database) {
+  /**
+   * Single access predicate for every read in this module: all requests of
+   * the owner's Projects, or for a dealer the requests its own Dealer
+   * submitted to a Project open to it (ADR 0014).
+   */
+  function reachable(
+    actor: ProjectActor,
+    executor: Kysely<Database> | Transaction<Database> = database
+  ) {
+    const dealerUserId = actor.kind === "dealer" ? actor.dealerUserId : null;
     return executor
       .withSchema("app")
       .selectFrom("quoteRequest")
       .innerJoin("project", "project.id", "quoteRequest.projectId")
-      .where("project.ownerId", "=", ownerId)
-      .where("project.lifecycle", "!=", "trashed");
+      .where("project.id", "in", accessibleProjectIds(executor, actor))
+      .where("project.lifecycle", "!=", "trashed")
+      .$if(dealerUserId !== null, (query) =>
+        query.where(
+          "quoteRequest.submittedByDealerUserId",
+          "in",
+          dealerUsersOfSameDealer(executor, dealerUserId ?? "")
+        )
+      );
+  }
+
+  function owned(ownerId: string, executor: Kysely<Database> | Transaction<Database> = database) {
+    return reachable({ kind: "owner", customerAccountId: ownerId }, executor);
   }
 
   async function page(
@@ -208,7 +233,7 @@ export function createPostgresQuoteRequestModule(
 
   return {
     async submit(input): Promise<SubmitQuoteRequestResult> {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
       const projectId = uuidSchema.parse(input.projectId);
       const expectedVersion = z.number().int().positive().parse(input.expectedVersion);
       const idempotencyKey = idempotencyKeySchema.parse(input.idempotencyKey);
@@ -229,7 +254,7 @@ export function createPostgresQuoteRequestModule(
         try {
           return await database.transaction().execute(
             async (transaction): Promise<SubmitQuoteRequestResult> => {
-              const replay = await owned(ownerId, transaction)
+              const replay = await reachable(actor, transaction)
                 .select([...columns, "quoteRequest.requestHash"])
                 .where("project.id", "=", projectId)
                 .where("quoteRequest.creationIdempotencyKey", "=", idempotencyKey)
@@ -239,6 +264,10 @@ export function createPostgresQuoteRequestModule(
                   return { kind: "idempotency-conflict" };
                 }
                 return { kind: "replayed", quoteRequest: mapRow(replay as Row) };
+              }
+
+              if (!(await holdsProjectAccess(transaction, actor, projectId))) {
+                return { kind: "unavailable" };
               }
 
               const working = await transaction
@@ -253,7 +282,7 @@ export function createPostgresQuoteRequestModule(
                   "workingConfiguration.version"
                 ])
                 .where("project.id", "=", projectId)
-                .where("project.ownerId", "=", ownerId)
+                .where("project.id", "in", accessibleProjectIds(transaction, actor))
                 .where("project.lifecycle", "=", "active")
                 .forUpdate()
                 .executeTakeFirst();
@@ -267,13 +296,29 @@ export function createPostgresQuoteRequestModule(
 
               const now = clock();
               const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+              // The owner's own requests and a Dealer User's count separately.
               const recent = await transaction
                 .withSchema("app")
                 .selectFrom("quoteRequest")
                 .innerJoin("project", "project.id", "quoteRequest.projectId")
                 .select((expression) => expression.fn.countAll<number>().as("count"))
-                .where("project.ownerId", "=", ownerId)
                 .where("quoteRequest.createdAt", ">=", since)
+                .$if(actor.kind === "owner", (query) =>
+                  query
+                    .where(
+                      "project.ownerId",
+                      "=",
+                      actor.kind === "owner" ? actor.customerAccountId : ""
+                    )
+                    .where("quoteRequest.submittedByDealerUserId", "is", null)
+                )
+                .$if(actor.kind === "dealer", (query) =>
+                  query.where(
+                    "quoteRequest.submittedByDealerUserId",
+                    "=",
+                    actor.kind === "dealer" ? actor.dealerUserId : ""
+                  )
+                )
                 .executeTakeFirstOrThrow();
               if (Number(recent.count) >= MAX_REQUESTS_PER_DAY) {
                 return { kind: "quota-exceeded", retryAfterSeconds: 3600 };
@@ -363,7 +408,9 @@ export function createPostgresQuoteRequestModule(
                   consentAcceptedAt: now,
                   priceIndication: description.priceIndication,
                   createdAt: now,
-                  updatedAt: now
+                  updatedAt: now,
+                  submittedByDealerUserId:
+                    actor.kind === "dealer" ? actor.dealerUserId : null
                 })
                 .execute();
 
@@ -387,7 +434,7 @@ export function createPostgresQuoteRequestModule(
                 })
                 .execute();
 
-              const created = await owned(ownerId, transaction)
+              const created = await reachable(actor, transaction)
                 .select([...columns])
                 .where("quoteRequest.id", "=", quoteRequestId)
                 .executeTakeFirstOrThrow();
@@ -416,10 +463,10 @@ export function createPostgresQuoteRequestModule(
     },
 
     async listForProject(input) {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
       const projectId = uuidSchema.parse(input.projectId);
       return page(
-        owned(ownerId).where("project.id", "=", projectId),
+        reachable(actor).where("project.id", "=", projectId),
         pageSize(input.limit),
         input.cursor
       );

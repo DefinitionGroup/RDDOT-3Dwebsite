@@ -168,6 +168,72 @@ END),
 
 
 --
+-- Name: dealer; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.dealer (
+    id uuid NOT NULL,
+    name text NOT NULL,
+    street text NOT NULL,
+    postal_code text NOT NULL,
+    city text NOT NULL,
+    country character(2) DEFAULT 'DE'::bpchar NOT NULL,
+    phone text DEFAULT ''::text NOT NULL,
+    email text DEFAULT ''::text NOT NULL,
+    website text DEFAULT ''::text NOT NULL,
+    latitude double precision NOT NULL,
+    longitude double precision NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT dealer_city_check CHECK (((char_length(city) >= 1) AND (char_length(city) <= 120))),
+    CONSTRAINT dealer_country_check CHECK ((country ~ '^[A-Z]{2}$'::text)),
+    CONSTRAINT dealer_email_check CHECK ((char_length(email) <= 254)),
+    CONSTRAINT dealer_latitude_check CHECK (((latitude >= ('-90'::integer)::double precision) AND (latitude <= (90)::double precision))),
+    CONSTRAINT dealer_longitude_check CHECK (((longitude >= ('-180'::integer)::double precision) AND (longitude <= (180)::double precision))),
+    CONSTRAINT dealer_name_check CHECK (((char_length(name) >= 1) AND (char_length(name) <= 160))),
+    CONSTRAINT dealer_phone_check CHECK (((phone = ''::text) OR ((char_length(phone) >= 3) AND (char_length(phone) <= 40)))),
+    CONSTRAINT dealer_postal_code_check CHECK ((postal_code ~ '^[A-Z0-9][A-Z0-9 -]{1,8}[A-Z0-9]$'::text)),
+    CONSTRAINT dealer_status_check CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text]))),
+    CONSTRAINT dealer_street_check CHECK (((char_length(street) >= 1) AND (char_length(street) <= 160))),
+    CONSTRAINT dealer_website_check CHECK ((char_length(website) <= 300))
+);
+
+
+--
+-- Name: dealer_user; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.dealer_user (
+    id uuid NOT NULL,
+    dealer_id uuid NOT NULL,
+    email text NOT NULL,
+    name text DEFAULT ''::text NOT NULL,
+    phone text DEFAULT ''::text NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT dealer_user_email_check CHECK (((email = lower(btrim(email))) AND (email ~ '^[^@[:space:]]+@[^@[:space:]]+$'::text) AND (char_length(email) <= 254))),
+    CONSTRAINT dealer_user_name_check CHECK ((char_length(name) <= 120)),
+    CONSTRAINT dealer_user_phone_check CHECK (((phone = ''::text) OR ((char_length(phone) >= 3) AND (char_length(phone) <= 40)))),
+    CONSTRAINT dealer_user_status_check CHECK ((status = ANY (ARRAY['active'::text, 'disabled'::text])))
+);
+
+
+--
+-- Name: dealer_user_identity; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.dealer_user_identity (
+    id uuid NOT NULL,
+    dealer_user_id uuid NOT NULL,
+    provider text NOT NULL,
+    provider_subject text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: development_email_capture; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -323,6 +389,27 @@ CREATE TABLE app.project (
 
 
 --
+-- Name: project_dealer_grant; Type: TABLE; Schema: app; Owner: -
+--
+
+CREATE TABLE app.project_dealer_grant (
+    id uuid NOT NULL,
+    project_id uuid NOT NULL,
+    dealer_id uuid NOT NULL,
+    customer_name text DEFAULT ''::text NOT NULL,
+    customer_email text NOT NULL,
+    customer_phone text DEFAULT ''::text NOT NULL,
+    creation_idempotency_key text NOT NULL,
+    granted_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    CONSTRAINT project_dealer_grant_check CHECK (((revoked_at IS NULL) OR (revoked_at >= granted_at))),
+    CONSTRAINT project_dealer_grant_customer_email_check CHECK (((char_length(customer_email) >= 3) AND (char_length(customer_email) <= 254))),
+    CONSTRAINT project_dealer_grant_customer_name_check CHECK ((char_length(customer_name) <= 120)),
+    CONSTRAINT project_dealer_grant_customer_phone_check CHECK (((customer_phone = ''::text) OR ((char_length(customer_phone) >= 3) AND (char_length(customer_phone) <= 40))))
+);
+
+
+--
 -- Name: prompt_template_release; Type: TABLE; Schema: app; Owner: -
 --
 
@@ -375,6 +462,7 @@ CREATE TABLE app.quote_request (
     timeframe text DEFAULT ''::text NOT NULL,
     budget_band text DEFAULT ''::text NOT NULL,
     wall_length_cm integer,
+    submitted_by_dealer_user_id uuid,
     CONSTRAINT quote_request_budget_band_check CHECK ((budget_band = ANY (ARRAY[''::text, 'up-to-10k'::text, '10-15k'::text, '15-25k'::text, 'over-25k'::text]))),
     CONSTRAINT quote_request_company_check CHECK ((char_length(company) <= 120)),
     CONSTRAINT quote_request_company_for_professionals CHECK (
@@ -418,6 +506,7 @@ CREATE TABLE app.shared_revision_link (
     expires_at timestamp with time zone NOT NULL,
     revoked_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by_dealer_user_id uuid,
     CONSTRAINT shared_revision_link_check CHECK ((expires_at > created_at)),
     CONSTRAINT shared_revision_link_check1 CHECK (((revoked_at IS NULL) OR (revoked_at >= created_at)))
 );
@@ -691,6 +780,46 @@ ALTER TABLE ONLY app.customer_profile
 
 
 --
+-- Name: dealer dealer_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.dealer
+    ADD CONSTRAINT dealer_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dealer_user dealer_user_email_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.dealer_user
+    ADD CONSTRAINT dealer_user_email_key UNIQUE (email);
+
+
+--
+-- Name: dealer_user_identity dealer_user_identity_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.dealer_user_identity
+    ADD CONSTRAINT dealer_user_identity_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dealer_user_identity dealer_user_identity_provider_provider_subject_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.dealer_user_identity
+    ADD CONSTRAINT dealer_user_identity_provider_provider_subject_key UNIQUE (provider, provider_subject);
+
+
+--
+-- Name: dealer_user dealer_user_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.dealer_user
+    ADD CONSTRAINT dealer_user_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: development_email_capture development_email_capture_pkey; Type: CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -784,6 +913,22 @@ ALTER TABLE ONLY app.photo_job_provider_event
 
 ALTER TABLE ONLY app.photo_job_provider_event
     ADD CONSTRAINT photo_job_provider_event_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_dealer_grant project_dealer_grant_pkey; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.project_dealer_grant
+    ADD CONSTRAINT project_dealer_grant_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_dealer_grant project_dealer_grant_project_id_creation_idempotency_key_key; Type: CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.project_dealer_grant
+    ADD CONSTRAINT project_dealer_grant_project_id_creation_idempotency_key_key UNIQUE (project_id, creation_idempotency_key);
 
 
 --
@@ -993,6 +1138,20 @@ CREATE INDEX configuration_revision_project_created_idx ON app.configuration_rev
 
 
 --
+-- Name: dealer_user_dealer_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX dealer_user_dealer_idx ON app.dealer_user USING btree (dealer_id);
+
+
+--
+-- Name: dealer_user_identity_user_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX dealer_user_identity_user_idx ON app.dealer_user_identity USING btree (dealer_user_id);
+
+
+--
 -- Name: development_email_capture_recipient_captured_idx; Type: INDEX; Schema: app; Owner: -
 --
 
@@ -1077,6 +1236,20 @@ CREATE INDEX photo_job_submitted_idx ON app.photo_job USING btree (submitted_at 
 
 
 --
+-- Name: project_dealer_grant_open_dealer_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX project_dealer_grant_open_dealer_idx ON app.project_dealer_grant USING btree (dealer_id, granted_at DESC) WHERE (revoked_at IS NULL);
+
+
+--
+-- Name: project_dealer_grant_open_project_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE UNIQUE INDEX project_dealer_grant_open_project_idx ON app.project_dealer_grant USING btree (project_id) WHERE (revoked_at IS NULL);
+
+
+--
 -- Name: project_owner_lifecycle_idx; Type: INDEX; Schema: app; Owner: -
 --
 
@@ -1088,6 +1261,13 @@ CREATE INDEX project_owner_lifecycle_idx ON app.project USING btree (owner_id, l
 --
 
 CREATE UNIQUE INDEX prompt_template_release_active_idx ON app.prompt_template_release USING btree (active) WHERE active;
+
+
+--
+-- Name: quote_request_dealer_user_created_idx; Type: INDEX; Schema: app; Owner: -
+--
+
+CREATE INDEX quote_request_dealer_user_created_idx ON app.quote_request USING btree (submitted_by_dealer_user_id, created_at DESC) WHERE (submitted_by_dealer_user_id IS NOT NULL);
 
 
 --
@@ -1214,6 +1394,22 @@ ALTER TABLE ONLY app.customer_profile
 
 
 --
+-- Name: dealer_user dealer_user_dealer_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.dealer_user
+    ADD CONSTRAINT dealer_user_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES app.dealer(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: dealer_user_identity dealer_user_identity_dealer_user_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.dealer_user_identity
+    ADD CONSTRAINT dealer_user_identity_dealer_user_id_fkey FOREIGN KEY (dealer_user_id) REFERENCES app.dealer_user(id) ON DELETE CASCADE;
+
+
+--
 -- Name: generated_photo generated_photo_photo_job_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -1270,6 +1466,22 @@ ALTER TABLE ONLY app.photo_job
 
 
 --
+-- Name: project_dealer_grant project_dealer_grant_dealer_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.project_dealer_grant
+    ADD CONSTRAINT project_dealer_grant_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES app.dealer(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: project_dealer_grant project_dealer_grant_project_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.project_dealer_grant
+    ADD CONSTRAINT project_dealer_grant_project_id_fkey FOREIGN KEY (project_id) REFERENCES app.project(id) ON DELETE CASCADE;
+
+
+--
 -- Name: project project_owner_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
 --
 
@@ -1283,6 +1495,22 @@ ALTER TABLE ONLY app.project
 
 ALTER TABLE ONLY app.quote_request
     ADD CONSTRAINT quote_request_project_id_configuration_revision_id_fkey FOREIGN KEY (project_id, configuration_revision_id) REFERENCES app.configuration_revision(project_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: quote_request quote_request_submitted_by_dealer_user_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.quote_request
+    ADD CONSTRAINT quote_request_submitted_by_dealer_user_id_fkey FOREIGN KEY (submitted_by_dealer_user_id) REFERENCES app.dealer_user(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: shared_revision_link shared_revision_link_created_by_dealer_user_id_fkey; Type: FK CONSTRAINT; Schema: app; Owner: -
+--
+
+ALTER TABLE ONLY app.shared_revision_link
+    ADD CONSTRAINT shared_revision_link_created_by_dealer_user_id_fkey FOREIGN KEY (created_by_dealer_user_id) REFERENCES app.dealer_user(id) ON DELETE RESTRICT;
 
 
 --
@@ -1350,4 +1578,5 @@ INSERT INTO public.schema_migrations (version) VALUES
     ('20261023120000'),
     ('20261027090000'),
     ('20261028120000'),
-    ('20261029120000');
+    ('20261029120000'),
+    ('20261030120000');

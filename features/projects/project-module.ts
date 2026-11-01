@@ -5,6 +5,19 @@ export type CustomerAccountId = string;
 export type ProjectId = string;
 export type ConfigurationRevisionId = string;
 
+/**
+ * Who acts on a Project: its owner, or a Dealer User whose Dealer holds the
+ * Project's open Dealer Grant (ADR 0014). The adapters check the grant inside
+ * every read and write; a dealer never acts as the owner.
+ */
+export type ProjectActor =
+  | { kind: "owner"; customerAccountId: CustomerAccountId }
+  | { kind: "dealer"; dealerUserId: string };
+
+export function ownerActor(customerAccountId: CustomerAccountId): ProjectActor {
+  return { kind: "owner", customerAccountId };
+}
+
 export type JsonValue =
   | null
   | boolean
@@ -126,8 +139,9 @@ export type ProjectModule = {
     productDefinitionVersion: string;
   }): Promise<ProjectWorkspace>;
 
+  /** The owner's Project, or one open to the dealer through its Dealer Grant. */
   getWorkspace(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
   }): Promise<ProjectWorkspace | null>;
 
@@ -160,14 +174,14 @@ export type ProjectModule = {
   }): Promise<DeleteProjectResult>;
 
   listConfigurationRevisions(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     limit?: number;
     cursor?: { createdAt: Date; id: ConfigurationRevisionId };
   }): Promise<ConfigurationRevisionPage>;
 
   saveWorkingConfiguration(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     expectedVersion: number;
     configuration: unknown;
@@ -175,7 +189,7 @@ export type ProjectModule = {
   }): Promise<SaveWorkingConfigurationResult>;
 
   checkpointRevision(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     expectedVersion: number;
     trigger: "version-save" | "share" | "photo" | "quote";
@@ -189,7 +203,7 @@ export type ProjectModule = {
   }): Promise<CheckpointRevisionResult>;
 
   restoreRevision(input: {
-    ownerId: CustomerAccountId;
+    actor: ProjectActor;
     projectId: ProjectId;
     revisionId: ConfigurationRevisionId;
     expectedVersion: number;

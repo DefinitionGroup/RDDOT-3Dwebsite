@@ -1,0 +1,299 @@
+{
+  "$comment": "Synthetic demo dealers for development and test databases only: fictional names, the placeholder street Musterstraße, unassignable phone numbers (a subscriber number never starts with 0) and the reserved .example domain. City-centre coordinates and postcodes are real so distances make sense. Provision with `pnpm dealers:provision` (ADR 0014).",
+  "dealers": [
+    {
+      "id": "d0000000-0000-4000-8000-000000000001",
+      "name": "Küchenstudio Spree (Demo)",
+      "street": "Musterstraße 12",
+      "postalCode": "10117",
+      "city": "Berlin",
+      "country": "DE",
+      "phone": "+49 30 0000 101",
+      "email": "kontakt@berlin.demo-haendler.example",
+      "website": "",
+      "latitude": 52.5163,
+      "longitude": 13.3889,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000001",
+          "email": "berlin@demo-haendler.example",
+          "name": "Demo Berlin",
+          "phone": "+49 30 0000 201"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000002",
+      "name": "Küchenwerk Elbe (Demo)",
+      "street": "Musterstraße 3",
+      "postalCode": "20095",
+      "city": "Hamburg",
+      "country": "DE",
+      "phone": "+49 40 0000 102",
+      "email": "kontakt@hamburg.demo-haendler.example",
+      "website": "",
+      "latitude": 53.5503,
+      "longitude": 9.993,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000002",
+          "email": "hamburg@demo-haendler.example",
+          "name": "Demo Hamburg",
+          "phone": "+49 40 0000 202"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000003",
+      "name": "Küchenhaus Isar (Demo)",
+      "street": "Musterstraße 27",
+      "postalCode": "80331",
+      "city": "München",
+      "country": "DE",
+      "phone": "+49 89 0000 103",
+      "email": "kontakt@muenchen.demo-haendler.example",
+      "website": "",
+      "latitude": 48.1374,
+      "longitude": 11.5755,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000003",
+          "email": "muenchen@demo-haendler.example",
+          "name": "Demo München",
+          "phone": "+49 89 0000 203"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000004",
+      "name": "Küchenraum Rhein (Demo)",
+      "street": "Musterstraße 8",
+      "postalCode": "50667",
+      "city": "Köln",
+      "country": "DE",
+      "phone": "+49 221 0000 104",
+      "email": "kontakt@koeln.demo-haendler.example",
+      "website": "",
+      "latitude": 50.9384,
+      "longitude": 6.9583,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000004",
+          "email": "koeln@demo-haendler.example",
+          "name": "Demo Köln",
+          "phone": "+49 221 0000 204"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000005",
+      "name": "Küchenatelier Main (Demo)",
+      "street": "Musterstraße 41",
+      "postalCode": "60311",
+      "city": "Frankfurt am Main",
+      "country": "DE",
+      "phone": "+49 69 0000 105",
+      "email": "kontakt@frankfurt.demo-haendler.example",
+      "website": "",
+      "latitude": 50.1109,
+      "longitude": 8.6821,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000005",
+          "email": "frankfurt@demo-haendler.example",
+          "name": "Demo Frankfurt",
+          "phone": "+49 69 0000 205"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000006",
+      "name": "Küchenform Neckar (Demo)",
+      "street": "Musterstraße 5",
+      "postalCode": "70173",
+      "city": "Stuttgart",
+      "country": "DE",
+      "phone": "+49 711 0000 106",
+      "email": "kontakt@stuttgart.demo-haendler.example",
+      "website": "",
+      "latitude": 48.7784,
+      "longitude": 9.18,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000006",
+          "email": "stuttgart@demo-haendler.example",
+          "name": "Demo Stuttgart",
+          "phone": "+49 711 0000 206"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000007",
+      "name": "Küchenplan Düssel (Demo)",
+      "street": "Musterstraße 19",
+      "postalCode": "40213",
+      "city": "Düsseldorf",
+      "country": "DE",
+      "phone": "+49 211 0000 107",
+      "email": "kontakt@duesseldorf.demo-haendler.example",
+      "website": "",
+      "latitude": 51.2254,
+      "longitude": 6.7763,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000007",
+          "email": "duesseldorf@demo-haendler.example",
+          "name": "Demo Düsseldorf",
+          "phone": "+49 211 0000 207"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000008",
+      "name": "Küchenkontor Pleiße (Demo)",
+      "street": "Musterstraße 2",
+      "postalCode": "04109",
+      "city": "Leipzig",
+      "country": "DE",
+      "phone": "+49 341 0000 108",
+      "email": "kontakt@leipzig.demo-haendler.example",
+      "website": "",
+      "latitude": 51.3397,
+      "longitude": 12.3731,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000008",
+          "email": "leipzig@demo-haendler.example",
+          "name": "Demo Leipzig",
+          "phone": "+49 341 0000 208"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000009",
+      "name": "Küchenwerkstatt Elbtal (Demo)",
+      "street": "Musterstraße 14",
+      "postalCode": "01067",
+      "city": "Dresden",
+      "country": "DE",
+      "phone": "+49 351 0000 109",
+      "email": "kontakt@dresden.demo-haendler.example",
+      "website": "",
+      "latitude": 51.0504,
+      "longitude": 13.7373,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000009",
+          "email": "dresden@demo-haendler.example",
+          "name": "Demo Dresden",
+          "phone": "+49 351 0000 209"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000010",
+      "name": "Küchenhof Leine (Demo)",
+      "street": "Musterstraße 33",
+      "postalCode": "30159",
+      "city": "Hannover",
+      "country": "DE",
+      "phone": "+49 511 0000 110",
+      "email": "kontakt@hannover.demo-haendler.example",
+      "website": "",
+      "latitude": 52.3745,
+      "longitude": 9.7386,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000010",
+          "email": "hannover@demo-haendler.example",
+          "name": "Demo Hannover",
+          "phone": "+49 511 0000 210"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000011",
+      "name": "Küchenzimmer Pegnitz (Demo)",
+      "street": "Musterstraße 6",
+      "postalCode": "90403",
+      "city": "Nürnberg",
+      "country": "DE",
+      "phone": "+49 911 0000 111",
+      "email": "kontakt@nuernberg.demo-haendler.example",
+      "website": "",
+      "latitude": 49.4521,
+      "longitude": 11.0767,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000011",
+          "email": "nuernberg@demo-haendler.example",
+          "name": "Demo Nürnberg",
+          "phone": "+49 911 0000 211"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000012",
+      "name": "Küchenmanufaktur Weser (Demo)",
+      "street": "Musterstraße 21",
+      "postalCode": "28195",
+      "city": "Bremen",
+      "country": "DE",
+      "phone": "+49 421 0000 112",
+      "email": "kontakt@bremen.demo-haendler.example",
+      "website": "",
+      "latitude": 53.0793,
+      "longitude": 8.8017,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000012",
+          "email": "bremen@demo-haendler.example",
+          "name": "Demo Bremen",
+          "phone": "+49 421 0000 212"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000013",
+      "name": "Küchenhaus Werre (Demo)",
+      "street": "Musterstraße 1",
+      "postalCode": "32257",
+      "city": "Bünde",
+      "country": "DE",
+      "phone": "+49 5223 0000 113",
+      "email": "kontakt@buende.demo-haendler.example",
+      "website": "",
+      "latitude": 52.2006,
+      "longitude": 8.5797,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000013",
+          "email": "buende@demo-haendler.example",
+          "name": "Demo Bünde",
+          "phone": "+49 5223 0000 213"
+        }
+      ]
+    },
+    {
+      "id": "d0000000-0000-4000-8000-000000000014",
+      "name": "Küchenraum Dreisam (Demo)",
+      "street": "Musterstraße 9",
+      "postalCode": "79098",
+      "city": "Freiburg im Breisgau",
+      "country": "DE",
+      "phone": "+49 761 0000 114",
+      "email": "kontakt@freiburg.demo-haendler.example",
+      "website": "",
+      "latitude": 47.9959,
+      "longitude": 7.8522,
+      "users": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000014",
+          "email": "freiburg@demo-haendler.example",
+          "name": "Demo Freiburg",
+          "phone": "+49 761 0000 214"
+        }
+      ]
+    }
+  ]
+}

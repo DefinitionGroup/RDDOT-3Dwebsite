@@ -17,8 +17,12 @@ type OverlayProps = {
   title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  /** A sheet from the right, or a centred card. */
-  placement?: "sheet" | "card";
+  /**
+   * A sheet from the right, a centred card, or a wide centred panel for work
+   * that needs two columns, such as a map beside a list (the whole screen on
+   * phones).
+   */
+  placement?: "sheet" | "card" | "panel";
 };
 
 function CloseIcon() {
@@ -59,12 +63,15 @@ export function Overlay({
   if (!mounted) return null;
 
   const sheet = placement === "sheet";
+  const panel = placement === "panel";
 
   return createPortal(
     <AnimatePresence>
       {open && (
         <div
-          className={`fixed inset-0 z-[80] flex ${sheet ? "justify-end" : "items-center justify-center p-5"}`}
+          className={`fixed inset-0 z-[80] flex ${
+            sheet ? "justify-end" : panel ? "items-center justify-center md:p-5" : "items-center justify-center p-5"
+          }`}
           ref={rootRef}
         >
           {/* A click outside closes; keyboards have Close and Escape. */}
@@ -84,7 +91,9 @@ export function Overlay({
             className={`relative flex flex-col bg-charcoal/[.96] outline-none backdrop-blur-[24px] ${
               sheet
                 ? "h-full w-full max-w-[40rem] border-l border-hairline"
-                : "max-h-full w-full max-w-[36rem] rounded-card border border-hairline"
+                : panel
+                  ? "h-full w-full md:h-[min(52rem,100%)] md:max-w-[76rem] md:rounded-card md:border md:border-hairline"
+                  : "max-h-full w-full max-w-[36rem] rounded-card border border-hairline"
             }`}
             exit={sheet ? { opacity: 0, x: OVERLAY_SLIDE } : { opacity: 0, y: OVERLAY_SLIDE }}
             initial={sheet ? { opacity: 0, x: OVERLAY_SLIDE } : { opacity: 0, y: OVERLAY_SLIDE }}

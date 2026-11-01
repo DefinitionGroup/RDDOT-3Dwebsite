@@ -53,15 +53,19 @@ const step = {
 };
 
 export function AccountAccess({
+  audience = "customer",
   returnTo,
   developmentCaptureEnabled = false
 }: {
+  /** Dealer Users sign in the same way, to accounts rotpunkt set up for them (ADR 0014). */
+  audience?: "customer" | "dealer";
   returnTo?: string;
   /** Server-decided: the deployment keeps authentication mails and shows the code here. */
   developmentCaptureEnabled?: boolean;
 }) {
   const locale = useLocale();
-  const t = useMessages().account;
+  const messages = useMessages();
+  const t = messages.account;
   const router = useRouter();
   const emailId = useId();
   const codeId = useId();
@@ -137,9 +141,11 @@ export function AccountAccess({
         {currentStep === "email" ? (
           <motion.div key="email" {...step}>
             <h1 className="m-0 max-w-md text-heading">
-              <Emphasized text={t.signInTitle} />
+              <Emphasized text={audience === "dealer" ? messages.dealers.signInTitle : t.signInTitle} />
             </h1>
-            <p className="m-0 mt-6 max-w-[42ch] text-body text-graphite">{t.signInBody}</p>
+            <p className="m-0 mt-6 max-w-[42ch] text-body text-graphite">
+              {audience === "dealer" ? messages.dealers.signInBody : t.signInBody}
+            </p>
 
             <form action={sendCode} className="mt-10">
               <FieldLabel htmlFor={emailId}>{t.email}</FieldLabel>
@@ -157,7 +163,7 @@ export function AccountAccess({
               <SubmitPill busyLabel={t.preparingCode}>{t.requestCode}</SubmitPill>
             </form>
 
-            <p className="m-0 mt-5 text-caption text-graphite">{t.signInNote}</p>
+            {audience === "customer" && <p className="m-0 mt-5 text-caption text-graphite">{t.signInNote}</p>}
           </motion.div>
         ) : (
           <motion.div key="code" {...step}>

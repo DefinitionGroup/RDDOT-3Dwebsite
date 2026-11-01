@@ -58,7 +58,10 @@ export const API_ERROR_CODES = [
   "scene-not-offered",
   "capture-rejected",
   "job-not-ready",
-  "generation-not-started"
+  "generation-not-started",
+  "invalid-dealer-grant",
+  "dealer-unavailable",
+  "dealer-grant-key-reused"
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

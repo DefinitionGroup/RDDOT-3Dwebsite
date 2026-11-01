@@ -54,6 +54,9 @@ export function useProjectActions() {
     deleteForGood(projectId: string) {
       return run(projectId, () => fetch(`/api/projects/${projectId}`, { method: "DELETE" }));
     },
+    endDealerShare(projectId: string) {
+      return run(projectId, () => fetch(`/api/projects/${projectId}/dealer-grant`, { method: "DELETE" }));
+    },
     duplicate(project: AccountProject) {
       return run(project.id, () =>
         fetch(`/api/projects/${project.id}/duplicate`, {
@@ -82,14 +85,26 @@ function DotsIcon() {
 }
 
 /**
- * The card's own menu, over its picture: duplicate, archive, trash. Trash asks
- * once more, because it revokes the share links for good. Escape or a click
- * outside closes it.
+ * The card's own menu, over its picture: share with a dealer, duplicate,
+ * archive, trash. Trash and ending a Dealer Grant ask once more, because both
+ * take access away for good. Escape or a click outside closes it.
  */
-export function ProjectMenu({ actions, project }: { actions: ProjectActions; project: AccountProject }) {
-  const t = useMessages().account;
+export function ProjectMenu({
+  actions,
+  onShareWithDealer,
+  project,
+  sharedWithDealer
+}: {
+  actions: ProjectActions;
+  onShareWithDealer: () => void;
+  project: AccountProject;
+  sharedWithDealer: boolean;
+}) {
+  const messages = useMessages();
+  const t = messages.account;
   const [open, setOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
+  const [confirmEndShare, setConfirmEndShare] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
@@ -117,6 +132,7 @@ export function ProjectMenu({ actions, project }: { actions: ProjectActions; pro
   function close() {
     setOpen(false);
     setConfirmTrash(false);
+    setConfirmEndShare(false);
   }
 
   return (
@@ -143,7 +159,24 @@ export function ProjectMenu({ actions, project }: { actions: ProjectActions; pro
             initial={{ opacity: 0, y: prefersReducedMotion ? 0 : -6 }}
             transition={{ duration: DURATION.state, ease: SIGNATURE_EASE }}
           >
-            {confirmTrash ? (
+            {confirmEndShare ? (
+              <div className="grid gap-1 p-1.5">
+                <p className="m-0 px-1.5 pb-2 pt-1 text-caption text-graphite">{messages.dealers.endShareNote}</p>
+                <button
+                  className={itemClass}
+                  onClick={() => {
+                    close();
+                    void actions.endDealerShare(project.id);
+                  }}
+                  type="button"
+                >
+                  {messages.dealers.confirmEndShare}
+                </button>
+                <button className={`${itemClass} text-graphite`} onClick={() => setConfirmEndShare(false)} type="button">
+                  {t.cancel}
+                </button>
+              </div>
+            ) : confirmTrash ? (
               <div className="grid gap-1 p-1.5">
                 <p className="m-0 px-1.5 pb-2 pt-1 text-caption text-graphite">{t.trashWarning}</p>
                 <button
@@ -162,6 +195,21 @@ export function ProjectMenu({ actions, project }: { actions: ProjectActions; pro
               </div>
             ) : (
               <div className="grid">
+                <button
+                  className={itemClass}
+                  onClick={() => {
+                    close();
+                    onShareWithDealer();
+                  }}
+                  type="button"
+                >
+                  {sharedWithDealer ? messages.dealers.switchDealer : messages.dealers.shareWithDealer}
+                </button>
+                {sharedWithDealer && (
+                  <button className={itemClass} onClick={() => setConfirmEndShare(true)} type="button">
+                    {messages.dealers.endShare}
+                  </button>
+                )}
                 <button
                   className={itemClass}
                   onClick={() => {

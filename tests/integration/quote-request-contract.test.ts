@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ownerActor } from "@/features/projects/project-module";
 import { QUOTE_REQUEST_REFERENCE_PATTERN } from "@/features/quote-requests/quote-request-reference";
 import {
   type ConfigurationDescriber,
@@ -78,7 +79,7 @@ describe("quote request contract", () => {
 
   function submission(ownerId: string, projectId: string, idempotencyKey = crypto.randomUUID()) {
     return {
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId,
       expectedVersion: 1,
       idempotencyKey,
@@ -331,7 +332,7 @@ describe("quote request contract", () => {
     expect(secondPage.items).toHaveLength(1);
     expect(secondPage.nextCursor).toBeNull();
 
-    const forProject = await quoteRequests.listForProject({ ownerId, projectId });
+    const forProject = await quoteRequests.listForProject({ actor: ownerActor(ownerId), projectId });
     expect(forProject.totalCount).toBe(2);
     expect(forProject.items.every((item) => item.projectId === projectId)).toBe(true);
   });

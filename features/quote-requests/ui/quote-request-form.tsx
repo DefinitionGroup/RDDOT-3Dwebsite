@@ -53,13 +53,16 @@ export function QuoteRequestForm({
   expectedVersion,
   initialContact,
   projectId,
-  projectName
+  projectName,
+  requester = "owner"
 }: {
   expectedVersion: number;
   /** What the account already knows: the profile and the sign-in email. */
   initialContact?: CustomerProfile & { email: string };
   projectId: string;
   projectName: string;
+  /** A Dealer User requests for the owner's Project with their own contact (ADR 0014). */
+  requester?: "owner" | "dealer";
 }) {
   const locale = useLocale();
   const messages = useMessages();
@@ -230,10 +233,16 @@ export function QuoteRequestForm({
           </div>
         </dl>
 
-        <p className="m-0 mt-6 max-w-[46ch] text-caption text-graphite">{t.keptNote}</p>
+        <p className="m-0 mt-6 max-w-[46ch] text-caption text-graphite">
+          {requester === "dealer" ? t.dealerKeptNote : t.keptNote}
+        </p>
 
         <div className="mt-10 flex flex-wrap items-center gap-3">
-          <Pill href={localizePath(locale, "/konto")}>{t.toRequests}</Pill>
+          {requester === "dealer" ? (
+            <Pill href={localizePath(locale, "/haendler")}>{messages.dealers.area}</Pill>
+          ) : (
+            <Pill href={localizePath(locale, "/konto")}>{t.toRequests}</Pill>
+          )}
           <Pill href={localizePath(locale, `/configure?project=${projectId}`)} variant="secondary">
             {t.toProject}
           </Pill>
@@ -248,7 +257,9 @@ export function QuoteRequestForm({
       <h1 className="m-0 mt-5 max-w-3xl text-heading">
         <Emphasized text={t.title} />
       </h1>
-      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">{t.intro(projectName)}</p>
+      <p className="m-0 mt-6 max-w-[46ch] text-body text-graphite">
+        {requester === "dealer" ? t.dealerIntro(projectName) : t.intro(projectName)}
+      </p>
 
       <form className="mt-10 max-w-xl" noValidate={false} onSubmit={submit}>
         <div className="grid gap-x-10 gap-y-8 sm:grid-cols-2">

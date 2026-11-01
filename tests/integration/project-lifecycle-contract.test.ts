@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ownerActor } from "@/features/projects/project-module";
 import { createPostgresIdentityAdapter } from "@/lib/server/db/identity-postgres";
 import { createPostgresProjectModule } from "@/lib/server/db/project-postgres";
 import { createPostgresSharingModule } from "@/lib/server/db/sharing-postgres";
@@ -73,7 +74,7 @@ describe("Project lifecycle: archive, trash, restore", () => {
     const { ownerId, projectId } = await newProject("Mit Link");
     const token = randomShareToken();
     const created = await sharing.createLink({
-      ownerId,
+      actor: ownerActor(ownerId),
       projectId,
       expectedVersion: 1,
       idempotencyKey: `share-${crypto.randomUUID()}`,
@@ -100,7 +101,7 @@ describe("Project lifecycle: archive, trash, restore", () => {
       deletionDueAt: null
     });
     await expect(sharing.resolveLink({ linkId: created.link.id, token })).resolves.toBeNull();
-    const [link] = await sharing.listLinks({ ownerId, projectId });
+    const [link] = await sharing.listLinks({ actor: ownerActor(ownerId), projectId });
     expect(link.revokedAt).not.toBeNull();
   });
 

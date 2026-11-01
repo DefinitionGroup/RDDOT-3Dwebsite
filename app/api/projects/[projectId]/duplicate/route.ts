@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ownerActor } from "@/features/projects/project-module";
 import { z } from "zod";
 import { customerSessions } from "@/lib/server/auth/customer-session";
 import { projects } from "@/lib/server/projects/projects";
@@ -45,7 +46,7 @@ export async function POST(
     return NextResponse.json({ code: "invalid-request" }, { status: 400 });
   }
 
-  const source = await projects.getWorkspace({ ownerId: session.customerAccountId, projectId });
+  const source = await projects.getWorkspace({ actor: ownerActor(session.customerAccountId), projectId });
   if (!source || source.lifecycle === "trashed") {
     return NextResponse.json({ code: "not-found" }, { status: 404 });
   }

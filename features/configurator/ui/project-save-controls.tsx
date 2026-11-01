@@ -12,7 +12,8 @@ import { useLocale, useMessages } from "@/lib/messages/locale-context";
 type ProjectAutosaveProps = {
   configurationCode: string;
   onRestore: (configurationCode: string) => boolean;
-  onSaveAsNew: (configurationCode: string) => void;
+  /** Without it the conflict offers no copy, as for a Dealer User, who cannot own Projects. */
+  onSaveAsNew?: (configurationCode: string) => void;
   onStatus: (status: ProjectAutosaveStatus) => void;
   project: EditableProject;
 };
@@ -90,15 +91,17 @@ export function ProjectAutosave({
       <Notice live="assertive" title={t.staleTitle}>
         <p className="m-0 text-caption text-graphite">{t.staleBody}</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Pill
-            className="h-11"
-            onClick={() => {
-              discardRecovery();
-              onSaveAsNew(status.configurationCode);
-            }}
-          >
-            {t.saveAsNew}
-          </Pill>
+          {onSaveAsNew && (
+            <Pill
+              className="h-11"
+              onClick={() => {
+                discardRecovery();
+                onSaveAsNew(status.configurationCode);
+              }}
+            >
+              {t.saveAsNew}
+            </Pill>
+          )}
           <Pill onClick={discardRecovery} variant="secondary">
             {messages.common.discard}
           </Pill>
@@ -121,15 +124,17 @@ export function ProjectAutosave({
           >
             {t.loadLatest}
           </Pill>
-          <Pill
-            onClick={() => {
-              discardRecovery();
-              onSaveAsNew(configurationCode);
-            }}
-            variant="secondary"
-          >
-            {t.saveAsNew}
-          </Pill>
+          {onSaveAsNew && (
+            <Pill
+              onClick={() => {
+                discardRecovery();
+                onSaveAsNew(configurationCode);
+              }}
+              variant="secondary"
+            >
+              {t.saveAsNew}
+            </Pill>
+          )}
         </div>
       </Notice>
     );

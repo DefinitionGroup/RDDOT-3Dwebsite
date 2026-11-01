@@ -3,8 +3,8 @@ import { LAUNCHED_LOCALES, localizePath } from "@/lib/i18n";
 import { SEARCH_INDEXING } from "@/lib/search-indexing";
 import { absoluteUrl } from "@/lib/site";
 
-/** Private and transactional screens: an account, a request, a shared link. */
-const PRIVATE_PATHS = ["/konto", "/anfrage", "/share/"];
+/** Private and transactional screens: an account, a request, a shared link, the Dealer Workspace. */
+const PRIVATE_PATHS = ["/konto", "/anfrage", "/share/", "/haendler"];
 
 /**
  * A deployment that must stay out of search engines keeps the same crawl

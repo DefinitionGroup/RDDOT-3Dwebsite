@@ -17,6 +17,7 @@ import type {
   CheckpointRevisionResult,
   DeleteProjectResult,
   ConfigurationRevisionSummary,
+  ProjectActor,
   ProjectModule,
   ProjectWorkspace,
   RenameProjectResult,
@@ -27,6 +28,12 @@ import type {
   WorkingConfigurationTable
 } from "@/lib/server/db/database-types";
 import { isPostgresErrorWithCode } from "@/lib/server/db/postgres-errors";
+import {
+  accessibleProjectIds,
+  holdsProjectAccess,
+  lockOpenProjectGrant,
+  parseProjectActor
+} from "@/lib/server/db/project-access-postgres";
 
 const uuidSchema = z.uuid();
 const idempotencyKeySchema = z.string().trim().min(8).max(200);
@@ -77,7 +84,7 @@ function mapWorkspace(row: {
 
 async function findWorkspace(
   database: Kysely<Database> | Transaction<Database>,
-  ownerId: string,
+  actor: ProjectActor,
   projectId: string
 ) {
   const row = await database
@@ -99,7 +106,7 @@ async function findWorkspace(
       "workingConfiguration.updatedAt"
     ])
     .where("project.id", "=", projectId)
-    .where("project.ownerId", "=", ownerId)
+    .where("project.id", "in", accessibleProjectIds(database, actor))
     .executeTakeFirst();
 
   return row ? mapWorkspace(row) : null;
@@ -118,7 +125,9 @@ async function findWorkspaceByCreationKey(
     .where("creationIdempotencyKey", "=", idempotencyKey)
     .executeTakeFirst();
 
-  return row ? findWorkspace(database, ownerId, row.id) : null;
+  return row
+    ? findWorkspace(database, { kind: "owner", customerAccountId: ownerId }, row.id)
+    : null;
 }
 
 function currentVersion(
@@ -223,7 +232,7 @@ export function createPostgresProjectModule(
 
           const workspace = await findWorkspace(
             transaction,
-            ownerId,
+            { kind: "owner", customerAccountId: ownerId },
             projectId
           );
           if (!workspace) throw new Error("Created Project could not be loaded");
@@ -245,7 +254,7 @@ export function createPostgresProjectModule(
     async getWorkspace(input) {
       return findWorkspace(
         database,
-        uuidSchema.parse(input.ownerId),
+        parseProjectActor(input.actor),
         uuidSchema.parse(input.projectId)
       );
     },
@@ -275,6 +284,19 @@ export function createPostgresProjectModule(
       const projectId = uuidSchema.parse(input.projectId);
 
       return database.transaction().execute(async (transaction) => {
+        if (input.action === "trash") {
+          // Trash revokes the Dealer Grant below; its lock comes first, as in
+          // every dealer write, so a dealer write in flight finishes before.
+          const owned = await transaction
+            .withSchema("app")
+            .selectFrom("project")
+            .select("id")
+            .where("id", "=", projectId)
+            .where("ownerId", "=", ownerId)
+            .executeTakeFirst();
+          if (owned) await lockOpenProjectGrant(transaction, projectId);
+        }
+
         const current = await transaction
           .withSchema("app")
           .selectFrom("project")
@@ -309,11 +331,19 @@ export function createPostgresProjectModule(
           .where("id", "=", projectId)
           .execute();
 
-        // Entering Trash revokes every open share link for good (CONTEXT.md, Trashed Project).
+        // Entering Trash revokes every open share link and the Dealer Grant
+        // for good (CONTEXT.md, Trashed Project and Dealer Grant).
         if (next === "trashed") {
           await transaction
             .withSchema("app")
             .updateTable("sharedRevisionLink")
+            .set({ revokedAt: now })
+            .where("projectId", "=", projectId)
+            .where("revokedAt", "is", null)
+            .execute();
+          await transaction
+            .withSchema("app")
+            .updateTable("projectDealerGrant")
             .set({ revokedAt: now })
             .where("projectId", "=", projectId)
             .where("revokedAt", "is", null)
@@ -359,7 +389,7 @@ export function createPostgresProjectModule(
     },
 
     async listConfigurationRevisions(input) {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
       const projectId = uuidSchema.parse(input.projectId);
       const limit = z.number().int().min(1).max(100).parse(input.limit ?? 50);
       const cursor = input.cursor
@@ -381,7 +411,7 @@ export function createPostgresProjectModule(
           "configurationRevision.createdAt"
         ])
         .where("project.id", "=", projectId)
-        .where("project.ownerId", "=", ownerId)
+        .where("project.id", "in", accessibleProjectIds(database, actor))
         .where("project.lifecycle", "!=", "trashed");
 
       if (cursor) {
@@ -418,7 +448,7 @@ export function createPostgresProjectModule(
           .innerJoin("project", "project.id", "configurationRevision.projectId")
           .select((expression) => expression.fn.countAll<number>().as("count"))
           .where("project.id", "=", projectId)
-          .where("project.ownerId", "=", ownerId)
+          .where("project.id", "in", accessibleProjectIds(database, actor))
           .where("project.lifecycle", "!=", "trashed")
           .executeTakeFirstOrThrow()
       ]);
@@ -435,7 +465,7 @@ export function createPostgresProjectModule(
     },
 
     async saveWorkingConfiguration(input) {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
       const projectId = uuidSchema.parse(input.projectId);
       const expectedVersion = z.number().int().positive().parse(input.expectedVersion);
       const productDefinitionVersion = productDefinitionVersionSchema.parse(
@@ -445,6 +475,10 @@ export function createPostgresProjectModule(
       const configurationHash = hashConfiguration(configuration);
 
       return database.transaction().execute(async (transaction) => {
+        if (!(await holdsProjectAccess(transaction, actor, projectId))) {
+          return { kind: "unavailable" as const };
+        }
+
         const saved = await transaction
           .withSchema("app")
           .updateTable("workingConfiguration")
@@ -462,7 +496,7 @@ export function createPostgresProjectModule(
             query
               .selectFrom("project")
               .select("id")
-              .where("ownerId", "=", ownerId)
+              .where("id", "in", accessibleProjectIds(transaction, actor))
               .where("lifecycle", "=", "active")
           )
           .returning(["version", "updatedAt"])
@@ -474,7 +508,6 @@ export function createPostgresProjectModule(
             .updateTable("project")
             .set({ updatedAt: new Date(saved.updatedAt) })
             .where("id", "=", projectId)
-            .where("ownerId", "=", ownerId)
             .executeTakeFirstOrThrow();
 
           return {
@@ -491,7 +524,7 @@ export function createPostgresProjectModule(
           .innerJoin("project", "project.id", "workingConfiguration.projectId")
           .select("workingConfiguration.version")
           .where("project.id", "=", projectId)
-          .where("project.ownerId", "=", ownerId)
+          .where("project.id", "in", accessibleProjectIds(transaction, actor))
           .where("project.lifecycle", "=", "active")
           .executeTakeFirst();
 
@@ -502,7 +535,7 @@ export function createPostgresProjectModule(
     },
 
     async checkpointRevision(input): Promise<CheckpointRevisionResult> {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
       const projectId = uuidSchema.parse(input.projectId);
       const expectedVersion = z.number().int().positive().parse(input.expectedVersion);
       const label = input.label ? labelSchema.parse(input.label) : null;
@@ -513,6 +546,10 @@ export function createPostgresProjectModule(
 
       try {
         return await database.transaction().execute(async (transaction) => {
+          if (!(await holdsProjectAccess(transaction, actor, projectId))) {
+            return { kind: "unavailable" };
+          }
+
           const working = await transaction
             .withSchema("app")
             .selectFrom("workingConfiguration")
@@ -525,7 +562,7 @@ export function createPostgresProjectModule(
               "workingConfiguration.version"
             ])
             .where("project.id", "=", projectId)
-            .where("project.ownerId", "=", ownerId)
+            .where("project.id", "in", accessibleProjectIds(transaction, actor))
             .where("project.lifecycle", "=", "active")
             .forUpdate()
             .executeTakeFirst();
@@ -667,7 +704,7 @@ export function createPostgresProjectModule(
     },
 
     async restoreRevision(input): Promise<RestoreRevisionResult> {
-      const ownerId = uuidSchema.parse(input.ownerId);
+      const actor = parseProjectActor(input.actor);
       const projectId = uuidSchema.parse(input.projectId);
       const revisionId = uuidSchema.parse(input.revisionId);
       const expectedVersion = z.number().int().positive().parse(input.expectedVersion);
@@ -677,6 +714,10 @@ export function createPostgresProjectModule(
         .parse(input.supportedProductDefinitionVersions);
 
       return database.transaction().execute(async (transaction) => {
+        if (!(await holdsProjectAccess(transaction, actor, projectId))) {
+          return { kind: "unavailable" };
+        }
+
         const working = await transaction
           .withSchema("app")
           .selectFrom("workingConfiguration")
@@ -689,7 +730,7 @@ export function createPostgresProjectModule(
             "workingConfiguration.version"
           ])
           .where("project.id", "=", projectId)
-          .where("project.ownerId", "=", ownerId)
+          .where("project.id", "in", accessibleProjectIds(transaction, actor))
           .where("project.lifecycle", "=", "active")
           .forUpdate()
           .executeTakeFirst();
@@ -789,7 +830,6 @@ export function createPostgresProjectModule(
           .updateTable("project")
           .set({ updatedAt })
           .where("id", "=", projectId)
-          .where("ownerId", "=", ownerId)
           .executeTakeFirstOrThrow();
 
         return {
