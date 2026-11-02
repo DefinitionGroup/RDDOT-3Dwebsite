@@ -126,10 +126,32 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Vercel project | Production builds `redesign/devstart` from Git, at `ca43e1d` since 2026-11-01, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
+| Better Auth 1.7.15: the database-backed rate limit holds under a burst (GHSA-44jh-23m7-hpcf) | Done 2026-11-02, not on the test site yet; `undici`, `zod` and three dev-only advisories remain (Known Warnings) |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
 
 ## Done
 
+- **Better Auth 1.7.15 (2026-11-02).** `better-auth` and the `auth` CLI from 1.6.27, after
+  the Dependabot review of the same day. Of Better Auth's four advisories one applied:
+  with rate-limit counts in PostgreSQL, requests arriving together could pass a limit
+  together (GHSA-44jh-23m7-hpcf, low); 1.7 checks and counts in one step. The other three
+  (a magic link made from OAuth state, the OAuth Proxy, device login; one critical, two
+  high) need plugins the site does not use: it signs in by email code alone. No schema
+  change: since 1.7.3 the account table is the same as in 1.6, the 1.7.15 CLI finds the
+  `auth` schema up to date, and on an empty database it generates the tables, columns and
+  indexes of `20260813123000` and `20260813230000`. Email-code users have no `account`
+  rows, and the shared development database has none, so the upgrade guide's
+  duplicate-key check finds nothing there (read-only query). 1.7 also keeps rate-limit rows
+  for the longest configured window, ten minutes here, instead of pruning them after 60 s,
+  which retires that Known Warning (seen in `dist/api/rate-limiter`). Checked: lint, types,
+  200/200 unit tests; the database suite on a new Postgres 17 database, 111 passed and 1
+  skipped (live storage), with a burst added to the sign-in code test (thirty requests at
+  once from one client address get twenty codes: on 1.6.27 one of two runs gave 21, on
+  1.7.15 eight of eight gave 20); the build and the smoke test, 6/6, on a throwaway
+  database; and on `next start` against it, at 1440 and 390 px: sign-in by code, sign-out,
+  signing in again, deleting with a session older than 15 minutes asks for a fresh sign-in,
+  and deleting after that removes the user and returns to the homepage. Not on the test
+  site yet.
 - **Dates and times in one time zone (2026-11-01).** Every date and time the site prints
   is formatted in `SITE_TIME_ZONE` (Europe/Berlin, `lib/i18n.ts`). The account page printed
   the session's end time in the server's zone (UTC on Vercel and in CI) and again in the
@@ -1366,11 +1388,12 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 
 ## Known Warnings
 
-- Better Auth 1.6.27 prunes its rate-limit rows older than its default window (60 s)
-  whenever some row's window resets, custom rules included: a client address's
-  ten-minute count of code requests and five-minute count of sign-ins can start over
-  after a minute without requests from it. The per-address code limit keeps its own
-  table and holds its ten minutes (seen in `dist/api/rate-limiter`, 2026-10-28).
+- GitHub's dependency graph is off for the repository (its Insights page says so,
+  2026-11-02), so Dependabot matches new advisories against a dependency snapshot from
+  before 2026-10-01 (Next.js 16.2.10, Vite 8.2.1). Of its 46 open alerts on 2026-11-02, 36
+  were already fixed in the lockfile and the 10 for Better Auth 1.6.27 are fixed by 1.7.15
+  (see Done). Turning the graph on (repository settings, Advanced Security; needs an admin)
+  should close them; until then `pnpm audit` is the reliable list.
 - `pnpm build` on Node 26 prints an `ExperimentalWarning: localStorage is not available`
   once per page-data worker: Node's experimental Web Storage warns when a dependency probes
   `localStorage` on the server. Harmless; no application code reads it on the server
@@ -1388,12 +1411,21 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - One React hydration-mismatch error ("attributes of the server rendered HTML didn't match")
   appeared once during the 500 px journey on the dev server; loading each page of that
   journey directly, signed in and out, showed none.
-- `pnpm audit --prod` (2026-10-23) reports one high advisory: `braces` ≤ 3.0.3, stack
-  exhaustion through deeply nested patterns (GHSA-vfj7-8cjw-p6xm), with no fixed release
-  published. Its only path is `sanity > @sanity/cli > @sanity/codegen > chokidar`, the file
-  watcher of type generation, which sees only this repository's own patterns at build time;
-  nothing a visitor sends reaches it. Recheck when `braces` or `chokidar` publishes a fix.
-  The other eleven of 2026-10-22 are gone (see Done).
+- `pnpm audit --prod` (2026-11-02, after Better Auth 1.7.15) reports advisories in three
+  packages; the `braces` one of 2026-10-23 is gone.
+  - `undici` 7.30.0, eight advisories (four high), fixed in 7.30.1. Sanity's HTTP client
+    (`@sanity/client > get-it` 9.6.1) bundles it into the server build. It talks only to
+    Sanity's API, so the TLS, decompression, renegotiation and cache advisories need a
+    hostile server or client settings the site does not use. Also under Sanity's CLI and
+    vitest's jsdom.
+  - `zod` below 4.6.6 (GHSA-mrhx-c7xc-m3w5, high): an array with many invalid entries can
+    use up memory during validation. The site's own `zod` 4.4.3 checks request bodies, and
+    the project routes take the kitchen's `wallModules`; reaching them needs a signed-in
+    user. Also `@vercel/functions > @vercel/oidc > @vercel/cli-config` (4.1.11).
+  - `minimatch` under Sanity's CLI (moderate); its fix is a major version upstream.
+
+  Dev and build only: `postcss-selector-parser` 6.1.4 under Tailwind 3, and `minimatch` and
+  `glob` under ESLint, the gltf-transform CLI and testcontainers.
 - `next-env.d.ts` churns between `./.next/types/routes.d.ts` and
   `./.next/dev/types/routes.d.ts` depending on whether `next build` or `next dev` ran
   last. It is a generated file marked "should not be edited"; commit `12215a5` committed

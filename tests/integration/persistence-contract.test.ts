@@ -153,7 +153,8 @@ describe("PostgreSQL persistence contract", () => {
   it("limits sign-in codes per address and leaves room for a shared client address", { timeout: 120_000 }, async () => {
     const authUrl = new URL(context.connectionString);
     authUrl.searchParams.set("options", "-c search_path=auth");
-    const authPool = new Pool({ connectionString: authUrl.toString(), max: 2 });
+    // Enough connections for a burst to race on the rate-limit row.
+    const authPool = new Pool({ connectionString: authUrl.toString(), max: 8 });
     const delivered = vi.fn().mockResolvedValue(undefined);
     const auth = createAuth({
       database: authPool,
@@ -202,7 +203,18 @@ describe("PostgreSQL persistence contract", () => {
         statuses.push(await requestCode(target, ip));
       }
       expect(statuses).toEqual([200, 200, 200, 429]);
-      expect(delivered).toHaveBeenCalledTimes(23);
+
+      // Thirty requests from one address at the same moment still get twenty
+      // codes: Better Auth before 1.7 let a burst past the database-backed
+      // limit (GHSA-44jh-23m7-hpcf).
+      const burstIp = randomIp();
+      ips.push(burstIp);
+      const burst = Array.from({ length: 30 }, () => `burst-${crypto.randomUUID()}@example.invalid`);
+      emails.push(...burst);
+      const burstStatuses = await Promise.all(burst.map((email) => requestCode(email, burstIp)));
+      expect(burstStatuses.filter((status) => status === 200)).toHaveLength(20);
+      expect(burstStatuses.filter((status) => status === 429)).toHaveLength(10);
+      expect(delivered).toHaveBeenCalledTimes(43);
     } finally {
       for (const email of emails) {
         await authPool.query('DELETE FROM auth."verification" WHERE identifier = $1', [
