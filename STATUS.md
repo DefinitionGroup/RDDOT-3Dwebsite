@@ -7,7 +7,7 @@ added the same evening.
 Working branch: `cc/devstart-sanity` — the main development branch from 2026-10-01, cut from
 `cc/devstart-003` at `e4fd3e9`. `redesign/devstart`, the Vercel production branch, is
 fast-forwarded to this branch and pushed when the test environment should update; last on
-2026-10-30 to `dd2044f`. `cc/devstart-003` and the earlier
+2026-11-01 to `ca43e1d`. `cc/devstart-003` and the earlier
 `cc/devstart-*` branches are frozen at their last commit; none is merged back and none
 needs to be.
 
@@ -93,7 +93,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 
 | Feature | State |
 | --- | --- |
-| Dealer Directory, nearest first from the profile postcode, on a self-hosted OpenStreetMap map; a customer shares a Project with one dealer, switches or ends it from the account | Done (2026-10-30), merged into `cc/devstart-sanity` 2026-11-01, not on the test site yet; synthetic demo dealers only |
+| Dealer Directory, nearest first from the profile postcode, on a self-hosted OpenStreetMap map; a customer shares a Project with one dealer, switches or ends it from the account | Done (2026-10-30), on the test site since 2026-11-01; synthetic demo dealers only |
 | Dealer Users provisioned by rotpunkt sign in with the email code; the Dealer Workspace lists the shared Projects with the customer's name, email and phone | Done on the branch; provisioning is a script (`pnpm dealers:provision`), no admin screen |
 | A dealer edits the Working Configuration, saves and restores versions, makes share links and sends Quote Requests with its own contact, each checked against the Dealer Grant in the database | Done on the branch |
 | Map tiles on a deployment | Gated: the tile archive has to go to EU object storage with `MAP_TILES_OBJECT_KEY`; without it the dialog shows the list alone |
@@ -123,13 +123,19 @@ built. Details for each line are under Done, Known Defects and Missing.
 | --- | --- |
 | PostgreSQL on Neon Frankfurt with migrations; private S3-compatible storage with a deletion outbox | Done; the daily storage sweep (30-day hold) waits for `CRON_SECRET` on Vercel |
 | Gates: lint, types, 149 unit tests, 64 database tests, production build with server-bundle check | Done, run by hand; no CI |
-| Vercel project | Production builds `redesign/devstart` from Git, at `dd2044f` since 2026-10-30, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
+| Vercel project | Production builds `redesign/devstart` from Git, at `ca43e1d` since 2026-11-01, and serves as a test environment with noindex (see Deployment); functions run in `iad1` (US East), the database in Frankfurt |
 | Dependency security: Next.js 16.4.1, React 19.3.1, patched `sharp`, `undici`, `vitest` (`a80ef42`) | Done |
 | Sanity CLI advisories (dompurify, vite, uuid, braces under `sanity > @sanity/cli`) | Done 2026-10-23: `sanity` 6.20.0 plus two overrides; one `braces` advisory has no fixed release and stays (Known Warnings) |
 | Browser E2E tests, analytics, accessibility audit, whole-site performance budgets (the kitchen Asset Manifest has its own) | Open |
 
 ## Done
 
+- **Dates and times in one time zone (2026-11-01).** Every date and time the site prints
+  is formatted in `SITE_TIME_ZONE` (Europe/Berlin, `lib/i18n.ts`). The account page printed
+  the session's end time in the server's zone (UTC on Vercel and in CI) and again in the
+  browser's, so a signed-in direct visit or reload of `/konto` failed hydration (React error
+  418) and re-rendered on the client. The dealer smoke test, the first to reload `/konto`,
+  caught it in CI; green since `ca43e1d`.
 - **Dealers (2026-10-30, merged into `cc/devstart-sanity` 2026-11-01).** Martin's
   decisions, the access model and the slices are in
   [.scratch/dealer-access/spec.md](.scratch/dealer-access/spec.md), ADR 0014 and
@@ -153,8 +159,8 @@ built. Details for each line are under Done, Known Defects and Missing.
   the smoke test walks the dealer path at desktop and phone width (6 of 6 with the
   journeys and the scene); in the browser at 1440 and 390 px the dialog, the map (headless
   Chrome on the GPU), the workspace, a dealer's front change redrawing the kitchen, a
-  dealer's request, the 401s of owner-only routes and the 404s for another dealer. Not on
-  the test site. The shared development database has the migration and the 14 demo dealers
+  dealer's request, the 401s of owner-only routes and the 404s for another dealer. On the
+  test site since 2026-11-01. The shared development database has the migration and the 14 demo dealers
   since 2026-10-30 (Martin's OK); a `pg_dump` of it matches `db/schema.sql` apart from
   Neon's build hash.
 - **Lighter configurator textures (2026-10-30).** Issue 07 of `.scratch/a11y-perf/issues/`.
@@ -1082,7 +1088,20 @@ Updated 2026-10-22.
   Settings scoped to a single branch do not reach CLI deployments at runtime, which is why
   the test settings are set for all previews. Turning Deployment Protection on needs a team
   Owner or Member.
-- Production: `rddot-3-dwebsite-1ubz7vglv`, built from `dd2044f` on 2026-10-30, live about
+- Production: `rddot-3-dwebsite-8f4h15lyf`, built from `ca43e1d` on 2026-11-01, live about
+  2 min after `redesign/devstart` was fast-forwarded from `dd2044f` and pushed; it brings
+  dealers (ADR 0014), the lighter textures (07) and dates in one time zone (see Done). CI
+  was green on `ca43e1d`; on the merge `fde0b08` the dealer smoke test had caught the
+  `/konto` hydration error the time zone fixes. Checked right after, signed out, in Chrome
+  on the real GPU at 1440 px and on a 390 px phone: the homepage and `/configure` render,
+  the kitchen redraws in Nussbaum Memory, nothing past the edge, noindex on every response,
+  no console errors; `/haendler` shows the dealer sign-in and `/api/dealers` answers 401.
+  The studio HDRI is 0.42 MB (2.1 before), the floor maps 0.20 and 0.06 MB (1.09 and 0.57),
+  the finish scans 28, 10 and 4 KB as JPEG. Phone profile (1.6 Mbit/s, 150 ms, CPU 4×): the
+  configurator's files were all in after 14 s, 2.7 MB in all; on `dd2044f` the HDRI and the
+  floor had not finished by 22 s. The map archive is not in object storage, so the dealer
+  directory shows as a list. Nothing was submitted and no code requested.
+- The deployment before, `rddot-3-dwebsite-1ubz7vglv`, was built from `dd2044f` on 2026-10-30, live about
   2 min after `redesign/devstart` was fast-forwarded from `1fe6086` and pushed; it brings the
   audit's fixes 01–04 and 06 (see Done). Migration `20261029120000` is still not applied to
   the shared development database. Checked right after, signed out, in Chrome on the real
@@ -1338,8 +1357,8 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   exposure is intended.
 - The "Appartement" environment is a development placeholder: since 2026-10-16 it is `public/models/apartment-room.glb`, prepared from `newroom.glb` in the defgrp-3d-configurator prototype. That file is a Sketchfab export (its root node is `Sketchfab_model`) whose author and licence are recorded nowhere; only its floor photo is identifiable (Pexels, and dropped anyway). Establish the licence or replace the room with an owned or licensed one before any production release. Recorded here so the Production Release Gate cannot miss it.
 - The "Loft" environment is a development placeholder too: `public/models/loft-room.glb` is prepared from "57-estancia_comedor_obj.zip" (a 3ds Max 2019 OBJ export, no author or licence inside). Establish its source and licence, or replace it, before any production release.
-- **Dealer access discloses customer data to another controller** (ADR 0014, on
-  `cc/devstart-sanity`, not live yet). Sharing a Project gives the dealer the customer's name, email
+- **Dealer access discloses customer data to another controller** (ADR 0014, on the
+  test site since 2026-11-01). Sharing a Project gives the dealer the customer's name, email
   and phone; the dialog shows the values first, but its wording and the legal basis need
   review together with the Datenschutz page before dealers go live. The demo dealers are
   synthetic (`db/seeds/demo-dealers.json`); the real list, who provisions and disables
@@ -1420,7 +1439,7 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
   sideways (Done, 2026-10-29). The Edit Session, versions, photos, the account's other
   sections and the rendered picture are still checked by hand each slice.
 
-- Dealers (ADR 0014, on `cc/devstart-sanity` since 2026-11-01, not deployed): the shared development
+- Dealers (ADR 0014, on the test site since 2026-11-01): the shared development
   database has migration `20261030120000` and the 14 demo dealers (2026-10-30); while the
   capture sign-in is on, anyone holding a deployment's URL can sign in as a demo dealer,
   as with any other address; the tile archive is not in object storage and `MAP_TILES_OBJECT_KEY` is not set on Vercel, so a deployment
@@ -1453,8 +1472,8 @@ in below; their history is in git and in the Done section.
 
 ### M0 — Next (from the 2026-10-22 reconciliation)
 
-The dependency upgrade (`a80ef42`) is done. Dealers (2026-10-30, see Done) are merged into
-`cc/devstart-sanity` (2026-11-01) and wait for a deploy to the test site.
+The dependency upgrade (`a80ef42`) is done. Dealers (2026-10-30, see Done) are on the test
+site since 2026-11-01 (`ca43e1d`).
 *Martin:* the tile archive in object storage with `MAP_TILES_OBJECT_KEY` on Vercel; the
 real dealer list. Migrations `20261029120000` and `20261030120000` and the demo dealers
 are in the shared development database, which the test site and previews use, since
