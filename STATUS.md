@@ -96,7 +96,7 @@ built. Details for each line are under Done, Known Defects and Missing.
 | Dealer Directory, nearest first from the profile postcode, on a self-hosted OpenStreetMap map; a customer shares a Project with one dealer, switches or ends it from the account | Done (2026-10-30), on the test site since 2026-11-01; synthetic demo dealers only |
 | Dealer Users provisioned by rotpunkt sign in with the email code; the Dealer Workspace lists the shared Projects with the customer's name, email and phone | Done on the branch; provisioning is a script (`pnpm dealers:provision`), no admin screen |
 | A dealer edits the Working Configuration, saves and restores versions, makes share links and sends Quote Requests with its own contact, each checked against the Dealer Grant in the database | Done on the branch |
-| Map tiles on a deployment | Gated: the tile archive has to go to EU object storage with `MAP_TILES_OBJECT_KEY`; without it the dialog shows the list alone |
+| Map tiles on a deployment | Archive in the storage bucket as `map/germany-z10-20261029.pmtiles` (2026-11-06; presigned range reads checked); gated on `MAP_TILES_OBJECT_KEY` on Vercel, without which `/api/map/tiles` answers 204 and the dialog shows the list alone. The bucket's proxy refuses a single 178 MB PUT (413): upload a new archive in multipart parts |
 | Telling a dealer that a Project was shared | Open (waits on the email provider, ADR 0010) |
 
 **AI photos**
@@ -1474,8 +1474,9 @@ Trash keeps Projects until restored or deleted by hand: no automatic purge after
 - Dealers (ADR 0014, on the test site since 2026-11-01): the shared development
   database has migration `20261030120000` and the 14 demo dealers (2026-10-30); while the
   capture sign-in is on, anyone holding a deployment's URL can sign in as a demo dealer,
-  as with any other address; the tile archive is not in object storage and `MAP_TILES_OBJECT_KEY` is not set on Vercel, so a deployment
-  shows the directory as a list; nobody is told that a Project was shared or changed
+  as with any other address; the tile archive is in object storage (2026-11-06) but
+  `MAP_TILES_OBJECT_KEY` is not set on Vercel, so a deployment still shows the directory
+  as a list (local development reads `MAP_TILES_FILE`, `.env.example`); nobody is told that a Project was shared or changed
   (email provider, ADR 0010); there is no admin screen for the directory; the dealer's
   photo action, attribution of autosaves and an activity log are left out by decision.
 
@@ -1506,7 +1507,8 @@ in below; their history is in git and in the Done section.
 
 The dependency upgrade (`a80ef42`) is done. Dealers (2026-10-30, see Done) are on the test
 site since 2026-11-01 (`ca43e1d`).
-*Martin:* the tile archive in object storage with `MAP_TILES_OBJECT_KEY` on Vercel; the
+*Martin:* `MAP_TILES_OBJECT_KEY=map/germany-z10-20261029.pmtiles` on Vercel (Production
+and Preview), then a redeploy — the archive is in the bucket since 2026-11-06; the
 real dealer list. Migrations `20261029120000` and `20261030120000` and the demo dealers
 are in the shared development database, which the test site and previews use, since
 2026-10-30. Any other database needs both before the branch runs against it: every

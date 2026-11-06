@@ -13,7 +13,17 @@ describe("self-hosted map assets", () => {
 
   it("carries the glyphs the basemap style names, with their licence", () => {
     for (const font of ["Noto Sans Regular", "Noto Sans Medium", "Noto Sans Italic"]) {
-      for (const range of ["0-255", "256-511", "8192-8447"]) {
+      // The ranges the tile archive's labels use (public/map/README.md).
+      for (const range of [
+        "0-255",
+        "256-511",
+        "512-767",
+        "768-1023",
+        "1024-1279",
+        "7424-7679",
+        "8192-8447",
+        "8448-8703"
+      ]) {
         expect(existsSync(`public/map/fonts/${font}/${range}.pbf`)).toBe(true);
       }
     }
